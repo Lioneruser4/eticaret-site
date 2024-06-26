@@ -9,5 +9,14 @@ const App = () => (
     <Router>
         <div className="container">
             <Switch>
-                <Route path="/" exact component={ProductList}
+                <Route path="/" exact component={ProductList} />
+                <Route path="/login" component={Login} />
+                <Route path="/register" component={Register} />
+                <Route path="/add-product" component={ProductForm} />
+                <Route path="/edit-product/:id" component={ProductForm} />
+            </Switch>
+        </div>
+    </Router>
+);
 
+export default App;
