@@ -3,239 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş Profesyonel QR Kod Oluşturucu | GitHub Pages</title>
+    <title>Sade Profesyonel Animasyonlu QR Kod Oluşturucu</title>
     
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
     
     <style>
-        /* Gelişmiş Minimal Kurumsal CSS Framework */
+        /* Sade, Temiz ve Kurumsal Stil */
         :root {
-            --primary-color: #1a73e8; /* Mavi - Google/Kurumsal renk */
-            --secondary-color: #555;
-            --text-color: #3c4043;
-            --bg-light: #f1f3f4; /* Çok açık gri */
-            --bg-card: #ffffff;
-            --border-color: #dadce0;
-            --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            --font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --primary-color: #007bff; /* Kurumsal Mavi */
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #ddd;
         }
 
         body {
-            font-family: var(--font-family);
-            background-color: var(--bg-light);
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 40px 20px;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
         }
 
-        .app-container {
-            display: flex;
-            gap: 30px;
-            max-width: 1200px;
+        .container {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
             width: 100%;
-            margin: auto;
-        }
-
-        .card {
-            background-color: var(--bg-card);
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: var(--box-shadow);
-            transition: box-shadow 0.3s;
-        }
-        
-        /* Sol Panel: Kontroller */
-        .controls-panel {
-            flex: 1;
-            min-width: 350px;
-            max-width: 450px;
-        }
-
-        /* Sağ Panel: QR Kod Önizleme */
-        .preview-panel {
-            flex: 2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 500px;
         }
 
         h1 {
             color: var(--primary-color);
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 24px;
-            font-weight: 500;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
         }
-        
+
         /* Form Elemanları */
         label {
             display: block;
             margin-top: 15px;
             margin-bottom: 5px;
-            font-weight: 600;
-            color: var(--secondary-color);
+            font-weight: bold;
         }
 
-        input[type="text"], input[type="file"], select, input[type="color"] {
+        input[type="text"], input[type="file"], select {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 4px;
             box-sizing: border-box;
             font-size: 15px;
-            transition: border-color 0.3s;
+        }
+        
+        /* Kontrol Gruplarını Yan Yana Getirme */
+        .controls-group {
+            display: flex;
+            gap: 15px;
+        }
+        .controls-group > div {
+            flex: 1;
         }
 
-        input[type="text"]:focus, select:focus, input[type="file"]:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        /* Butonlar */
+        /* Buton */
         button {
             width: 100%;
             padding: 12px;
-            margin-top: 20px;
+            margin-top: 25px;
             background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-            font-weight: 500;
+            transition: background-color 0.3s;
         }
 
         button:hover {
-            background-color: #1660c6;
+            background-color: #0056b3;
         }
 
-        /* QR Kod Önizleme Alanı */
+        /* QR Kod Alanı */
         #qrcode-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 20px;
-            min-height: 350px; 
-            width: 100%;
+            margin-top: 30px;
+            padding: 10px;
+            min-height: 250px;
         }
-
-        #qrcode-container p {
-            color: #9aa0a6;
-            font-style: italic;
-        }
-
-        /* İndirme Butonu */
-        #downloadBtn {
-            margin-top: 20px;
-            background-color: #34a853; /* Yeşil */
-        }
-        #downloadBtn:hover {
-            background-color: #2e8b46;
-        }
-
-        /* SVG Özelleştirme ve Animasyon CSS'i */
-        /* QR kodun siyah noktaları (path'leri) */
+        
+        /* QR Kodu Özelleştirme ve Animasyon CSS'i */
+        /* qrcode.js'in oluşturduğu svg'yi hedef al */
         #qrcode-container svg path {
-            fill: var(--qr-dark-color, #000000) !important; /* Varsayılan koyu renk */
-            animation: slight-float 2s ease-in-out infinite alternate; 
+            fill: url(#pattern-image) !important; /* SVG pattern'i ile doldur */
+            animation: pulse 1.5s infinite alternate; 
             transform-origin: center center;
         }
 
-        /* Yüklenen resim varsa, path dolgusunu pattern ile değiştir */
-        .image-filled svg path {
-            fill: url(#pattern-image) !important;
-        }
-
         /* Animasyon Keyframes */
-        @keyframes slight-float {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-1px); }
-        }
-
-        /* Responsive düzenleme */
-        @media (max-width: 900px) {
-            .app-container {
-                flex-direction: column;
-            }
-            .controls-panel, .preview-panel {
-                max-width: 100%;
-                min-width: auto;
-            }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.01); }
         }
     </style>
 </head>
 <body>
 
-<div class="app-container">
+<div class="container">
+    <h1>QR Kod Oluşturucu</h1>
     
-    <div class="card controls-panel">
-        <h1>⚙️ QR Kod Ayarları</h1>
+    <label for="linkInput">Hedef Link:</label>
+    <input type="text" id="linkInput" placeholder="orneksite.com veya https://orneksite.com">
 
-        <label for="linkInput">Hedef Link / Metin:</label>
-        <input type="text" id="linkInput" placeholder="https://www.orneksite.com" value="https://github.com/kullaniciadi">
+    <label for="imageUpload">QR Kod Dolgu Resmi:</label>
+    <input type="file" id="imageUpload" accept="image/png, image/jpeg">
 
-        <label for="imageUpload">Dolgu Resmi (Siyah Kısımlar için):</label>
-        <input type="file" id="imageUpload" accept="image/png, image/jpeg">
-        <small style="color:red; display:block; margin-top:-10px; margin-bottom:15px;">**UYARI:** Dolgu resmi seçildiğinde renkler devre dışı kalır.</small>
-
-        <div class="grid-2">
-            <div>
-                <label for="darkColor">Koyu Renk:</label>
-                <input type="color" id="darkColor" value="#1a73e8">
-            </div>
-            <div>
-                <label for="lightColor">Açık Renk (Arka Plan):</label>
-                <input type="color" id="lightColor" value="#ffffff" disabled>
-            </div>
+    <div class="controls-group">
+        <div>
+            <label for="sizeSelect">Boyut (px):</label>
+            <select id="sizeSelect">
+                <option value="256">256x256</option>
+                <option value="512" selected>512x512</option>
+            </select>
         </div>
-
-        <div class="grid-2">
-            <div>
-                <label for="sizeSelect">Boyut (px):</label>
-                <select id="sizeSelect">
-                    <option value="256">256x256</option>
-                    <option value="384">384x384</option>
-                    <option value="512" selected>512x512</option>
-                </select>
-            </div>
-            <div>
-                <label for="errorSelect">Hata Düzeltme Seviyesi:</label>
-                <select id="errorSelect">
-                    <option value="L">Düşük (L)</option>
-                    <option value="M" selected>Orta (M)</option>
-                    <option value="Q">Yüksek (Q)</option>
-                    <option value="H">Çok Yüksek (H)</option>
-                </select>
-            </div>
+        <div>
+            <label for="errorSelect">Hata Düzeltme:</label>
+            <select id="errorSelect">
+                <option value="M" selected>Orta (M)</option>
+                <option value="H">Yüksek (H)</option>
+            </select>
         </div>
-        
-        <button onclick="generateQRCode()">QR Kodu Oluştur / Güncelle</button>
     </div>
 
-    <div class="card preview-panel">
-        <h1>🖼️ QR Kod Önizleme</h1>
-        
-        <div id="qrcode-container">
-            <p>Ayarları girip 'Oluştur'a tıklayınız.</p>
-        </div>
+    <button onclick="generateQRCode()">QR Kodu Oluştur</button>
 
-        <button id="downloadBtn" onclick="downloadQRCode()" disabled>PNG İndir</button>
+    <div id="qrcode-container">
+        <p>Link ve resmi girip Oluştur'a tıklayın.</p>
     </div>
 
 </div>
@@ -246,33 +156,15 @@
     const linkInput = document.getElementById('linkInput');
     const sizeSelect = document.getElementById('sizeSelect');
     const errorSelect = document.getElementById('errorSelect');
-    const darkColorInput = document.getElementById('darkColor');
-    const lightColorInput = document.getElementById('lightColor');
-    const downloadBtn = document.getElementById('downloadBtn');
 
-    // Başlangıçta QR kodu oluştur (örnek göstermek için)
-    window.onload = function() {
-        generateQRCode();
-    };
-
-    // Dinamik input değişikliklerini dinle
-    document.querySelectorAll('.controls-panel input, .controls-panel select').forEach(element => {
-        element.addEventListener('change', generateQRCode);
-    });
-
-
-    // QR Kodu oluşturma ve özelleştirme fonksiyonu
     function generateQRCode() {
         const link = linkInput.value.trim();
         const file = imageUpload.files[0];
         const size = parseInt(sizeSelect.value);
         const errorLevel = errorSelect.value;
-        const darkColor = darkColorInput.value;
-        const lightColor = lightColorInput.value;
 
-        if (!link) {
-            qrCodeContainer.innerHTML = '<p>Lütfen bir hedef link girin.</p>';
-            downloadBtn.disabled = true;
+        if (!link || !file) {
+            alert("Lütfen hem hedef linki hem de dolgu resmini seçin.");
             return;
         }
 
@@ -282,40 +174,32 @@
             safeLink = 'https://' + safeLink;
         }
 
-        // 2. QR Kodu Oluştur
-        qrCodeContainer.innerHTML = ''; // Önceki kodu temizle
-
-        // CSS değişkenini ayarla (renk veya resim dolgusunda kullanılacak)
-        qrCodeContainer.style.setProperty('--qr-dark-color', darkColor);
-
-        // qrcode.js Canvas'ı kullanırsa indirilebilirlik için Canvas'ı oluşturur, 
-        // ancak biz özelleştirme için SVG oluşturmasını istiyoruz.
-        new QRCode(qrCodeContainer, {
-            text: safeLink,
-            width: size,
-            height: size,
-            colorDark: darkColor,
-            colorLight: lightColor,
-            correctLevel: errorLevel
-        });
-
-        // İndirme butonunu etkinleştir
-        downloadBtn.disabled = false;
-
-
-        // 3. Resim Dolgusu (Custom Image Fill)
-        if (file) {
-            qrCodeContainer.classList.add('image-filled');
-            const reader = new FileReader();
+        // 2. Resmi Base64'e çevir
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imageDataUrl = e.target.result;
             
-            reader.onload = function(e) {
-                const imageDataUrl = e.target.result;
+            // 3. QR Kodu Oluştur (Önceki kodu temizle)
+            qrCodeContainer.innerHTML = ''; 
+
+            new QRCode(qrCodeContainer, {
+                text: safeLink,
+                width: size,
+                height: size,
+                colorDark: "#000000", // Siyah, ki bu daha sonra resimle değiştirilecek
+                colorLight: "#ffffff", // Arka plan (Beyaz)
+                correctLevel: errorLevel 
+            });
+
+            // 4. SVG'yi al ve resim dolgusunu uygula
+            // qrcode.js kütüphanesinin QR kodu bir süre sonra oluşturması ihtimaline karşı küçük bir gecikme ekleyelim
+            setTimeout(() => {
                 const svgElement = qrCodeContainer.querySelector('svg');
                 
                 if (svgElement) {
                     const patternId = 'pattern-image';
                     
-                    // Önceki pattern'leri temizle (Güncelleme için)
+                    // Önceki patternleri temizle (güncelleme durumunda)
                     const existingDefs = svgElement.querySelector('defs');
                     if(existingDefs) existingDefs.remove();
 
@@ -328,59 +212,28 @@
                     pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
 
                     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-                    image.setAttribute('href', imageDataUrl);
+                    image.setAttribute('href', imageDataUrl); // Base64 resim verisi
                     image.setAttribute('x', '0');
                     image.setAttribute('y', '0');
                     image.setAttribute('width', '1');
                     image.setAttribute('height', '1');
-                    image.setAttribute('preserveAspectRatio', 'xMidYMid slice'); 
+                    image.setAttribute('preserveAspectRatio', 'xMidYMid slice'); // Resmi QR alanına sığdırır
 
                     pattern.appendChild(image);
                     defs.appendChild(pattern);
                     svgElement.prepend(defs); 
+                    
+                    // Dikkat: Animasyon ve dolgu ayarı CSS'te yapılır: 
+                    // #qrcode-container svg path { fill: url(#pattern-image) !important; animation: pulse...}
+
+                } else {
+                    alert("QR kod SVG elementine ulaşılamadı. Lütfen tekrar deneyin.");
                 }
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // Resim yoksa, normal renk dolgusuna dön
-            qrCodeContainer.classList.remove('image-filled');
-        }
-    }
-
-    // QR Kodunu PNG olarak indirme fonksiyonu
-    function downloadQRCode() {
-        const svgElement = qrCodeContainer.querySelector('svg');
-        if (!svgElement) {
-            alert('Lütfen önce QR kodu oluşturun.');
-            return;
-        }
-
-        // SVG'den veri URI'sini al
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-        const url = URL.createObjectURL(svgBlob);
-        
-        // Canvas oluştur (PNG dönüşümü için)
-        const canvas = document.createElement('canvas');
-        const size = parseInt(sizeSelect.value);
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        
-        const img = new Image();
-        img.onload = function() {
-            ctx.drawImage(img, 0, 0);
-            
-            // PNG indirme linki oluştur
-            const a = document.createElement('a');
-            a.download = 'professional_qr_code.png';
-            a.href = canvas.toDataURL('image/png');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            }, 50); // 50ms gecikme ile elementin oluşmasını bekle
         };
-        img.src = url;
+
+        // Base64 dönüşümünü başlat
+        reader.readAsDataURL(file);
     }
 </script>
 
