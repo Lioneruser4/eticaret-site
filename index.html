@@ -1,146 +1,339 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RESİM QR - Siyah Yerine Resmin</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ProQR - Profesyonel Resimli QR Kod Oluşturucu</title>
+  <meta name="description" content="Kurumsal, temiz ve resimli QR kodlar oluşturun. Siyah kısımlar sizin resminizle dolar."/>
+  
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;800&display=swap');
-    
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --primary: #3b82f6;
+      --muted: #64748b;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      margin:0; padding:40px 20px; min-height:100vh;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      font-family:'Poppins',sans-serif;
-      color:white;
-      display:flex; align-items:center; justify-content:center;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px 0;
     }
-    .card {
-      background:rgba(255,255,255,0.1);
-      backdrop-filter:blur(15px);
-      border-radius:30px;
-      padding:40px;
-      width:100%; max-width:500px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.4);
-      text-align:center;
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
     }
-    h1 { font-size:2.8rem; margin:0 0 10px; background:linear-gradient(90deg,#fff,#00ffea); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    input, button { width:100%; padding:18px; margin:15px 0; border:none; border-radius:18px; font-size:1.1rem; }
-    input { background:rgba(255,255,255,0.2); color:white; }
-    input::placeholder { color:#ddd; }
-    .upload {
-      border:3px dashed rgba(255,255,255,0.4);
-      padding:50px 20px;
-      border-radius:20px;
-      cursor:pointer;
-      transition:0.3s;
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 40px 20px;
     }
-    .upload:hover { border-color:#00ffea; background:rgba(0,255,234,0.1); }
-    #preview { max-width:150px; margin:20px auto; display:none; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-    button {
-      background:linear-gradient(135deg,#00ffea,#ff00a0);
-      color:black; font-weight:800; cursor:pointer;
-      box-shadow:0 10px 30px rgba(0,255,234,0.4);
-      transition:0.4s;
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 12px;
     }
-    button:hover { transform:translateY(-5px); box-shadow:0 20px 40px rgba(0,255,234,0.6); }
-    #qr { margin:40px 0; }
-    canvas { border-radius:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); }
-    .download { background:#10b981; display:none; }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .main-card {
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .form-section {
+      padding: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+    .upload-box {
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f8fafc;
+    }
+    .upload-box:hover {
+      border-color: var(--primary);
+      background: #f0f7ff;
+    }
+    .upload-box.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    #imagePreview {
+      max-width: 140px;
+      max-height: 140px;
+      margin: 16px auto;
+      border-radius: 12px;
+      display: none;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59,130,246,0.3);
+    }
+    .preview-section {
+      padding: 50px 40px;
+      text-align: center;
+      background: #f8fafc;
+    }
+    #qrCanvas {
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      max-width: 420px;
+      display: inline-block;
+    }
+    canvas {
+      border-radius: 16px;
+      width: 100% !important;
+      height: auto !important;
+    }
+    .download-btn {
+      background: #10b981;
+      display: none;
+      margin-top: 20px;
+    }
+    .download-btn:hover { background: #059669; }
+    .footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 2.2rem; }
+      .form-section, .preview-section { padding: 30px 20px; }
+      .options-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="header">
+      <h1>ProQR</h1>
+      <p class="subtitle">Profesyonel, temiz ve tamamen sizin resminizden oluşan QR kodlar</p>
+    </div>
 
-<div class="card">
-  <h1>RESİM QR</h1>
-  <p>Siyah kısımlar senin resmin olacak!</p>
+    <div class="main-card">
+      <div class="form-section">
+        <div class="form-group">
+          <label for="url">Hedef Link *</label>
+          <input type="text" id="url" placeholder="https://example.com" value="https://">
+        </div>
 
-  <input type="text" id="url" placeholder="https://instagram.com/abc" value="https://">
+        <div class="form-group">
+          <label>QR Kodun Siyah Kısmı İçin Resim *</label>
+          <div class="upload-box" id="uploadBox">
+            <p>Tıkla veya resmi buraya sürükle</p>
+            <small>En iyi sonuç için 512x512 veya daha büyük, renkli/resimli bir görsel kullanın</small>
+            <img id="imagePreview" alt="Önizleme">
+            <input type="file" id="imageInput" accept="image/*" hidden>
+          </div>
+        </div>
 
-  <div class="upload" onclick="document.getElementById('file').click()">
-    <p>RESMİ BURAYA SÜRÜKLE VEYA TIKLA</p>
-    <small>En iyi sonuç için 1:1 oranlı, renkli resim kullan</small>
-    <img id="preview">
-    <input type="file" id="file" accept="image/*" hidden>
+        <div class="options-grid">
+          <div class="form-group">
+            <label for="size">QR Boyutu</label>
+            <select id="size">
+              <option value="300">300 × 300</option>
+              <option value="400">400 × 400</option>
+              <option value="500" selected>500 × 500 (Tavsiye)</option>
+              <option value="600">600 × 600</option>
+              <option value="800">800 × 800 (Yüksek Kalite)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="errorLevel">Hata Düzeltme Seviyesi</label>
+            <select id="errorLevel">
+              <option value="L">Düşük (Daha küçük)</option>
+              <option value="M">Orta</option>
+              <option value="Q">Yüksek</option>
+              <option value="H" selected>En Yüksek (Tavsiye)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="dotStyle">Nokta Stili</label>
+            <select id="dotStyle">
+              <option value="square">Kare</option>
+              <option value="rounded">Yuvarlak Köşe</option>
+              <option value="extra-rounded" selected>Ekstra Yuvarlak</option>
+              <option value="dots">Nokta</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="margin">Kenar Boşluğu</label>
+            <select id="margin">
+              <option value="0">Yok</option>
+              <option value="20" selected>Küçük</option>
+              <option value="40">Orta</option>
+              <option value="60">Büyük</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="generateBtn">QR KODU OLUŞTUR</button>
+      </div>
+
+      <div class="preview-section">
+        <h2 style="margin-bottom:20px; color:#1e293b;">Oluşturulan QR Kod</h2>
+        <div id="qrCanvas"></div>
+        <button class="btn-primary download-btn" id="downloadBtn">
+          Yüksek Kalite PNG Olarak İndir
+        </button>
+      </div>
+    </div>
+
+    <div class="footer">
+      ProQR • 2025 • Kurumsal ve profesyonel kullanım için tasarlandı
+    </div>
   </div>
 
-  <button onclick="olustur()">RESİM QR OLUŞTUR</button>
+  <script>
+    const urlInput = document.getElementById('url');
+    const imageInput = document.getElementById('imageInput');
+    const uploadBox = document.getElementById('uploadBox');
+    const imagePreview = document.getElementById('imagePreview');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const qrCanvas = document.getElementById('qrCanvas');
 
-  <div id="qr"></div>
-  <button class="download" onclick="qrCode.download({name:'resim-qr',extension:'png'})">
-    İNDİR (PNG)
-  </button>
-</div>
+    let selectedImage = null;
+    let qrCode = null;
 
-<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
-<script>
-let qrCode = null;
-let resim = null;
+    // Resim yükleme
+    uploadBox.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', e => handleFile(e.target.files[0]));
+    
+    // Drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+      uploadBox.addEventListener(event, e => e.preventDefault());
+    });
+    ['dragenter', 'dragover'].forEach(event => {
+      uploadBox.addEventListener(event, () => uploadBox.classList.add('dragover'));
+    });
+    ['dragleave', 'drop'].forEach(event => {
+      uploadBox.addEventListener(event, () => uploadBox.classList.remove('dragover'));
+    });
+    uploadBox.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
 
-document.getElementById('file').onchange = function(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    resim = ev.target.result;
-    document.getElementById('preview').src = resim;
-    document.getElementById('preview').style.display = 'block';
-  }
-  reader.readAsDataURL(file);
-}
-
-// Drag & drop desteği
-['dragenter','dragover','drop'].forEach(ev => document.querySelector('.upload').addEventListener(ev, e=>e.preventDefault()));
-document.querySelector('.upload').addEventListener('drop', e=>{
-  const file = e.dataTransfer.files[0];
-  if(file && file.type.startsWith('image/')){
-    const reader = new FileReader();
-    reader.onload = ev=> {
-      resim = ev.target.result;
-      document.getElementById('preview').src = resim;
-      document.getElementById('preview').style.display = 'block';
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        selectedImage = e.target.result;
+        imagePreview.src = selectedImage;
+        imagePreview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
     }
-    reader.readAsDataURL(file);
-  }
-});
 
-function olustur(){
-  const link = document.getElementById('url').value.trim();
-  if(!link || !link.startsWith('http')){
-    alert('Lütfen geçerli bir link gir (https:// ile başlasın)');
-    return;
-  }
-  if(!resim){
-    alert('Önce bir resim yükle!');
-    return;
-  }
+    generateBtn.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      if (!url || !url.startsWith('http')) {
+        alert('Lütfen geçerli bir link girin (https:// ile başlasın)');
+        return;
+      }
+      if (!selectedImage) {
+        alert('Lütfen bir resim yükleyin');
+        return;
+      }
 
-  document.getElementById('qr').innerHTML = '';
+      qrCanvas.innerHTML = '';
 
-  qrCode = new QRCodeStyling({
-    width: 600,
-    height: 600,
-    data: link,
-    image: resim,
-    dotsOptions: {
-      type: "extra-rounded",
-      color: "#000000" // bu siyah renk yerine resmin kendisi olacak
-    },
-    backgroundOptions: { color: "#ffffff" },
-    imageOptions: {
-      crossOrigin: "anonymous",
-      imageSize: 1,           // %100 kaplasın
-      margin: 0,
-      hideBackgroundDots: false,
-      saveAsBlob: true,
-      // EN ÖNEMLİ KISIM → Siyah noktalar yerine resmi koy
-      dotColorAsImage: true   // ← BU ÖZELLİK TAM İSTEDİĞİN ŞEY!
-    },
-    qrOptions: { errorCorrectionLevel: "H" }
-  });
+      qrCode = new QRCodeStyling({
+        width: parseInt(document.getElementById('size').value),
+        height: parseInt(document.getElementById('size').value),
+        data: url,
+        margin: parseInt(document.getElementById('margin').value),
+        qrOptions: { errorCorrectionLevel: document.getElementById('errorLevel').value },
+        image: selectedImage,
+        dotsOptions: {
+          type: document.getElementById('dotStyle').value,
+          color: "#000000"
+        },
+        backgroundOptions: { color: "#ffffff" },
+        imageOptions: {
+          crossOrigin: "anonymous",
+          imageSize: 1.0,
+          margin: 0,
+          hideBackgroundDots: false,
+          saveAsBlob: true
+        }
+      });
 
-  qrCode.append(document.getElementById('qr'));
-  document.querySelector('.download').style.display = 'block';
-}
-</script>
+      qrCode.append(qrCanvas);
+      downloadBtn.style.display = 'block';
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (qrCode) qrCode.download({ name: "proqr-kod", extension: "png" });
+    });
+  </script>
 </body>
 </html>
