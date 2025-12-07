@@ -1,146 +1,278 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Barkod & QR Oxuyucu</title>
-  <script src="https://unpkg.com/@zxing/library@0.20.0/dist/index.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
-    video { width: 100%; max-width: 500px; border: 4px solid #333; border-radius: 12px; }
-    #result { margin-top: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    .btn { padding: 12px 24px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
-    .btn:hover { background: #0056b3; }
-    .original { color: green; font-weight: bold; }
-    .fake { color: red; font-weight: bold; }
-    .expiry { font-size: 18px; margin: 10px 0; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Barkod / QR Scanner</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0e1013;
+    color:white;
+    text-align:center;
+}
+
+header {
+    background:#181b20;
+    padding:20px;
+    font-size:24px;
+    font-weight:bold;
+    letter-spacing:1px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+
+#intro {
+    margin:20px auto;
+    width:90%;
+    max-width:450px;
+    background:#181b20;
+    padding:20px;
+    border-radius:12px;
+    text-align:left;
+    line-height:1.6;
+}
+
+button {
+    background:#09f;
+    border:none;
+    padding:15px 20px;
+    color:white;
+    border-radius:10px;
+    font-size:18px;
+    margin-top:15px;
+    cursor:pointer;
+    width:90%;
+    max-width:300px;
+}
+
+button:hover {
+    background:#0bf;
+}
+
+#reader {
+    margin-top:25px;
+    display:none;
+}
+
+#loading {
+    display:none;
+    margin-top:20px;
+}
+
+.loader {
+  border: 6px solid #444;
+  border-top: 6px solid #09f;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  animation: spin 1s linear infinite;
+  margin: auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#result {
+    background:#181b20;
+    margin:20px auto;
+    padding:15px;
+    border-radius:12px;
+    width:90%;
+    max-width:450px;
+    text-align:left;
+    display:none;
+}
+
+h3 {
+    border-left:4px solid #09f;
+    padding-left:10px;
+}
+</style>
 </head>
+
 <body>
-  <h1>📱 Barkod / QR / IBAN Oxuyucu</h1>
-  <p>Kameranı məhsulun barkoduna tut</p>
-  
-  <video id="video" playsinline></video>
-  <div id="result">Oxumağa hazır...</div>
-  
-  <button class="btn" onclick="startScanner()">▶ Yenidən Başlat</button>
 
-  <script>
-    const codeReader = new ZXing.BrowserMultiFormatReader();
-    const videoElement = document.getElementById('video');
-    const resultElement = document.getElementById('result');
-    let scanning = false;
+<header>📦 Universal Barkod Scanner</header>
 
-    function startScanner() {
-      resultElement.innerHTML = "Kamera açılır...";
-      codeReader.decodeFromVideoDevice(null, videoElement, async (result, err) => {
-        if (result && !scanning) {
-          scanning = true;
-          const text = result.getText().trim();
-          await processCode(text);
-          setTimeout(() => scanning = false, 3000);
+<!-- ⭐ Giriş məlumatı -->
+<div id="intro">
+    <h2>🔍 Bu sayt nə edir?</h2>
+    <p>
+        Bu platforma barkod və QR kodlarını oxuyaraq məhsul haqqında məlumatları
+        qlobal bazalardan toplayır:
+    </p>
+    <ul>
+        <li>🍎 Qida məhsullarının məlumatı</li>
+        <li>💄 Parfüm & kosmetika məlumatı</li>
+        <li>📱 Elektronika məlumatı</li>
+        <li>📦 Ümumi məhsul məlumatı</li>
+        <li>🧪 Batch code → istehsal + bitmə tarixi</li>
+    </ul>
+    <p>
+        Başlamaq üçün aşağıdakı düyməyə kliklə və kameraya icazə ver.
+    </p>
+</div>
+
+<button onclick="startScanner()">📷 Kameranı Aç</button>
+
+<!-- ⭐ Scanner -->
+<div id="reader"></div>
+
+<!-- ⭐ Loading -->
+<div id="loading">
+  <div class="loader"></div>
+  <p>Məlumat yüklənir...</p>
+</div>
+
+<!-- ⭐ Result -->
+<div id="result"></div>
+
+<script>
+
+let scanner;
+
+function analyzeBatchCode(batch) {
+    if (!batch) return null;
+
+    let year, month;
+
+    if (batch.length === 4) {
+        year = 2020 + parseInt(batch[0]);
+        month = parseInt(batch[1] + batch[2]);
+    } else if (batch.length === 5) {
+        year = 2015 + parseInt(batch[0]);
+        month = parseInt(batch[1] + batch[2]);
+    }
+
+    if (!month || month > 12) return null;
+
+    const production = new Date(year, month - 1, 1);
+    const expiry = new Date(year + 3, month - 1, 1);
+
+    return {
+        production: production.toDateString(),
+        expiry: expiry.toDateString()
+    };
+}
+
+// ⭐ Kameranı açan funksiya
+function startScanner() {
+    document.getElementById("intro").style.display = "none";
+    document.getElementById("result").style.display = "block";
+    document.getElementById("reader").style.display = "block";
+
+    scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 280 },
+        code => {
+            searchProduct(code);
         }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error(err);
+    );
+}
+
+// ⭐ Məlumat axtaran funksiya
+async function searchProduct(code) {
+    document.getElementById("loading").style.display = "block";
+    let out = `<b>Barkod:</b> ${code}<br><br>`;
+
+    let found = false;
+
+    // 1️⃣ Qida
+    try {
+        let r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+        let d = await r.json();
+
+        if (d.status === 1) {
+            out += `
+            <h3>🍎 Qida Məhsulu</h3>
+            Ad: ${d.product.product_name}<br>
+            Marka: ${d.product.brands}<br>
+            Kategoriya: ${d.product.categories}<br>
+            Ölkə: ${d.product.countries}<br><br>
+            `;
+            found = true;
         }
-      });
-    }
+    } catch {}
 
-    async function processCode(code) {
-      resultElement.innerHTML = `<strong>TAPILDI:</strong> ${code}<br><br>Yoxlanılır...`;
+    // 2️⃣ Kosmetika / parfüm
+    try {
+        let r = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${code}.json`);
+        let d = await r.json();
 
-      // IBAN yoxlaması
-      if (/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(code.replace(/\s/g,''))) {
-        resultElement.innerHTML += `<br>✅ Bu IBAN-dır!<br><b>${code}</b>`;
-        speak(`IBAN tapıldı: ${code.substring(0,20)}...`);
-        return;
-      }
+        if (d.status === 1) {
+            out += `
+            <h3>💄 Parfüm / Kosmetika</h3>
+            Ad: ${d.product.product_name}<br>
+            Marka: ${d.product.brands}<br>
+            Tərkib: ${d.product.ingredients_text}<br>
+            `;
 
-      // QR kod (linkdirsə)
-      if (code.startsWith('http')) {
-        resultElement.innerHTML += `<br>🔗 QR Link: <a href="${code}" target="_blank">${code}</a>`;
-        speak("QR kod linki tapıldı");
-        return;
-      }
+            // Batch code
+            if (d.product.emb_codes) {
+                const batch = d.product.emb_codes.split(",")[0].trim();
+                const info = analyzeBatchCode(batch);
 
-      // Barkod - məhsul məlumatı
-      if (/^\d{8,14}$/.test(code)) {
-        await checkProduct(code);
-      } else {
-        resultElement.innerHTML += `<br>ℹ️ Digər kod: ${code}`;
-      }
-    }
-
-    async function checkProduct(barcode) {
-      let info = `<br><b>Barkod:</b> ${barcode}<br>`;
-
-      // 1. Open Food Facts (yemək məhsulları)
-      const food = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
-        .then(r => r.json()).catch(() => null);
-      if (food && food.status === 1) {
-        const p = food.product;
-        info += `<br>🍔 <b>${p.product_name || "Adsız məhsul"}</b><br>`;
-        if (p.brands) info += `Marka: ${p.brands}<br>`;
-        speak(`Məhsul tapıldı: ${p.product_name || p.brands}`);
-        resultElement.innerHTML = info;
-        return;
-      }
-
-      // 2. Kosmetika & Parfüm orijinallıq yoxlaması
-      const cosmetic = await fetch(`https://api.checkcosmetic.com/api/v1/products/${barcode}`).then(r=>r.json()).catch(()=>null)
-        || await fetch(`https://makeup-api.herokuapp.com/api/v1/products.json?barcode=${barcode}`).then(r=>r.json()).catch(()=>null);
-      
-      if (cosmetic && (cosmetic.production_date || cosmetic[0])) {
-        const c = Array.isArray(cosmetic) ? cosmetic[0] : cosmetic;
-        const expiry = calculateExpiry(c);
-        info += `<br>💄 <b>${c.name || c.brand || "Kosmetika"}</b><br>`;
-        if (expiry) {
-          const monthsLeft = monthsBetween(new Date(), new Date(expiry));
-          info += `<div class="expiry">📅 Son istifadə: ${expiry}</div>`;
-          info += monthsLeft > 0 
-            ? `<span class="original">✅ Orijinal • ${monthsLeft} ay qalıb</span>`
-            : `<span class="fake">⚠️ Müddəti bitib!</span>`;
-        } else {
-          info += `<span class="original">✅ Orijinal görünür</span>`;
+                if (info) {
+                    out += `
+                    <br><b>Batch code:</b> ${batch}<br>
+                    İstehsal: ${info.production}<br>
+                    Bitmə tarixi: ${info.expiry}<br>
+                    `;
+                }
+            }
+            out += "<br>";
+            found = true;
         }
-        speak("Parfüm orijinaldır");
-      } else {
-        // 3. Ümumi UPC axtarışı
-        const upc = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`).then(r=>r.json()).catch(()=>null);
-        if (upc && upc.items && upc.items[0]) {
-          info += `<br>📦 <b>${upc.items[0].title}</b><br>Marka: ${upc.items[0].brand || "Bilinmir"}`;
-        } else {
-          info += `<br>ℹ️ Bu barkod bazada tapılmadı, amma oxundu`;
+    } catch {}
+
+    // 3️⃣ Elektronika
+    try {
+        let r = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+        let d = await r.json();
+
+        if (d.items && d.items.length) {
+            let p = d.items[0];
+            out += `
+            <h3>📱 Elektronika</h3>
+            Ad: ${p.title}<br>
+            Marka: ${p.brand}<br>
+            Kateqoriya: ${p.category}<br><br>
+            `;
+            found = true;
         }
-      }
+    } catch {}
 
-      resultElement.innerHTML = info;
+    // 4️⃣ Ümumi məhsul
+    try {
+        let r = await fetch(`https://api.upcdatabase.org/product/${code}`);
+        let d = await r.json();
+
+        if (d && d.title) {
+            out += `
+            <h3>📦 Məhsul Məlumatı</h3>
+            Ad: ${d.title}<br>
+            Şirkət: ${d.manufacturer}<br><br>
+            `;
+            found = true;
+        }
+    } catch {}
+
+    if (!found) {
+        out = "❌ Bu barkod üçün heç bir məlumat tapılmadı.";
     }
 
-    function calculateExpiry(data) {
-      if (data.expiration_date) return data.expiration_date.split("T")[0];
-      if (data.production_date) {
-        const prod = new Date(data.production_date);
-        const months = data.shelf_life_months || 36; // default 3 il
-        return new Date(prod.setMonth(prod.getMonth() + months)).toISOString().split("T")[0];
-      }
-      return null;
-    }
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").innerHTML = out;
+}
 
-    function monthsBetween(d1, d2) {
-      return (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth();
-    }
-
-    function speak(text) {
-      if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = "az-AZ";
-        speechSynthesis.speak(utter);
-      }
-    }
-
-    // Avtomatik başla
-    startScanner();
-  </script>
+</script>
 </body>
 </html>
