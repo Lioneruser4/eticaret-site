@@ -1,240 +1,82 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sade Profesyonel Animasyonlu QR Kod Oluşturucu</title>
-    
-    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-    
-    <style>
-        /* Sade, Temiz ve Kurumsal Stil */
-        :root {
-            --primary-color: #007bff; /* Kurumsal Mavi */
-            --bg-color: #f4f6f9;
-            --card-bg: #ffffff;
-            --text-color: #333;
-            --border-color: #ddd;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-        }
-
-        .container {
-            background-color: var(--card-bg);
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 100%;
-        }
-
-        h1 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-
-        /* Form Elemanları */
-        label {
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input[type="text"], input[type="file"], select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 15px;
-        }
-        
-        /* Kontrol Gruplarını Yan Yana Getirme */
-        .controls-group {
-            display: flex;
-            gap: 15px;
-        }
-        .controls-group > div {
-            flex: 1;
-        }
-
-        /* Buton */
-        button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 25px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        /* QR Kod Alanı */
-        #qrcode-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 30px;
-            padding: 10px;
-            min-height: 250px;
-        }
-        
-        /* QR Kodu Özelleştirme ve Animasyon CSS'i */
-        /* qrcode.js'in oluşturduğu svg'yi hedef al */
-        #qrcode-container svg path {
-            fill: url(#pattern-image) !important; /* SVG pattern'i ile doldur */
-            animation: pulse 1.5s infinite alternate; 
-            transform-origin: center center;
-        }
-
-        /* Animasyon Keyframes */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.01); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Barkod Oxuyucu</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body { font-family: Arial; background:#f2f2f2; padding:20px; text-align:center; }
+video { width: 100%; max-width:400px; border-radius:10px; }
+#result { margin-top:20px; background:white; padding:15px; border-radius:10px; text-align:left; }
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>QR Kod Oluşturucu</h1>
-    
-    <label for="linkInput">Hedef Link:</label>
-    <input type="text" id="linkInput" placeholder="orneksite.com veya https://orneksite.com">
-
-    <label for="imageUpload">QR Kod Dolgu Resmi:</label>
-    <input type="file" id="imageUpload" accept="image/png, image/jpeg">
-
-    <div class="controls-group">
-        <div>
-            <label for="sizeSelect">Boyut (px):</label>
-            <select id="sizeSelect">
-                <option value="256">256x256</option>
-                <option value="512" selected>512x512</option>
-            </select>
-        </div>
-        <div>
-            <label for="errorSelect">Hata Düzeltme:</label>
-            <select id="errorSelect">
-                <option value="M" selected>Orta (M)</option>
-                <option value="H">Yüksek (H)</option>
-            </select>
-        </div>
-    </div>
-
-    <button onclick="generateQRCode()">QR Kodu Oluştur</button>
-
-    <div id="qrcode-container">
-        <p>Link ve resmi girip Oluştur'a tıklayın.</p>
-    </div>
-
-</div>
+<h2>📷 Universal Barkod / QR Oxuyucu</h2>
+<video id="reader"></video>
+<div id="result">Barkod gözlənilir...</div>
 
 <script>
-    const qrCodeContainer = document.getElementById('qrcode-container');
-    const imageUpload = document.getElementById('imageUpload');
-    const linkInput = document.getElementById('linkInput');
-    const sizeSelect = document.getElementById('sizeSelect');
-    const errorSelect = document.getElementById('errorSelect');
+const qr = new Html5Qrcode("reader");
 
-    function generateQRCode() {
-        const link = linkInput.value.trim();
-        const file = imageUpload.files[0];
-        const size = parseInt(sizeSelect.value);
-        const errorLevel = errorSelect.value;
+qr.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    async code => {
+        document.getElementById("result").innerHTML = "<b>Kod:</b> " + code + "<br><br>Məlumat yüklənir...";
 
-        if (!link || !file) {
-            alert("Lütfen hem hedef linki hem de dolgu resmini seçin.");
-            return;
-        }
+        let info = "";
 
-        // 1. Linki kontrol et ve 'https://' ekle
-        let safeLink = link;
-        if (!safeLink.match(/^(https?|ftp):\/\//i)) {
-            safeLink = 'https://' + safeLink;
-        }
+        // 1️⃣ OpenFoodFacts — Qida
+        try {
+            let food = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`).then(r => r.json());
+            if (food.status === 1) {
+                info += `<h3>🍎 Qida / Market</h3>
+                Ad: ${food.product.product_name}<br>
+                Marka: ${food.product.brands}<br>
+                Kategoriya: ${food.product.categories}<br>
+                Ölkə: ${food.product.countries}<br>`;
+            }
+        } catch {}
 
-        // 2. Resmi Base64'e çevir
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const imageDataUrl = e.target.result;
-            
-            // 3. QR Kodu Oluştur (Önceki kodu temizle)
-            qrCodeContainer.innerHTML = ''; 
+        // 2️⃣ OpenBeautyFacts — Parfüm, kosmetika
+        try {
+            let beauty = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${code}.json`).then(r => r.json());
+            if (beauty.status === 1) {
+                info += `<h3>💄 Parfüm / Kosmetika</h3>
+                Ad: ${beauty.product.product_name}<br>
+                Marka: ${beauty.product.brands}<br>
+                Tərkib: ${beauty.product.ingredients_text}<br>`;
+            }
+        } catch {}
 
-            new QRCode(qrCodeContainer, {
-                text: safeLink,
-                width: size,
-                height: size,
-                colorDark: "#000000", // Siyah, ki bu daha sonra resimle değiştirilecek
-                colorLight: "#ffffff", // Arka plan (Beyaz)
-                correctLevel: errorLevel 
-            });
+        // 3️⃣ OpenProductData – ümumi məhsullar
+        try {
+            let prod = await fetch(`https://api.upcdatabase.org/product/${code}`).then(r => r.json());
+            if (prod && prod.title) {
+                info += `<h3>📦 Ümumi Məhsul</h3>
+                Ad: ${prod.title}<br>
+                Şirkət: ${prod.manufacturer}<br>`;
+            }
+        } catch {}
 
-            // 4. SVG'yi al ve resim dolgusunu uygula
-            // qrcode.js kütüphanesinin QR kodu bir süre sonra oluşturması ihtimaline karşı küçük bir gecikme ekleyelim
-            setTimeout(() => {
-                const svgElement = qrCodeContainer.querySelector('svg');
-                
-                if (svgElement) {
-                    const patternId = 'pattern-image';
-                    
-                    // Önceki patternleri temizle (güncelleme durumunda)
-                    const existingDefs = svgElement.querySelector('defs');
-                    if(existingDefs) existingDefs.remove();
+        // 4️⃣ Elektronika — UPCItemDB
+        try {
+            let upc = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`).then(r => r.json());
+            if (upc.items && upc.items.length) {
+                info += `<h3>📱 Elektronika</h3>
+                Ad: ${upc.items[0].title}<br>
+                Brand: ${upc.items[0].brand}<br>
+                Kateqoriya: ${upc.items[0].category}<br>`;
+            }
+        } catch {}
 
-                    // SVG Pattern oluşturma
-                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                    const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-                    pattern.setAttribute('id', patternId);
-                    pattern.setAttribute('width', '100%');
-                    pattern.setAttribute('height', '100%');
-                    pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
-
-                    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-                    image.setAttribute('href', imageDataUrl); // Base64 resim verisi
-                    image.setAttribute('x', '0');
-                    image.setAttribute('y', '0');
-                    image.setAttribute('width', '1');
-                    image.setAttribute('height', '1');
-                    image.setAttribute('preserveAspectRatio', 'xMidYMid slice'); // Resmi QR alanına sığdırır
-
-                    pattern.appendChild(image);
-                    defs.appendChild(pattern);
-                    svgElement.prepend(defs); 
-                    
-                    // Dikkat: Animasyon ve dolgu ayarı CSS'te yapılır: 
-                    // #qrcode-container svg path { fill: url(#pattern-image) !important; animation: pulse...}
-
-                } else {
-                    alert("QR kod SVG elementine ulaşılamadı. Lütfen tekrar deneyin.");
-                }
-            }, 50); // 50ms gecikme ile elementin oluşmasını bekle
-        };
-
-        // Base64 dönüşümünü başlat
-        reader.readAsDataURL(file);
+        // Nəticəni göstər
+        document.getElementById("result").innerHTML = info || "❌ Heç bir məlumat tapılmadı.";
     }
+);
 </script>
 
 </body>
