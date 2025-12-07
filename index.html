@@ -3,67 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN – Global Barcode & QR Scanner</title>
+<title>XSCAN – Professional Global Barcode & QR Scanner</title>
 
-<!-- Animation & UI Style -->
 <style>
     body {
         margin: 0;
         background: #0c0f16;
         color: white;
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         text-align: center;
+        padding-bottom: 50px;
     }
 
     .title {
         margin-top: 40px;
-        font-size: 40px;
-        font-weight: bold;
-        animation: glow 3s infinite;
+        font-size: 44px;
+        font-weight: 900;
+        animation: glow 3s infinite alternate;
+        letter-spacing: 2px;
+        color: #0ff;
     }
 
     @keyframes glow {
-        0% { text-shadow: 0 0 10px #0ff; }
-        50% { text-shadow: 0 0 25px #00f7ff; }
-        100% { text-shadow: 0 0 10px #0ff; }
+        0% { text-shadow: 0 0 10px #0ff, 0 0 20px #00e0ff; }
+        100% { text-shadow: 0 0 25px #00f7ff, 0 0 40px #00e0ff; }
     }
 
     button {
-        background: #00e0ff;
-        padding: 15px 30px;
-        border-radius: 10px;
+        background: linear-gradient(45deg, #00e0ff, #008cff);
+        padding: 15px 40px;
+        border-radius: 50px;
         border: none;
         margin-top: 30px;
-        font-size: 18px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #0c0f16;
         cursor: pointer;
-        transition: 0.3s;
+        transition: 0.3s ease-in-out, transform 0.1s;
+        box-shadow: 0 5px 15px rgba(0, 224, 255, 0.4);
     }
 
     button:hover {
-        background: #00c2e0;
+        background: linear-gradient(45deg, #00c2e0, #0070c7);
+        transform: translateY(-2px);
     }
 
-    video {
+    #reader {
         width: 90%;
-        border-radius: 10px;
-        margin-top: 20px;
-        border: 3px solid #00e0ff;
-        animation: borderglow 2s infinite;
+        max-width: 500px;
+        margin: 20px auto;
+        border: 4px solid #00e0ff;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 0 30px rgba(0, 224, 255, 0.6);
+        position: relative;
     }
 
-    @keyframes borderglow {
-        0% { box-shadow: 0 0 10px #00e0ff; }
-        50% { box-shadow: 0 0 25px #00e0ff; }
-        100% { box-shadow: 0 0 10px #00e0ff; }
+    /* Skaner Lazer Animasiyası */
+    #reader::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: red;
+        box-shadow: 0 0 15px red;
+        animation: scanline 2s infinite ease-in-out alternate;
+        z-index: 10;
+    }
+
+    @keyframes scanline {
+        0% { transform: translateY(0%); }
+        100% { transform: translateY(10000%); } /* Hündürlüyə görə tənzimlənə bilər */
     }
 
     .result-box {
-        background: rgba(255,255,255,0.08);
-        padding: 20px;
-        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        padding: 30px;
+        border-radius: 20px;
         margin: 20px;
         display: none;
-        animation: fadein 0.6s ease-in-out;
+        animation: fadein 0.8s ease-in-out;
+        border: 1px solid rgba(0, 224, 255, 0.5);
+        text-align: left;
+    }
+
+    .result-box h2 {
+        color: #0ff;
+        border-bottom: 2px solid #0ff;
+        padding-bottom: 10px;
+    }
+
+    /* Yüklənmə Animasiyası */
+    .loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #00e0ff;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     @keyframes fadein {
@@ -72,8 +118,7 @@
     }
 </style>
 
-<!-- ZXING (supports QR + Barcode) -->
-<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 
 </head>
 <body>
@@ -81,88 +126,131 @@
 <div class="title">XSCAN</div>
 <p>Global məhsulları, QR və bütün barkodları tanıyan sistem</p>
 
-<button onclick="startScanner()">➤ Başla</button>
+<button id="startButton" onclick="startScanner()">🚀 Skan etməyə Başla</button>
+<button id="stopButton" style="display:none; background-color: #ff4d4d;" onclick="stopScanner()">⏸ Dayandır</button>
 
-<video id="preview" style="display:none;" autoplay></video>
+<div id="reader"></div>
 
 <div id="result" class="result-box"></div>
 
 <script>
-let codeReader = new ZXing.BrowserMultiFormatReader();
-let stream;
+    const resultBox = document.getElementById("result");
+    const readerElement = document.getElementById("reader");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+    let html5QrCode;
 
-// Kamera aç
-async function startScanner() {
-    document.getElementById("result").style.display = "none";
+    // Skaneri işə salır
+    function startScanner() {
+        resultBox.style.display = "none";
+        startButton.style.display = "none";
+        stopButton.style.display = "inline-block";
+        readerElement.style.display = "block";
 
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    document.getElementById("preview").style.display = "block";
-    document.getElementById("preview").srcObject = stream;
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
 
-    codeReader.decodeOnceFromVideoDevice(undefined, "preview")
-        .then(result => {
-            stopCamera();
-            fetchProduct(result.text);
-        })
-        .catch(err => console.error(err));
-}
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.UPC_A
+            ]
+        };
 
-// Kamera bağla
-function stopCamera() {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        html5QrCode.start(
+            { facingMode: "environment" }, // Arxa kameranı istifadə et
+            config,
+            (decodedText, decodedResult) => {
+                // Skan uğurlu olduqda
+                stopScanner(false); // Kameranı dayandır
+                fetchProduct(decodedText);
+            },
+            (errorMessage) => {
+                // Skan hələ başa çatmayıb
+                // console.log(errorMessage); 
+            }
+        ).catch((err) => {
+            resultBox.style.display = "block";
+            resultBox.innerHTML = `<h2>XƏTA ❗</h2><p>Kamera açıla bilmədi. Zəhmət olmasa icazə verdiyinizdən əmin olun: ${err}</p>`;
+            stopScanner(true);
+        });
     }
-    document.getElementById("preview").style.display = "none";
-}
 
-// API-lər ardıcıllıqla yoxlanır
-async function fetchProduct(code) {
-    const box = document.getElementById("result");
-    box.style.display = "block";
-    box.innerHTML = "<h2>Kod oxundu: " + code + "</h2><p>Məlumat axtarılır...</p>";
+    // Skaneri dayandırır
+    function stopScanner(resetButtons = true) {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                if (resetButtons) {
+                    startButton.style.display = "inline-block";
+                    stopButton.style.display = "none";
+                    readerElement.style.display = "none";
+                }
+            }).catch((err) => {
+                console.error("Kameranı dayandırmaq xətası:", err);
+            });
+        } else if (resetButtons) {
+            startButton.style.display = "inline-block";
+            stopButton.style.display = "none";
+            readerElement.style.display = "none";
+        }
+    }
 
-    let apis = [
-        `https://world.openfoodfacts.org/api/v0/product/${code}.json`,
-        `https://world.openbeautyfacts.org/api/v0/product/${code}.json`,
-        `https://world.openproducts.org/api/v0/product/${code}.json`,
-        `https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`
-    ];
+    // API-dən məhsul məlumatını axtarır
+    async function fetchProduct(code) {
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+            <h2>Kod oxundu: ${code}</h2>
+            <div class="loader"></div>
+            <p style="text-align: center;">Məlumat axtarılır, zəhmət olmasa gözləyin...</p>
+        `;
 
-    for (let url of apis) {
+        // Əsas etibarlı API
+        const url = `https://world.openfoodfacts.org/api/v0/product/${code}.json`;
+
         try {
             let res = await fetch(url);
             let data = await res.json();
 
-            // OpenFoodFacts tip
-            if (data && data.product && data.product.product_name) {
-                return showProduct(data.product.product_name, data.product.brands, code);
+            if (data && data.product && data.status === 1) {
+                const product = data.product;
+                showProduct(product.product_name || "Adı qeyd edilməyib", product.brands || "Məlum deyil", code, product.image_front_url);
+            } else {
+                // Məhsul tapılmadı
+                resultBox.innerHTML = `
+                    <h2>Məhsul Tapılmadı ⚠️</h2>
+                    <p><b>Kod:</b> ${code}</p>
+                    <p>Bu məhsul Open Food Facts verilənlər bazasında tapılmadı. Lokal və ya qeyri-qeydiyyatlı ola bilər.</p>
+                    <button onclick="startScanner()">Yenidən Skan Et</button>
+                `;
             }
 
-            // UPCitemDB tip
-            if (data && data.items && data.items.length > 0) {
-                let p = data.items[0];
-                return showProduct(p.title, p.brand, code);
-            }
-
-        } catch (e) {}
+        } catch (e) {
+            resultBox.innerHTML = `
+                <h2>XƏTA ❗</h2>
+                <p><b>Kod:</b> ${code}</p>
+                <p>Şəbəkə xətası baş verdi. İnternet bağlantınızı yoxlayın.</p>
+                <button onclick="startScanner()">Yenidən Skan Et</button>
+            `;
+        }
     }
 
-    box.innerHTML = `
-        <h2>Kod: ${code}</h2>
-        <p>Məhsul tapılmadı ❗</p>
-        <p>Bu məhsul lokal və ya qeyri-qeydiyyatlı ola bilər.</p>
-    `;
-}
-
-// Məlumat göstər
-function showProduct(name, brand, code) {
-    document.getElementById("result").innerHTML = `
-        <h2>Məhsul Tapıldı ✔</h2>
-        <p><b>Ad:</b> ${name}</p>
-        <p><b>Brend:</b> ${brand}</p>
-        <p><b>Kod:</b> ${code}</p>
-    `;
-}
+    // Məlumatı animativ şəkildə göstərir
+    function showProduct(name, brand, code, imageUrl) {
+        resultBox.innerHTML = `
+            <h2>Məhsul Tapıldı ✔</h2>
+            ${imageUrl ? `<img src="${imageUrl}" alt="Məhsul şəkli" style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 15px; border: 2px solid #0ff;">` : ''}
+            <p><b>💡 Ad:</b> ${name}</p>
+            <p><b>🏷️ Brend:</b> ${brand}</p>
+            <p><b>#️⃣ Kod:</b> ${code}</p>
+            <p style="margin-top: 20px;"><a href="https://world.openfoodfacts.org/product/${code}" target="_blank" style="color: #0ff;">Ətraflı Məlumat üçün Bax</a></p>
+            <button onclick="startScanner()">Yenidən Skan Et</button>
+        `;
+    }
 </script>
 
 </body>
