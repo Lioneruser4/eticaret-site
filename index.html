@@ -3,164 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR GÖRSEL - Resmi QR Koda Çevir</title>
-  <meta name="description" content="Herhangi bir resmi yükle, anında o resimden oluşan QR kod olsun!">
+  <title>RENKLİ QR - Resimli & Çalışan QR Kod Oluşturucu</title>
+  <meta name="description" content="Link + Resim = Renkli ve çalışan QR kod!">
   
   <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;900&display=swap" rel="stylesheet">
+  
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&display=swap');
-    
     :root {
-      --bg: #0a0a1a;
-      --card: #121228;
-      --primary: #00ff9d;
-      --accent: #ff00c8;
+      --bg: #0d0d1f;
+      --card: #15152e;
+      --primary: #00ff88;
+      --accent: #ff00ff;
       --text: #ffffff;
     }
-    
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: 'Exo 2', sans-serif;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      padding: 20px;
-      background: radial-gradient(circle at top left, #1a1a3a, #0a0a1a);
+      padding: 20px 0;
+      background: radial-gradient(circle at 30% 70%, rgba(0,255,136,0.15), transparent 50%),
+                  radial-gradient(circle at 70% 30%, rgba(255,0,255,0.15), transparent 50%);
     }
-    
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    
+    .container { max-width: 520px; margin: 0 auto; padding: 0 15px; }
     .card {
       background: var(--card);
       border-radius: 32px;
       overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
-      border: 2px solid rgba(0,255,157,0.2);
-      animation: glow 4s ease-in-out infinite alternate;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+      border: 2px solid rgba(0,255,136,0.3);
+      animation: float 6s ease-in-out infinite;
     }
-    
-    @keyframes glow {
-      from { box-shadow: 0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0,255,157,0.3); }
-      to { box-shadow: 0 25px 60px rgba(0,0,0,0.7), 0 0 50px rgba(0,255,157,0.6); }
-    }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
     
     header {
-      background: linear-gradient(135deg, #00ff9d, #00bcd4);
-      padding: 60px 30px;
+      background: linear-gradient(135deg, #00ff88, #00d4ff);
+      padding: 50px 20px;
       text-align: center;
       color: #000;
     }
-    
     h1 {
-      font-size: 3rem;
+      font-size: 3.2rem;
       font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .subtitle { font-size: 1.2rem; font-weight: 700; opacity: 0.9; }
+
+    .content { padding: 40px; }
+
+    .input-group {
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
       margin-bottom: 10px;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      font-weight: 700;
+      font-size: 1.1rem;
     }
-    
-    .subtitle {
-      font-size: 1.2rem;
-      font-weight: 600;
-      opacity: 0.9;
+    input, textarea {
+      width: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      border: 2px solid rgba(0,255,136,0.4);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 1.1rem;
+      transition: all 0.3s;
     }
-    
-    .content {
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 25px rgba(0,255,136,0.4);
+    }
+
+    .upload-area {
+      border: 3px dashed rgba(0,255,136,0.5);
+      border-radius: 24px;
       padding: 40px;
       text-align: center;
-    }
-    
-    .upload-zone {
-      border: 3px dashed rgba(0,255,157,0.5);
-      border-radius: 24px;
-      padding: 50px 20px;
-      margin: 30px 0;
       cursor: pointer;
       transition: all 0.4s;
-      background: rgba(0,255,157,0.05);
+      background: rgba(0,255,136,0.05);
+      margin: 25px 0;
     }
-    
-    .upload-zone:hover {
-      border-color: var(--primary);
-      background: rgba(0,255,157,0.15);
-      transform: scale(1.02);
-    }
-    
-    .upload-zone.dragover {
-      background: rgba(0,255,157,0.3);
-      border-style: solid;
-    }
-    
-    .upload-text {
-      font-size: 1.3rem;
-      margin-bottom: 15px;
-    }
-    
-    .upload-hint {
-      font-size: 0.95rem;
-      opacity: 0.7;
-    }
-    
-    #image-preview {
-      max-width: 200px;
-      max-height: 200px;
+    .upload-area:hover { background: rgba(0,255,136,0.15); border-color: var(--primary); }
+    .upload-area.dragover { background: rgba(0,255,136,0.3); }
+
+    #logo-preview {
+      max-width: 120px;
+      max-height: 120px;
       border-radius: 20px;
-      margin: 20px auto;
+      margin: 15px auto;
       display: none;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
-    
+
     .btn {
-      background: linear-gradient(135deg, #00ff9d, #00bcd4);
+      background: linear-gradient(135deg, #00ff88, #00d4ff);
       color: #000;
       border: none;
-      padding: 20px 40px;
+      padding: 22px;
       font-size: 1.4rem;
       font-weight: 900;
       border-radius: 50px;
       cursor: pointer;
       width: 100%;
       margin: 30px 0;
-      box-shadow: 0 15px 40px rgba(0,255,157,0.4);
+      box-shadow: 0 15px 40px rgba(0,255,136,0.5);
       transition: all 0.4s;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
-    
     .btn:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 25px 60px rgba(0,255,157,0.6);
+      transform: translateY(-10px);
+      box-shadow: 0 25px 60px rgba(0,255,136,0.7);
     }
-    
+
     #qrCanvas {
+      text-align: center;
       margin: 40px 0;
       padding: 30px;
       background: rgba(255,255,255,0.03);
       border-radius: 28px;
-      border: 1px solid rgba(0,255,157,0.2);
+      border: 1px solid rgba(0,255,136,0.2);
     }
-    
     canvas {
       border-radius: 24px;
       max-width: 100%;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
     }
-    
+
     .download-btn {
-      background: linear-gradient(135deg, #ff00c8, #ff6bfc);
+      background: linear-gradient(135deg, #ff00ff, #ff6b6b);
       display: none;
     }
-    
+
     footer {
       text-align: center;
       padding: 30px;
       color: #64748b;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
   </style>
 </head>
@@ -168,119 +152,129 @@
   <div class="container">
     <div class="card">
       <header>
-        <h1>QR GÖRSEL</h1>
-        <p class="subtitle">Resmi yükle → O resim QR kod olsun!</p>
+        <h1>RENKLİ QR</h1>
+        <p class="subtitle">Link + Resim = Mükemmel QR Kod</p>
       </header>
-      
+
       <div class="content">
-        <div class="upload-zone" id="uploadZone">
-          <div class="upload-text">Resmi Sürükle veya Tıkla</div>
-          <div class="upload-hint">Herhangi bir fotoğraf, logo, meme... ne istersen!</div>
-          <img id="image-preview" alt="Önizleme">
-          <input type="file" id="imageInput" accept="image/*" hidden>
+        <div class="input-group">
+          <label for="url">Açılacak Link *</label>
+          <input type="text" id="url" placeholder="https://instagram.com/abc" value="https://">
         </div>
-        
-        <button class="btn" id="generateBtn">RESMİ QR'A ÇEVİR</button>
-        
+
+        <div class="input-group">
+          <label>Logo / Resim (Renkli QR için)</label>
+          <div class="upload-area" id="uploadArea">
+            <p>Tıkla veya sürükle bırak</p>
+            <small>Şeffaf PNG en iyi sonucu verir</small>
+            <img id="logo-preview" alt="Logo önizleme">
+            <input type="file" id="logoInput" accept="image/*" hidden>
+          </div>
+        </div>
+
+        <button class="btn" id="generateBtn">RENKLİ QR OLUŞTUR</button>
+
         <div id="qrCanvas"></div>
-        
+
         <button class="btn download-btn" id="downloadBtn">
-          İNDİR (Yüksek Kalite)
+          İNDİR (Yüksek Kalite PNG)
         </button>
       </div>
-      
+
       <footer>
-        2025 • Tamamen Ücretsiz • Made with love
+        2025 • Sınırsız & Ücretsiz • Made with love
       </footer>
     </div>
   </div>
 
   <script>
-    const uploadZone = document.getElementById('uploadZone');
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('image-preview');
+    const urlInput = document.getElementById('url');
+    const uploadArea = document.getElementById('uploadArea');
+    const logoInput = document.getElementById('logoInput');
+    const logoPreview = document.getElementById('logo-preview');
     const generateBtn = document.getElementById('generateBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const qrCanvas = document.getElementById('qrCanvas');
     
-    let selectedImage = null;
+    let logoData = null;
 
-    // Dosya seçimi
-    uploadZone.addEventListener('click', () => imageInput.click());
-    
-    imageInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) handleImage(e.target.files[0]);
+    // Logo yükleme
+    uploadArea.addEventListener('click', () => logoInput.click());
+    logoInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleLogo(e.target.files[0]);
     });
-    
+
     // Drag & drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-      uploadZone.addEventListener(event, e => e.preventDefault());
+    ['dragenter', 'dragover'].forEach(ev => {
+      uploadArea.addEventListener(ev, () => uploadArea.classList.add('dragover'));
     });
-    
-    ['dragenter', 'dragover'].forEach(event => {
-      uploadZone.addEventListener(event, () => uploadZone.classList.add('dragover'));
+    ['dragleave', 'drop'].forEach(ev => {
+      uploadArea.addEventListener(ev, () => uploadArea.classList.remove('dragover'));
     });
-    
-    ['dragleave', 'drop'].forEach(event => {
-      uploadZone.addEventListener(event, () => uploadZone.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      if (e.dataTransfer.files[0]) handleLogo(e.dataTransfer.files[0]);
     });
-    
-    uploadZone.addEventListener('drop', e => {
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        handleImage(file);
-      }
-    });
-    
-    function handleImage(file) {
+
+    function handleLogo(file) {
       const reader = new FileReader();
-      reader.onload = function(e) {
-        selectedImage = e.target.result;
-        imagePreview.src = selectedImage;
-        imagePreview.style.display = 'block';
+      reader.onload = e => {
+        logoData = e.target.result;
+        logoPreview.src = logoData;
+        logoPreview.style.display = 'block';
       };
       reader.readAsDataURL(file);
     }
-    
+
     generateBtn.addEventListener('click', () => {
-      if (!selectedImage) {
-        alert("Önce bir resim yükle kardeşim!");
+      const url = urlInput.value.trim();
+      if (!url || !url.startsWith('http')) {
+        alert("Lütfen geçerli bir link gir (https:// ile başlasın)");
         return;
       }
-      
+
       qrCanvas.innerHTML = '';
-      
-      // QR kodu tamamen resimden oluştur
-      const qrCode = new QRCodeStyling({
+
+      const qr = new QRCodeStyling({
         width: 600,
         height: 600,
-        data: "https://github.com", // QR içeriği (istersen link, metin vs.)
+        data: url,
         margin: 0,
-        image: selectedImage,
+        qrOptions: { errorCorrectionLevel: "H" },
+        image: logoData || "", // logo varsa ekle
         dotsOptions: {
-          type: "square",
-          color: "#ffffff"
+          type: "extra-rounded",
+          gradient: logoData ? {
+            type: "radial",
+            colorStops: [
+              { offset: 0, color: "#00ff88" },
+              { offset: 0.6, color: "#00d4ff" },
+              { offset: 1, color: "#ff00ff" }
+            ]
+          } : { color: "#00ff88", type: "rounded" }
         },
-        backgroundOptions: {
-          color: "transparent"
-        },
+        cornersSquareOptions: { type: "extra-rounded", color: "#ffffff" },
+        cornersDotOptions: { type: "dot", color: "#ffffff" },
+        backgroundOptions: { color: "#0d0d1f" },
         imageOptions: {
           crossOrigin: "anonymous",
-          imageSize: 1.0,        // %100 resim kaplasın
+          imageSize: 1.0,           // Resim QR'ın tamamını kaplar
           margin: 0,
-          hideBackgroundDots: false
-        },
-        qrOptions: {
-          errorCorrectionLevel: "H"
+          hideBackgroundDots: false // Noktalar resmin üstünde renkli gözüksün
         }
       });
-      
-      qrCode.append(qrCanvas);
+
+      qr.append(qrCanvas);
       downloadBtn.style.display = 'block';
-      
+
       downloadBtn.onclick = () => {
-        qrCode.download({ name: "resimden-qr", extension: "png" });
+        qr.download({ name: "renkli-qr", extension: "png" });
       };
+    });
+
+    // Enter ile oluştur
+    urlInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') generateBtn.click();
     });
   </script>
 </body>
