@@ -3,276 +3,167 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Universal Barkod / QR Scanner</title>
+<title>XSCAN – Global Barcode & QR Scanner</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-
+<!-- Animation & UI Style -->
 <style>
-body {
-    margin:0;
-    font-family:Arial, sans-serif;
-    background:#0e1013;
-    color:white;
-    text-align:center;
-}
+    body {
+        margin: 0;
+        background: #0c0f16;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
 
-header {
-    background:#181b20;
-    padding:20px;
-    font-size:24px;
-    font-weight:bold;
-    letter-spacing:1px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.5);
-}
+    .title {
+        margin-top: 40px;
+        font-size: 40px;
+        font-weight: bold;
+        animation: glow 3s infinite;
+    }
 
-#intro {
-    margin:20px auto;
-    width:90%;
-    max-width:450px;
-    background:#181b20;
-    padding:20px;
-    border-radius:12px;
-    text-align:left;
-    line-height:1.6;
-}
+    @keyframes glow {
+        0% { text-shadow: 0 0 10px #0ff; }
+        50% { text-shadow: 0 0 25px #00f7ff; }
+        100% { text-shadow: 0 0 10px #0ff; }
+    }
 
-button {
-    background:#09f;
-    border:none;
-    padding:15px 20px;
-    color:white;
-    border-radius:10px;
-    font-size:18px;
-    margin-top:15px;
-    cursor:pointer;
-    width:90%;
-    max-width:300px;
-}
+    button {
+        background: #00e0ff;
+        padding: 15px 30px;
+        border-radius: 10px;
+        border: none;
+        margin-top: 30px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
 
-button:hover {
-    background:#0bf;
-}
+    button:hover {
+        background: #00c2e0;
+    }
 
-#reader {
-    margin-top:25px;
-    display:none;
-}
+    video {
+        width: 90%;
+        border-radius: 10px;
+        margin-top: 20px;
+        border: 3px solid #00e0ff;
+        animation: borderglow 2s infinite;
+    }
 
-#loading {
-    display:none;
-    margin-top:20px;
-}
+    @keyframes borderglow {
+        0% { box-shadow: 0 0 10px #00e0ff; }
+        50% { box-shadow: 0 0 25px #00e0ff; }
+        100% { box-shadow: 0 0 10px #00e0ff; }
+    }
 
-.loader {
-  border: 6px solid #444;
-  border-top: 6px solid #09f;
-  border-radius: 50%;
-  width: 45px;
-  height: 45px;
-  animation: spin 1s linear infinite;
-  margin: auto;
-}
+    .result-box {
+        background: rgba(255,255,255,0.08);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px;
+        display: none;
+        animation: fadein 0.6s ease-in-out;
+    }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-#result {
-    background:#181b20;
-    margin:20px auto;
-    padding:15px;
-    border-radius:12px;
-    width:90%;
-    max-width:450px;
-    text-align:left;
-    display:none;
-}
-
-h3 {
-    border-left:4px solid #09f;
-    padding-left:10px;
-}
+    @keyframes fadein {
+        from { opacity: 0; transform: translateY(15px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 </style>
-</head>
 
+<!-- ZXING (supports QR + Barcode) -->
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
+</head>
 <body>
 
-<header>📦 Universal Barkod Scanner</header>
+<div class="title">XSCAN</div>
+<p>Global məhsulları, QR və bütün barkodları tanıyan sistem</p>
 
-<!-- ⭐ Giriş məlumatı -->
-<div id="intro">
-    <h2>🔍 Bu sayt nə edir?</h2>
-    <p>
-        Bu platforma barkod və QR kodlarını oxuyaraq məhsul haqqında məlumatları
-        qlobal bazalardan toplayır:
-    </p>
-    <ul>
-        <li>🍎 Qida məhsullarının məlumatı</li>
-        <li>💄 Parfüm & kosmetika məlumatı</li>
-        <li>📱 Elektronika məlumatı</li>
-        <li>📦 Ümumi məhsul məlumatı</li>
-        <li>🧪 Batch code → istehsal + bitmə tarixi</li>
-    </ul>
-    <p>
-        Başlamaq üçün aşağıdakı düyməyə kliklə və kameraya icazə ver.
-    </p>
-</div>
+<button onclick="startScanner()">➤ Başla</button>
 
-<button onclick="startScanner()">📷 Kameranı Aç</button>
+<video id="preview" style="display:none;" autoplay></video>
 
-<!-- ⭐ Scanner -->
-<div id="reader"></div>
-
-<!-- ⭐ Loading -->
-<div id="loading">
-  <div class="loader"></div>
-  <p>Məlumat yüklənir...</p>
-</div>
-
-<!-- ⭐ Result -->
-<div id="result"></div>
+<div id="result" class="result-box"></div>
 
 <script>
+let codeReader = new ZXing.BrowserMultiFormatReader();
+let stream;
 
-let scanner;
+// Kamera aç
+async function startScanner() {
+    document.getElementById("result").style.display = "none";
 
-function analyzeBatchCode(batch) {
-    if (!batch) return null;
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    document.getElementById("preview").style.display = "block";
+    document.getElementById("preview").srcObject = stream;
 
-    let year, month;
+    codeReader.decodeOnceFromVideoDevice(undefined, "preview")
+        .then(result => {
+            stopCamera();
+            fetchProduct(result.text);
+        })
+        .catch(err => console.error(err));
+}
 
-    if (batch.length === 4) {
-        year = 2020 + parseInt(batch[0]);
-        month = parseInt(batch[1] + batch[2]);
-    } else if (batch.length === 5) {
-        year = 2015 + parseInt(batch[0]);
-        month = parseInt(batch[1] + batch[2]);
+// Kamera bağla
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
     }
-
-    if (!month || month > 12) return null;
-
-    const production = new Date(year, month - 1, 1);
-    const expiry = new Date(year + 3, month - 1, 1);
-
-    return {
-        production: production.toDateString(),
-        expiry: expiry.toDateString()
-    };
+    document.getElementById("preview").style.display = "none";
 }
 
-// ⭐ Kameranı açan funksiya
-function startScanner() {
-    document.getElementById("intro").style.display = "none";
-    document.getElementById("result").style.display = "block";
-    document.getElementById("reader").style.display = "block";
+// API-lər ardıcıllıqla yoxlanır
+async function fetchProduct(code) {
+    const box = document.getElementById("result");
+    box.style.display = "block";
+    box.innerHTML = "<h2>Kod oxundu: " + code + "</h2><p>Məlumat axtarılır...</p>";
 
-    scanner = new Html5Qrcode("reader");
+    let apis = [
+        `https://world.openfoodfacts.org/api/v0/product/${code}.json`,
+        `https://world.openbeautyfacts.org/api/v0/product/${code}.json`,
+        `https://world.openproducts.org/api/v0/product/${code}.json`,
+        `https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`
+    ];
 
-    scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 280 },
-        code => {
-            searchProduct(code);
-        }
-    );
-}
+    for (let url of apis) {
+        try {
+            let res = await fetch(url);
+            let data = await res.json();
 
-// ⭐ Məlumat axtaran funksiya
-async function searchProduct(code) {
-    document.getElementById("loading").style.display = "block";
-    let out = `<b>Barkod:</b> ${code}<br><br>`;
-
-    let found = false;
-
-    // 1️⃣ Qida
-    try {
-        let r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-        let d = await r.json();
-
-        if (d.status === 1) {
-            out += `
-            <h3>🍎 Qida Məhsulu</h3>
-            Ad: ${d.product.product_name}<br>
-            Marka: ${d.product.brands}<br>
-            Kategoriya: ${d.product.categories}<br>
-            Ölkə: ${d.product.countries}<br><br>
-            `;
-            found = true;
-        }
-    } catch {}
-
-    // 2️⃣ Kosmetika / parfüm
-    try {
-        let r = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${code}.json`);
-        let d = await r.json();
-
-        if (d.status === 1) {
-            out += `
-            <h3>💄 Parfüm / Kosmetika</h3>
-            Ad: ${d.product.product_name}<br>
-            Marka: ${d.product.brands}<br>
-            Tərkib: ${d.product.ingredients_text}<br>
-            `;
-
-            // Batch code
-            if (d.product.emb_codes) {
-                const batch = d.product.emb_codes.split(",")[0].trim();
-                const info = analyzeBatchCode(batch);
-
-                if (info) {
-                    out += `
-                    <br><b>Batch code:</b> ${batch}<br>
-                    İstehsal: ${info.production}<br>
-                    Bitmə tarixi: ${info.expiry}<br>
-                    `;
-                }
+            // OpenFoodFacts tip
+            if (data && data.product && data.product.product_name) {
+                return showProduct(data.product.product_name, data.product.brands, code);
             }
-            out += "<br>";
-            found = true;
-        }
-    } catch {}
 
-    // 3️⃣ Elektronika
-    try {
-        let r = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
-        let d = await r.json();
+            // UPCitemDB tip
+            if (data && data.items && data.items.length > 0) {
+                let p = data.items[0];
+                return showProduct(p.title, p.brand, code);
+            }
 
-        if (d.items && d.items.length) {
-            let p = d.items[0];
-            out += `
-            <h3>📱 Elektronika</h3>
-            Ad: ${p.title}<br>
-            Marka: ${p.brand}<br>
-            Kateqoriya: ${p.category}<br><br>
-            `;
-            found = true;
-        }
-    } catch {}
-
-    // 4️⃣ Ümumi məhsul
-    try {
-        let r = await fetch(`https://api.upcdatabase.org/product/${code}`);
-        let d = await r.json();
-
-        if (d && d.title) {
-            out += `
-            <h3>📦 Məhsul Məlumatı</h3>
-            Ad: ${d.title}<br>
-            Şirkət: ${d.manufacturer}<br><br>
-            `;
-            found = true;
-        }
-    } catch {}
-
-    if (!found) {
-        out = "❌ Bu barkod üçün heç bir məlumat tapılmadı.";
+        } catch (e) {}
     }
 
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("result").innerHTML = out;
+    box.innerHTML = `
+        <h2>Kod: ${code}</h2>
+        <p>Məhsul tapılmadı ❗</p>
+        <p>Bu məhsul lokal və ya qeyri-qeydiyyatlı ola bilər.</p>
+    `;
 }
 
+// Məlumat göstər
+function showProduct(name, brand, code) {
+    document.getElementById("result").innerHTML = `
+        <h2>Məhsul Tapıldı ✔</h2>
+        <p><b>Ad:</b> ${name}</p>
+        <p><b>Brend:</b> ${brand}</p>
+        <p><b>Kod:</b> ${code}</p>
+    `;
+}
 </script>
+
 </body>
 </html>
