@@ -3,166 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro QR Oluşturucu | Mobil Uyumlu ve Logolu</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <title>⚡ Modern QR Kod Oluşturucu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qr-code-with-logo@1.1.2/dist/qr-code-with-logo.min.js"></script>
     
     <style>
-        /* Global Reset ve Font */
+        /* Ana Tema: Koyu (Dark Mode) */
         body {
             font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ee 100%);
-            color: #333;
+            background-color: #121212; /* Koyu Arka Plan */
+            color: #e0e0e0; /* Açık Yazı Rengi */
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
-            padding-top: 40px;
+            padding: 20px;
         }
 
-        /* Ana Konteyner */
+        /* Ana Kart Stili */
         .container {
-            background: #ffffff;
-            padding: 30px;
+            background: #1e1e1e;
+            padding: 35px;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            max-width: 850px;
-            width: 95%;
-            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            max-width: 650px;
+            width: 100%;
+            transition: all 0.4s ease-in-out;
+            border: 1px solid #333; /* Hafif çerçeve */
         }
 
         /* Başlık Stili */
         h1 {
-            color: #007bff;
+            color: #00bcd4; /* Açık Mavi/Cyan Vurgu */
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-weight: 700;
         }
 
-        /* Giriş Alanı */
-        .input-group {
-            margin-bottom: 25px;
+        .subtitle {
+            text-align: center;
+            color: #bbbbbb;
+            margin-bottom: 30px;
+            font-size: 0.9em;
         }
 
+        /* Giriş Alanı */
         #dataInput {
             width: 100%;
             padding: 15px;
-            border: 2px solid #ddd;
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+            border: 1px solid #444;
             border-radius: 8px;
             font-size: 16px;
             box-sizing: border-box;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            margin-bottom: 20px;
         }
 
         #dataInput:focus {
-            border-color: #007bff;
+            border-color: #00bcd4;
             outline: none;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            box-shadow: 0 0 8px rgba(0, 188, 212, 0.4);
         }
 
-        /* Butonlar */
+        /* Butonlar Grubu */
         .button-group {
             display: flex;
             gap: 15px;
-            flex-wrap: wrap; /* Mobil uyumluluk için */
             justify-content: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
         }
 
         button {
             flex-grow: 1;
-            padding: 12px 25px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 500;
             transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
-            min-width: 150px;
+            min-width: 130px;
+            color: #fff;
         }
 
-        .btn-primary {
-            background-color: #28a745;
-            color: white;
+        .btn-generate {
+            background-color: #00bcd4; /* Ana Vurgu Rengi */
         }
 
-        .btn-secondary {
-            background-color: #007bff;
-            color: white;
+        .btn-save {
+            background-color: #4CAF50; /* Yeşil */
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .btn-primary:hover {
-            background-color: #218838;
+        .btn-generate:hover {
+            background-color: #00a0b0;
         }
 
-        .btn-secondary:hover {
-            background-color: #0056b3;
+        .btn-save:hover {
+            background-color: #45a049;
         }
 
         /* QR Çıktı Alanı */
         .qr-output-section {
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
             justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
         .qr-card {
-            background: #f9f9f9;
+            background: #2c2c2c;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
             text-align: center;
-            flex: 1 1 350px; /* Esnek boyutlandırma */
-            min-height: 350px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            flex: 1 1 300px;
         }
 
         .qr-card p {
-            font-weight: bold;
-            color: #555;
+            font-weight: 500;
+            color: #00bcd4;
             margin-bottom: 15px;
             font-size: 1.1em;
         }
-
+        
+        /* QR Kodu çevreleyen alan */
+        .qr-canvas-container {
+            display: inline-block;
+            background-color: white; /* QR kod siyah beyaz olduğu için arkayı beyaz tutmak zorundayız */
+            border-radius: 4px;
+            padding: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
         /* Hata Mesajları */
         .error {
-            color: #dc3545;
+            color: #ff9800; /* Turuncu uyarı */
             padding: 10px;
-            background: #f8d7da;
+            background: #402f00;
             border-radius: 5px;
             margin-top: 15px;
         }
 
-        .qr-canvas-container {
-            display: inline-block;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            padding: 5px;
-            transition: opacity 0.3s;
-        }
-
         /* Mobil Adaptasyon */
-        @media (max-width: 768px) {
-            .qr-output-section {
-                flex-direction: column;
-                align-items: center;
-            }
-            .qr-card {
-                flex: 1 1 100%;
-                max-width: 90%;
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
             }
             .button-group button {
                 width: 100%;
                 margin-bottom: 10px;
+            }
+            .qr-output-section {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
@@ -170,29 +175,23 @@
 <body>
 
     <div class="container">
-        <h1>🚀 Profesyonel QR Kod Oluşturucu</h1>
-        <p>URL, metin veya Wi-Fi bilgilerinizi girin ve anında QR kodunuzu oluşturun.</p>
+        <h1>Sanatsal QR Kod</h1>
+        <p class="subtitle">URL, metin veya resim linkinizi girin.</p>
         
         <div class="input-group">
-            <input type="text" id="dataInput" placeholder="https://linkinizi.buraya.yazin" value="https://sizinadiniz.github.io">
+            <input type="text" id="dataInput" placeholder="Örn: https://www.resminizinadresi.com/resim.jpg" value="https://sizinadiniz.github.io">
         </div>
         
         <div class="button-group">
-            <button class="btn-primary" onclick="generateQrCodes()">Oluştur / Güncelle</button>
-            <button class="btn-secondary" onclick="saveQrCode('simple')">Sade QR'yi Kaydet</button>
-            <button class="btn-secondary" onclick="saveQrCode('logo')">Logolu QR'yi Kaydet</button>
+            <button class="btn-generate" onclick="generateQrCodes()">▶️ QR Oluştur</button>
+            <button class="btn-save" onclick="saveQrCode('logo')">💾 Logolu QR'yi Kaydet</button>
         </div>
 
         <div class="qr-output-section">
             <div class="qr-card">
-                <p>Sade QR Kod</p>
-                <div id="simpleQrCode" class="qr-canvas-container"></div>
-                <small style="display: block; margin-top: 10px;">(Logosuz, daha güvenilir)</small>
-            </div>
-            <div class="qr-card">
                 <p>Logolu QR Kod</p>
                 <div id="logoQrCode" class="qr-canvas-container"></div>
-                <small style="display: block; margin-top: 10px; color: orange;">(Logo için 'logo.png' dosyası gereklidir)</small>
+                <small style="display: block; margin-top: 10px; color: #ff9800;">(Logo için 'logo.png' dosyası gereklidir)</small>
             </div>
         </div>
     </div>
@@ -209,33 +208,15 @@
                 return;
             }
 
-            // 1. Sade QR Kodu (qrcode.js)
-            const simpleQrContainer = document.getElementById('simpleQrCode');
-            simpleQrContainer.innerHTML = ''; 
-            try {
-                // Canvas oluşturulur ve üzerine çizim yapılır
-                const canvasSimple = document.createElement('canvas');
-                simpleQrContainer.appendChild(canvasSimple);
-
-                QRCode.toCanvas(canvasSimple, data, {
-                    errorCorrectionLevel: 'H', 
-                    width: QR_SIZE,
-                    margin: 2,
-                });
-            } catch (err) {
-                simpleQrContainer.innerHTML = '<div class="error">Sade QR oluşturma hatası.</div>';
-                console.error("Sade QR hatası:", err);
-            }
-
-
+            // 1. Sade QR Kodu (Kaldırıldı, sadece Logolu gösteriliyor)
+            
             // 2. Logolu QR Kodu (qr-code-with-logo)
             const logoQrContainer = document.getElementById('logoQrCode');
             logoQrContainer.innerHTML = ''; 
 
             try {
-                 // Logolu QR kodu için canvas oluşturulur
                 const canvasLogo = document.createElement('canvas');
-                canvasLogo.id = 'logoCanvas'; // Kaydetme fonksiyonu için ID ekledik
+                canvasLogo.id = 'logoCanvas'; 
                 logoQrContainer.appendChild(canvasLogo);
 
                 new QrCodeWithLogo({
@@ -243,8 +224,8 @@
                     width: QR_SIZE,
                     image: canvasLogo, 
                     logo: {
-                        src: "logo.png", // Ana dizindeki logo dosyası
-                        logoRadius: 5, 
+                        src: "logo.png", 
+                        logoRadius: 8, // Köşeleri daha yumuşak
                         bgColor: '#fff',
                         borderRadius: 0,
                         borderSize: 0.1,
@@ -252,7 +233,7 @@
                     }
                 }).toCanvas();
             } catch (err) {
-                logoQrContainer.innerHTML = '<div class="error">Logolu QR Hatası: "logo.png" dosyası bulunamadı. Lütfen kontrol edin.</div>';
+                logoQrContainer.innerHTML = '<div class="error">Logolu QR Hatası: "logo.png" dosyası veya kod hatası oluştu.</div>';
                 console.error("Logolu QR hatası:", err);
             }
         }
@@ -262,18 +243,16 @@
             let canvasElement;
             let filename;
 
-            if (type === 'simple') {
-                // Sade QR kodu, qrcode.js'nin ürettiği ilk canvas'tır
-                canvasElement = document.getElementById('simpleQrCode').querySelector('canvas');
-                filename = 'sade_qr_kod.png';
-            } else if (type === 'logo') {
-                // Logolu QR kodu, qr-code-with-logo'nun ürettiği 'logoCanvas' ID'li elementtir
+            if (type === 'logo') {
                 canvasElement = document.getElementById('logoQrCode').querySelector('canvas');
                 filename = 'logolu_qr_kod.png';
+            } else {
+                 // Sadece logolu butonu aktif olduğu için diğer tip kontrolü kaldırıldı.
+                alert("QR kodu henüz oluşturulmadı. Lütfen önce 'QR Oluştur' butonuna basın.");
+                return;
             }
 
             if (canvasElement) {
-                // Canvas içeriğini resim dosyası olarak kaydetme işlemi
                 const link = document.createElement('a');
                 link.download = filename;
                 link.href = canvasElement.toDataURL('image/png');
@@ -281,13 +260,12 @@
                 link.click();
                 document.body.removeChild(link);
             } else {
-                alert("QR kodu henüz oluşturulmadı veya bir hata oluştu. Lütfen önce 'Oluştur / Güncelle' butonuna basın.");
+                alert("QR kodu henüz oluşturulmadı veya bir hata oluştu.");
             }
         }
 
         // Sayfa yüklendiğinde varsayılan QR'yi oluştur
         window.onload = generateQrCodes;
     </script>
-
 </body>
 </html>
