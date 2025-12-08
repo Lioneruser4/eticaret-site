@@ -1,59 +1,117 @@
-// server.js
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
+const UserAgent = require('fake-useragent');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
-// Test endpoint
-app.get('/', (req, res) => {
-  res.send('XSCAN Backend Ready');
+const PORT = process.env.PORT || 3000;
+
+// Yardımçı funksiya: Təsadüfi User-Agent
+const getHeaders = () => ({
+    'User-Agent': new UserAgent().random,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5'
 });
 
-// Search endpoint
-app.get('/search', async (req, res) => {
-  const { code } = req.query;
-  if(!code) return res.json({ error: "Kod boş ola bilməz" });
+// Axtarış Mühərrikləri
+const sources = {
+    google: async (query) => {
+        try {
+            const { data } = await axios.get(`https://www.google.com/search?q=${query}`, { headers: getHeaders() });
+            const $ = cheerio.load(data);
+            const results = [];
+            $('.g').each((i, el) => {
+                const title = $(el).find('h3').text();
+                const link = $(el).find('a').attr('href');
+                const snippet = $(el).find('.VwiC3b').text();
+                if (title && link) {
+                    results.push({ source: 'Google', title, link, description: snippet, image: null });
+                }
+            });
+            return results.slice(0, 3);
+        } catch (e) { return []; }
+    },
+    ebay: async (query) => {
+        try {
+            const { data } = await axios.get(`https://www.ebay.com/sch/i.html?_nkw=${query}`, { headers: getHeaders() });
+            const $ = cheerio.load(data);
+            const results = [];
+            $('.s-item').each((i, el) => {
+                const title = $(el).find('.s-item__title').text();
+                const link = $(el).find('.s-item__link').attr('href');
+                const price = $(el).find('.s-item__price').text();
+                const img = $(el).find('.s-item__image-img').attr('src');
+                if (title && link && i > 0) { // i>0 çünki birincisi adətən reklam olur
+                    results.push({ source: 'eBay', title, link, description: `Qiymət: ${price}`, image: img });
+                }
+            });
+            return results.slice(0, 3);
+        } catch (e) { return []; }
+    },
+    vinDb: async (query) => {
+        // VIN nömrəsi formatına uyğundursa
+        if (query.length === 17) {
+            return [{
+                source: 'VIN Decoder',
+                title: `VIN: ${query} Məlumatları`,
+                link: `https://www.faxvin.com/vin-decoder/check?vin=${query}`,
+                description: 'Avtomobil tarixi və texniki göstəriciləri üçün detallı axtarış.',
+                image: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png'
+            }];
+        }
+        return [];
+    }
+};
 
-  try {
-    const results = [];
+app.get('/api/search', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Kod daxil edilməyib' });
 
-    // Google search
-    const googleURL = `https://www.google.com/search?q=${encodeURIComponent(code)}`;
-    const { data: googleData } = await axios.get(googleURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
-    const $ = cheerio.load(googleData);
-    $('a').each((i, el) => {
-      const link = $(el).attr('href');
-      if(link && link.startsWith('http')) results.push({ source:'Google', link });
-    });
+    console.log(`Axtarılır: ${q}`);
 
-    // Bing search
-    const bingURL = `https://www.bing.com/search?q=${encodeURIComponent(code)}`;
-    const { data: bingData } = await axios.get(bingURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
-    const $$ = cheerio.load(bingData);
-    $$('a').each((i, el) => {
-      const link = $$(el).attr('href');
-      if(link && link.startsWith('http')) results.push({ source:'Bing', link });
-    });
+    try {
+        // Paralel axtarış (Bütün mənbələri eyni anda yoxlayır)
+        const promises = [
+            sources.google(q),
+            sources.ebay(q),
+            sources.vinDb(q)
+        ];
 
-    // Yandex search
-    const yandexURL = `https://yandex.com/search/?text=${encodeURIComponent(code)}`;
-    const { data: yandexData } = await axios.get(yandexURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
-    const $$$ = cheerio.load(yandexData);
-    $$$('a').each((i, el) => {
-      const link = $$$(el).attr('href');
-      if(link && link.startsWith('http')) results.push({ source:'Yandex', link });
-    });
+        const results = await Promise.allSettled(promises);
+        
+        // Nəticələri birləşdiririk
+        let combined = [];
+        results.forEach(result => {
+            if (result.status === 'fulfilled') {
+                combined = [...combined, ...result.value];
+            }
+        });
 
-    res.json({ code, results: results.slice(0, 25) }); // İlk 25 nəticə
-  } catch(e) {
-    res.json({ error: e.message });
-  }
+        // Əgər heç nə tapılmasa (Scraping bloklansa), ehtiyat nəticələr göstər
+        if (combined.length === 0) {
+            combined.push({
+                source: 'Sistem',
+                title: `${q} - Google Axtarışı`,
+                link: `https://www.google.com/search?q=${q}`,
+                description: 'Birbaşa axtarış üçün klikləyin. Server cavabı bloklanmış ola bilər.',
+                image: 'https://cdn-icons-png.flaticon.com/512/281/281764.png'
+            });
+        }
+
+        res.json({
+            query: q,
+            count: combined.length,
+            results: combined
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server xətası' });
+    }
 });
 
-app.listen(PORT, ()=>console.log(`XSCAN Backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
