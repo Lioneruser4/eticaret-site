@@ -22,7 +22,6 @@
         font-family: 'Roboto', sans-serif;
         text-align: center;
         padding-bottom: 50px;
-        transition: background-color 0.5s;
     }
 
     .container {
@@ -105,12 +104,13 @@
         box-shadow: 0 0 15px var(--error-color);
         animation: scanline 2s infinite ease-in-out alternate;
         z-index: 10;
-        display: none; /* JS ilə aktiv ediləcək */
+        /* Başlanğıcda gizli, JS ilə göstəriləcək */
+        display: none; 
     }
 
     @keyframes scanline {
         0% { transform: translateY(0%); opacity: 0.8; }
-        100% { transform: translateY(calc(100% * (450/450) - 3px)); opacity: 0.8; } /* Hündürlüyə uyğun tənzimlənir */
+        100% { transform: translateY(calc(100% * (450/450) - 3px)); opacity: 0.8; }
     }
 
     .result-box {
@@ -170,6 +170,11 @@
         <a href="#" id="stopButton" class="btn btn-stop" style="display:none;" onclick="stopScanner(event)">⏸ Dayandır</a>
     </div>
 
+    <div style="margin-top: 15px;">
+        <label for="cameraSelect" style="color: #ccc; font-size: 14px;">Kamera Seçimi:</label>
+        <select id="cameraSelect" style="padding: 8px; border-radius: 5px; border: 1px solid var(--primary-color); background: var(--bg-dark); color: white; margin-left: 10px;"></select>
+    </div>
+
     <div id="reader-container">
         <div id="reader"></div>
     </div>
@@ -183,25 +188,72 @@
     const readerContainer = document.getElementById("reader-container");
     const startButton = document.getElementById("startButton");
     const stopButton = document.getElementById("stopButton");
+    const cameraSelect = document.getElementById("cameraSelect");
     let html5QrCode;
+    let cameraDevices = [];
+
+    // Səhifə yüklənəndə və ya hər hansı bir hadisədə mövcud kameraları yoxlayır
+    window.onload = function() {
+        listCameras();
+    };
+
+    // Mövcud kamera qurğularını sadalayır (bu, kamera icazəsini tetikleyən ilk addımdır)
+    async function listCameras() {
+        try {
+            // Bu funksiya istifadəçidən icazə istəməyə başlayır
+            const devices = await Html5Qrcode.getCameras();
+            cameraDevices = devices;
+            cameraSelect.innerHTML = '';
+            
+            if (devices && devices.length) {
+                devices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.innerText = device.label || `Kamera ${index + 1}`;
+                    cameraSelect.appendChild(option);
+                    
+                    // Default olaraq arxa kameranı seçməyə çalış
+                    if (device.label && device.label.toLowerCase().includes('back')) {
+                        option.selected = true;
+                    }
+                });
+                
+            } else {
+                cameraSelect.innerHTML = '<option value="">Kamera tapılmadı</option>';
+            }
+        } catch (err) {
+            console.error("Kamera siyahısı alınarkən xəta (İcazə yoxlanılır):", err);
+            // İcazə verilmədikdə və ya HTTPS olmadıqda bu baş verir.
+            cameraSelect.innerHTML = '<option value="">Kamera avtomatik seçiləcək</option>';
+        }
+    }
 
     // Skaneri işə salır
     async function startScanner(event) {
-        event.preventDefault(); // Səhifənin yenilənməsini qarşısını alır
+        event.preventDefault(); 
+
+        const selectedDeviceId = cameraSelect.value;
+        let cameraId = selectedDeviceId || { facingMode: "environment" };
+        
+        // Əgər heç bir cihaz tapılmayıbsa, yenə də facingMode ilə cəhd et.
+        if (cameraDevices.length === 0 && !selectedDeviceId) {
+             cameraId = { facingMode: "environment" };
+        }
+
 
         resultBox.style.display = "none";
         startButton.style.display = "none";
         stopButton.style.display = "inline-block";
         readerContainer.style.display = "block";
         
-        // Lazer effektini aktiv et
+        // Lazer effektini aktiv et (CSS dəyişikliyini DOM-a tətbiq edir)
+        readerContainer.style.setProperty('--scanline-display', 'block'); 
         readerContainer.querySelector('::before').style.display = 'block';
 
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
         
-        // Skaner konfiqurasiyası
         const config = { 
             fps: 10, 
             qrbox: { width: 250, height: 250 },
@@ -212,16 +264,16 @@
                 Html5QrcodeSupportedFormats.UPC_A,
                 Html5QrcodeSupportedFormats.EAN_8,
                 Html5QrcodeSupportedFormats.ITF
-            ] // Bütün əsas barkod növləri əlavə edildi
+            ] 
         };
 
         try {
             await html5QrCode.start(
-                { facingMode: "environment" }, // Arxa kameranı istifadə et
+                cameraId, 
                 config,
                 (decodedText, decodedResult) => {
                     // Skan uğurlu olduqda
-                    stopScanner(null, false); // Kameranı dayandır, düymələri sıfırlama
+                    stopScanner(null, false); 
                     fetchProduct(decodedText);
                 },
                 (errorMessage) => {
@@ -232,11 +284,19 @@
         } catch (err) {
             // Kamera icazəsi xətası və ya açıla bilməməsi
             stopScanner(null, true);
+            
+            let errorMessageText = "Kamera açıla bilmədi. Xahiş edirik brauzerinizin təhlükəsizlik və icazələr ayarlarını yoxlayın.";
+            if (err.name === "NotAllowedError" || err.message.includes("Permission denied")) {
+                errorMessageText = "Kamera icazəsi rədd edildi. Zəhmət olmasa, yuxarıdakı kilid (🔒) nişanına basıb bu sayta kamera icazəsi verin.";
+            } else if (err.message.includes("https")) {
+                 errorMessageText = "Təhlükəsizlik Xətası: Kamera yalnız **HTTPS** üzərindən işləyir. Zəhmət olmasa, kodu canlı bir serverə yükləyin.";
+            }
+            
             resultBox.style.display = "block";
             resultBox.innerHTML = `
                 <h2>Kamera Xətası ❗</h2>
-                <p>Kamera açıla bilmədi. Zəhmət olmasa, brauzerinizdə bu sayt üçün kamera icazəsini ${err.includes("Permission denied") ? 'aktivləşdirin' : 'yoxlayın'}.</p>
-                <p style="color: var(--error-color);">${err}</p>
+                <p>${errorMessageText}</p>
+                <p style="color: var(--error-color); font-size: 12px;">Texniki Xəta: ${err.name || err.message}</p>
                 <a href="#" class="btn" onclick="startScanner(event)">Yenidən Cəhd Et</a>
             `;
         }
@@ -247,7 +307,8 @@
         if(event) event.preventDefault(); 
 
         // Lazer effektini söndür
-        readerContainer.querySelector('::before').style.display = 'none';
+        const scanlineElement = readerContainer.querySelector('::before');
+        if (scanlineElement) scanlineElement.style.display = 'none';
 
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
@@ -257,11 +318,9 @@
                     readerContainer.style.display = "none";
                 }
             }).catch((err) => {
-                // Dayandırma xətası ciddi deyil, amma qeyd edirik
                 console.error("Kameranı dayandırmaq xətası:", err);
             });
         } else if (resetButtons) {
-            // Əgər artıq skan etmirsə, düymələri sıfırla
             startButton.style.display = "inline-block";
             stopButton.style.display = "none";
             readerContainer.style.display = "none";
@@ -277,7 +336,6 @@
             <p style="text-align: center;">Məlumat bazalarında axtarılır...</p>
         `;
 
-        // Əsas etibarlı API - (Qida, Gözəllik və Ümumi)
         const url = `https://world.openfoodfacts.org/api/v0/product/${code}.json`;
 
         try {
@@ -294,7 +352,6 @@
                     product.ingredients_text_az || product.ingredients_text
                 );
             } else {
-                // Məhsul tapılmadı
                 resultBox.innerHTML = `
                     <h2>Məhsul Tapılmadı ⚠️</h2>
                     <p><b>Kod:</b> ${code}</p>
