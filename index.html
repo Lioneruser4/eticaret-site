@@ -43,14 +43,35 @@
         
         // --- TELEGRAM AUTH FUNKSİYASI ---
         function onTelegramAuth(user) {
+            // Telegram ID-ni qəbul edir və formanı aktivləşdirir
             userId = user.id;
-            const firstName = user.first_name;
+            const firstName = user.first_name || "İstifadəçi";
             
             document.getElementById('auth-status').style.display = 'none';
             document.getElementById('download-form').style.display = 'block';
             document.getElementById('welcome-message').innerText = `Xoş gəlmisiniz, ${firstName}! Musiqi sifariş edin.`;
 
             console.log("İstifadəçi ID-si:", userId);
+        }
+
+        // --- AVTOMATİK LOGIN YOXLANILMASI (WebView üçün) ---
+        function checkUrlForTelegramAuth() {
+            // URL-dəki bütün parametrləri (query parameters) yoxlayırıq
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Telegram bəzən ID-ni birbaşa URL-ə əlavə edir.
+            if (urlParams.has('id') && urlParams.has('hash')) {
+                const user = {
+                    id: urlParams.get('id'),
+                    first_name: urlParams.get('first_name')
+                };
+                
+                // Avtomatik olaraq onTelegramAuth funksiyasını çağırırıq
+                onTelegramAuth(user);
+                
+                // URL-dən tokenləri silməyə çalışırıq (təmizlik üçün)
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         }
 
         // --- YÜKLƏMƏ SORĞUSUNU GÖNDƏRMƏ FUNKSİYASI ---
@@ -102,6 +123,9 @@
                 statusDiv.innerText = 'Serverlə əlaqə qurularkən problem yarandı.';
             });
         }
+
+        // Səhifə yükləndikdən sonra avtomatik yoxlamağı başlat
+        checkUrlForTelegramAuth();
     </script>
 
 </body>
