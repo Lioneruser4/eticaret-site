@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN Pro</title>
+<title>XSCAN VIN / Barkod Pro</title>
 <style>
 body{margin:0;font-family:sans-serif;background:#121212;color:#fff;}
 header{padding:20px;text-align:center;background:#1f1f1f;font-size:1.6rem;font-weight:bold;}
@@ -20,7 +20,7 @@ img.result-img{max-width:100%;border-radius:5px;margin-top:10px;}
 </style>
 </head>
 <body>
-<header>XSCAN Pro - VIN / Barkod Scanner</header>
+<header>XSCAN VIN / Barkod Pro</header>
 
 <div id="camera-container">
   <video id="video" autoplay></video><br>
@@ -51,50 +51,36 @@ startBtn.onclick=async()=>{
 }
 
 // Kamera bağla
-stopBtn.onclick=()=>{
-  if(stream){
-    stream.getTracks().forEach(track=>track.stop());
-    video.srcObject=null;
-  }
-}
+stopBtn.onclick=()=>{if(stream){stream.getTracks().forEach(t=>t.stop());video.srcObject=null;}}
 
 // ZXing barcode reader
 const codeReader=new ZXing.BrowserMultiFormatReader();
-codeReader.decodeFromVideoDevice(null, video, (result, err)=>{
-  if(result){
-    handleCode(result.text);
-    stopBtn.click();
-  }
+codeReader.decodeFromVideoDevice(null,video,(result,err)=>{
+  if(result){handleCode(result.text);stopBtn.click();}
 });
 
 // Manual input
-manualBtn.onclick=()=>{
-  if(manualInput.value.trim()!==""){
-    handleCode(manualInput.value.trim());
-  }
-}
+manualBtn.onclick=()=>{if(manualInput.value.trim()!==""){handleCode(manualInput.value.trim());}}
 
-// Kod işləmə + serverə göndərmə
+// Kod işləmə + server fetch
 async function handleCode(code){
   resultsDiv.innerHTML="<p>Axtarılır...</p>";
   try{
     const res=await fetch(`https://saskioyunu.onrender.com/search?code=${encodeURIComponent(code)}`);
     const data=await res.json();
     displayResults(data);
-  }catch(e){
-    resultsDiv.innerHTML="<p>Xəta: "+e.message+"</p>";
-  }
+  }catch(e){resultsDiv.innerHTML="<p>Xəta: "+e.message+"</p>";}
 }
 
-// Nəticələri göstərmə
+// Nəticələri göstər
 function displayResults(data){
   resultsDiv.innerHTML="";
   if(data.error){resultsDiv.innerHTML="<p>"+data.error+"</p>";return;}
-  if(data.results.length===0){resultsDiv.innerHTML="<p>Nəticə tapılmadı</p>";return;}
+  if(!data.results||data.results.length===0){resultsDiv.innerHTML="<p>Nəticə tapılmadı</p>";return;}
   data.results.forEach(item=>{
     const card=document.createElement('div');
     card.className="result-card";
-    card.innerHTML=`<p>${item}</p>`;
+    card.innerHTML=`<p><strong>${item.source}:</strong> <a href="${item.link}" target="_blank">${item.link}</a></p>`;
     resultsDiv.appendChild(card);
   });
 }
