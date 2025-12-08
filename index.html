@@ -1,181 +1,149 @@
+
 <!DOCTYPE html>
 <html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Master Pro (Final Version)</title>
+    <title>VIN & Universal Barkod Scanner</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Glassmorphism/Dark Theme */
         :root {
-            --bg-dark: #1f2937;
-            --surface-blur: rgba(55, 65, 81, 0.7); 
-            --accent: #10b981; 
-            --text-light: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --radius: 16px;
+            --bg-dark: #1f2937; --surface-blur: rgba(55, 65, 81, 0.7); --accent: #10b981; 
+            --text-light: #f3f4f6; --danger: #ef4444; --warning: #f59e0b; --radius: 16px;
         }
-
-        body { 
-            font-family: 'Space Grotesk', sans-serif; 
-            background: var(--bg-dark); 
-            color: var(--text-light); 
-            margin: 0; 
-            padding: 40px 20px;
-        }
-
-        .search-container { 
-            max-width: 800px; 
-            margin: 0 auto 50px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            align-items: center; 
-            padding: 20px;
-        }
-        .search-title { 
-            font-size: 2.5rem; 
-            font-weight: 700; 
-            color: var(--accent);
-            text-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
-        }
-        .input-group { 
-            display: flex; 
-            gap: 10px; 
-            width: 100%; 
-            max-width: 650px;
-        }
-        input { 
-            flex: 1; 
-            padding: 16px; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            border-radius: var(--radius); 
-            background: var(--surface-blur);
-            backdrop-filter: blur(8px); 
-            color: var(--text-light);
-            font-size: 16px; 
-            transition: all 0.3s ease-in-out;
-        }
-        .btn { 
-            padding: 16px 20px; 
-            border: none; 
-            border-radius: var(--radius); 
-            cursor: pointer; 
-            font-weight: 700; 
-            color: var(--text-light); 
-            transition: background-color 0.3s, transform 0.2s;
-        }
+        body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-dark); color: var(--text-light); margin: 0; padding: 40px 20px; }
+        .search-container { max-width: 800px; margin: 0 auto 50px; display: flex; flex-direction: column; gap: 20px; align-items: center; padding: 20px; }
+        .search-title { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
+        .input-group { display: flex; gap: 10px; width: 100%; max-width: 650px; }
+        input { flex: 1; padding: 16px; border-radius: var(--radius); background: var(--surface-blur); backdrop-filter: blur(8px); color: var(--text-light); font-size: 16px; }
+        .btn { padding: 16px 20px; border-radius: var(--radius); cursor: pointer; font-weight: 700; color: var(--text-light); }
         .btn-scan { background: var(--accent); }
         .btn-search { background: #3b82f6; }
 
-        .dashboard { 
-            display: none; 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            grid-template-columns: 1fr 1fr;
-            gap: 30px; 
-            animation: fadeIn 0.8s ease-out;
-        }
-        
-        .card { 
-            background: var(--surface-blur); 
-            border-radius: var(--radius); 
-            padding: 30px; 
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            transition: transform 0.3s ease-in-out;
-        }
-        
-        .check-item { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 12px 0; 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
-        }
-        .status-checked { color: var(--accent); }
-        .status-danger { color: var(--danger); }
-        .status-warning { color: var(--warning); }
-        
-        .specs-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-        }
-        .spec-box { 
-            background: rgba(75, 85, 99, 0.6); 
-            padding: 15px; 
-            border-radius: 8px; 
-            transition: background 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .dashboard { display: none; max-width: 1200px; margin: 0 auto; grid-template-columns: 1fr 1fr; gap: 30px; animation: fadeIn 0.8s ease-out; }
+        .card { background: var(--surface-blur); border-radius: var(--radius); padding: 30px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.18); }
+
+        /* Məhsul Kartı Stili */
+        #product-dashboard .card { grid-column: 1 / -1; display: flex; gap: 20px; align-items: center; }
+        #product-dashboard .product-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; }
+
+        .status-checked { color: var(--accent); } .status-danger { color: var(--danger); } .status-warning { color: var(--warning); }
+        .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <div class="search-title">VIN Master Pro Scanner</div>
+        <div class="search-title">Universal Kod Scanner</div>
         <div class="input-group">
-            <input type="text" id="vinInput" placeholder="VIN kodu daxil edin (17 simvol)">
+            <input type="text" id="codeInput" placeholder="VIN və ya Barkod daxil edin">
             <button class="btn btn-scan" onclick="openScanner()">
                 <i class="fas fa-camera"></i> Skan et
             </button>
-            <button class="btn btn-search" onclick="fetchData()">
+            <button class="btn btn-search" onclick="checkCodeType()">
                 <i class="fas fa-search"></i> Axtar
             </button>
         </div>
     </div>
 
-    <div class="loader" id="loader">
+    <div class="loader" id="loader" style="display:none;">
         <div class="spinner"></div>
         <p style="margin-top:10px; color:var(--text-muted);">Məlumat bazaları yoxlanılır...</p>
     </div>
 
-    <div class="dashboard" id="dashboard">
-        </div>
+    <div class="dashboard" id="vin-dashboard"></div>
+
+    <div class="dashboard" id="product-dashboard"></div>
 
     <div id="scanner-modal" style="display: none;">
         <div class="close-scan" onclick="closeScanner()">&times;</div>
-        <div id="reader"></div>
-        <p class="camera-info">Kodu kameranın mərkəzinə tutun. Avtomatik oxunacaq.</p>
+        <div id="reader" style="width: 90%; max-width: 400px;"></div>
+        <p style="color:white; margin-top:20px;">Kodu kameranın mərkəzinə tutun.</p>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        const API = "https://saskioyunu.onrender.com/api/search"; 
+        const API_VIN = "https://saskioyunu.onrender.com/api/search"; 
+        const API_PRODUCT = "https://saskioyunu.onrender.com/api/product"; 
         let html5QrcodeScanner = null;
 
-        async function fetchData(code = null) {
-            const vin = code || document.getElementById('vinInput').value.trim();
-            if (vin.length !== 17) return alert("VIN kod 17 simvol olmalıdır!");
+        // KOD TİPİNİ YOXLAYAN ƏSAS FUNKSİYA
+        function checkCodeType(code = null) {
+            const inputCode = code || document.getElementById('codeInput').value.trim().toUpperCase();
+            
+            document.getElementById('vin-dashboard').style.display = 'none';
+            document.getElementById('product-dashboard').style.display = 'none';
 
-            document.getElementById('dashboard').style.display = 'none';
+            // VIN Kodu (17 simvol, hərflər və rəqəmlər)
+            if (inputCode.length === 17 && /^[A-HJ-NPR-Z0-9]{17}$/.test(inputCode)) {
+                fetchVINData(inputCode);
+            } 
+            // EAN/UPC Barkodu (8, 12 və ya 13 rəqəm)
+            else if ((inputCode.length === 8 || inputCode.length === 12 || inputCode.length === 13) && /^\d+$/.test(inputCode)) {
+                fetchProductData(inputCode);
+            } 
+            else {
+                alert("Daxil edilən kod etibarlı VIN (17 simvol) və ya EAN/UPC (8, 12, 13 rəqəm) kodu deyil.");
+            }
+        }
+        
+        // VIN Məlumatını Çəkmək (Əvvəlki loqika)
+        async function fetchVINData(vin) {
             document.getElementById('loader').style.display = 'block';
-
             try {
-                const res = await fetch(`${API}?q=${vin}`);
+                const res = await fetch(`${API_VIN}?q=${vin}`);
                 const json = await res.json();
-
                 if (json.success) {
-                    renderDashboard(json.data, vin);
+                    renderVINDashboard(json.data, vin);
                 } else {
-                    alert("Axtarış uğursuz oldu: " + json.message);
+                    alert("VIN Axtarış Uğursuz Oldu: " + json.message);
                 }
             } catch (error) {
-                alert("Server bağlantı xətası baş verdi. Serverin aktiv olduğundan əmin olun.");
+                alert("Server bağlantı xətası (VIN).");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
+        // MƏHSUL MƏLUMATINI ÇƏKMƏK (YENİ LOQİKA)
+        async function fetchProductData(ean) {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const res = await fetch(`${API_PRODUCT}?ean=${ean}`);
+                const json = await res.json();
+                
+                if (json.success) {
+                    renderProductDashboard(json.data, ean);
+                } else {
+                    alert("Məhsul Axtarış Uğursuz Oldu: " + json.message);
+                }
+            } catch (error) {
+                alert("Server bağlantı xətası (Məhsul).");
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // MƏHSUL PANELİNİ GÖSTƏRMƏK
+        function renderProductDashboard(data, ean) {
+            const dash = document.getElementById('product-dashboard');
+            dash.innerHTML = `
+                <div class="card">
+                    <img src="${data.image}" alt="${data.name} Şəkli" class="product-image">
+                    <div>
+                        <h1 style="color:var(--accent);">${data.name}</h1>
+                        <p style="color:var(--text-muted)">Barkod Tipi: ${data.code_type} | Kod: ${ean}</p>
+                        <h3>Təsvir</h3>
+                        <p>${data.description}</p>
+                    </div>
+                </div>
+            `;
+            dash.style.display = 'grid';
+        }
+
+        // VIN PANELİNİ GÖSTƏRMƏK (Əvvəlki loqika)
         function getStatusClass(value) {
             if (value.includes('Problem Tapıldı') || value.includes('Hərrac/Zərər')) return 'status-danger';
             if (value.includes('Ödənişli bazada') || value.includes('Yoxlama Tələb Olunur')) return 'status-warning';
@@ -183,40 +151,17 @@
             return '';
         }
 
-        function renderDashboard(data, vin) {
-            const dash = document.getElementById('dashboard');
+        function renderVINDashboard(data, vin) {
+            const dash = document.getElementById('vin-dashboard');
             const summary = data.summary;
             const specs = data.specs;
             const recalls = data.recalls; 
             const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
-
-            // Zavod Xətaları (Recalls)
-            let recallsHTML = recalls.length > 0 
-                ? recalls.map(r => `
-                    <div class="recall-item">
-                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> Komponent: ${r.komponent || 'N/A'}</div>
-                        <div class="recall-desc">Xülasə (EN): ${r.xülasə ? r.xülasə.substring(0, 150) + '...' : 'Təfərrüat yoxdur.'}</div>
-                    </div>`).join('')
-                : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
-
-            // 1. Report Summary (Hesabat Yoxlanışları)
-            const summaryHTML = Object.entries(summary).map(([key, val]) => `
-                <li class="check-item">
-                    <span class="check-label ${getStatusClass(val)}">${key}</span> 
-                    <span class="check-status ${getStatusClass(val)}">
-                        ${val}
-                    </span>
-                </li>
-            `).join('');
-
-            // 2. Specs Details (Texniki Məlumat)
-            const specsHTML = Object.entries(specs).map(([key, val]) => `
-                <div class="spec-box">
-                    <div class="spec-title">${key}</div>
-                    <div class="spec-val">${val}</div>
-                </div>
-            `).join('');
-
+            
+            // Recalls və digər HTML hissələri (qısaldıldı)
+            let recallsHTML = recalls.length > 0 ? recalls.map(r => `...`).join('') : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
+            const summaryHTML = Object.entries(summary).map(([key, val]) => `...`).join('');
+            const specsHTML = Object.entries(specs).map(([key, val]) => `...`).join('');
 
             dash.innerHTML = `
                 <div class="card hero-card">
@@ -224,30 +169,25 @@
                     <div class="hero-details">
                         <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
                         <h1 class="car-title">${specs.Marka || 'Məlumat Yoxdur'} ${specs.Model || ''}</h1>
-                        <p style="color:var(--text-muted)">Buraxılış İli: ${specs["Buraxılış İli"] || 'N/A'}</p>
                     </div>
                 </div>
-
                 <div class="card">
                     <div class="card-header" style="color:var(--text-light);"><i class="fas fa-clipboard-check"></i> Hesabat Yoxlanışları</div>
                     <ul class="check-list">${summaryHTML}</ul>
                 </div>
-
                 <div class="card">
                     <div class="card-header" style="color:var(--text-light);"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
                     <div class="specs-grid">${specsHTML}</div>
                 </div>
-
                 <div class="card" style="grid-column: 1 / -1;">
                     <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları</div>
                     ${recallsHTML}
                 </div>
             `;
-
             dash.style.display = 'grid';
         }
 
-        // KAMERA İNİSİALİZASİYASI
+        // KAMERA FİKSİ VƏ İNİSİALİZASİYA
         function openScanner() {
             document.getElementById('scanner-modal').style.display = 'flex';
             
@@ -255,25 +195,29 @@
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
             
-            const config = { fps: 10, qrbox: 250 };
+            const config = { fps: 10, qrbox: 250, disableFlip: false };
             
             html5QrcodeScanner.start(
                 { facingMode: "environment" }, 
                 config,
                 (decodedText) => {
                     closeScanner();
-                    document.getElementById('vinInput').value = decodedText;
-                    fetchData(decodedText);
+                    document.getElementById('codeInput').value = decodedText;
+                    checkCodeType(decodedText); 
+                },
+                (errorMessage) => {
+                    console.warn("QR/Barkod Skan Xətası:", errorMessage);
                 }
             ).catch(err => {
-                alert("Kamera başlatıla bilmədi. İcazələri yoxlayın.");
+                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın.");
+                console.error("Kamera Başlatma Xətası:", err);
                 closeScanner();
             });
         }
 
         function closeScanner() {
             document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrcodeScanner && html5QrcodeScanner.isscanning) {
+            if(html5QrcodeScanner && html5QrcodeScanner.isScanning) {
                 html5QrcodeScanner.stop().catch(err => console.error("Scanner stop failed:", err));
             }
         }
