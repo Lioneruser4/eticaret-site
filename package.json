@@ -10,7 +10,7 @@
     "ytdl-core": "^4.11.5",
     "cors": "^2.8.5", 
     "https-proxy-agent": "^5.0.1",
-    "axios": "^1.6.8",   <-- YENİ XƏTT
+    "axios": "^1.6.8",   
     "youtube-search-without-api-key": "^1.0.9" <-- Axtarış üçün daha stabil kitabxana
   }
 }
