@@ -3,27 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN - VIN & Barkod Scanner</title>
+<title>XSCAN Pro</title>
 <style>
 body{margin:0;font-family:sans-serif;background:#121212;color:#fff;}
-header{padding:20px;text-align:center;background:#1f1f1f;font-size:1.5rem;}
+header{padding:20px;text-align:center;background:#1f1f1f;font-size:1.6rem;font-weight:bold;}
 #camera-container{position:relative;text-align:center;margin:20px;}
-video{width:100%;max-width:400px;border-radius:10px;}
-button{padding:10px 20px;margin:10px;font-size:1rem;border:none;border-radius:5px;cursor:pointer;}
-#results{margin:20px;}
-.result-card{background:#1f1f1f;padding:15px;margin:10px 0;border-radius:10px;}
-img.result-img{max-width:100%;border-radius:5px;}
+video{width:100%;max-width:400px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,0.5);}
+button,input{padding:10px 20px;margin:10px;font-size:1rem;border:none;border-radius:5px;cursor:pointer;}
+input{width:calc(100% - 60px);}
+#results{margin:20px;animation:fadeIn 0.5s;}
+.result-card{background:#1f1f1f;padding:15px;margin:10px 0;border-radius:10px;transition:0.3s;animation:fadeInUp 0.5s;}
+.result-card:hover{background:#333;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+img.result-img{max-width:100%;border-radius:5px;margin-top:10px;}
 </style>
 </head>
 <body>
-<header>XSCAN - VIN / Barkod Scanner</header>
+<header>XSCAN Pro - VIN / Barkod Scanner</header>
+
 <div id="camera-container">
   <video id="video" autoplay></video><br>
   <button id="start-btn">Kamera Aç</button>
-  <button id="stop-btn">Kamera Bağla</button>
+  <button id="stop-btn">Kamera Bağla</button><br>
   <input type="text" id="manual-input" placeholder="Kod daxil edin"/>
   <button id="manual-btn">Axtar</button>
 </div>
+
 <div id="results"></div>
 
 <script src="https://unpkg.com/@zxing/library@latest"></script>
@@ -68,6 +74,7 @@ manualBtn.onclick=()=>{
   }
 }
 
+// Kod işləmə + serverə göndərmə
 async function handleCode(code){
   resultsDiv.innerHTML="<p>Axtarılır...</p>";
   try{
@@ -79,6 +86,7 @@ async function handleCode(code){
   }
 }
 
+// Nəticələri göstərmə
 function displayResults(data){
   resultsDiv.innerHTML="";
   if(data.error){resultsDiv.innerHTML="<p>"+data.error+"</p>";return;}
