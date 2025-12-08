@@ -55,7 +55,7 @@ async function scrapeGoogleImage(query) {
     return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 }
 
-// Qəza Statusunu Axtarmaq
+// Qəza Statusunu Axtarmaq (VIN)
 async function fetchAccidentStatus(vin) {
     const keywords = ['salvage', 'total loss', 'auction', 'damage', 'copart', 'iaai', 'zərər'];
     const query = `${vin} (${keywords.join(' OR ')})`; 
@@ -66,22 +66,15 @@ async function fetchAccidentStatus(vin) {
     let found = false;
     $('div#main a').each((i, el) => {
         const linkText = $(el).text().toLowerCase();
-        const href = $(el).attr('href');
-        
-        if ((linkText.includes('salvage') || linkText.includes('total loss') || linkText.includes('auction') || linkText.includes('copart') || linkText.includes('iaai')) && !href.includes('google.com')) {
+        if ((linkText.includes('salvage') || linkText.includes('total loss') || linkText.includes('auction') || linkText.includes('copart') || linkText.includes('iaai'))) {
             found = true;
             return false;
         }
     });
-
-    if (found) {
-        return "Hərrac/Zərər ehtimalı tapıldı (Əlavə yoxlama tələb olunur)";
-    }
-    
-    return "Açıq ödənişsiz bazalarda qəza qeydi tapılmadı.";
+    return found ? "Hərrac/Zərər ehtimalı tapıldı (Əlavə yoxlama tələb olunur)" : "Açıq ödənişsiz bazalarda qəza qeydi tapılmadı.";
 }
 
-// VIN Texniki Göstəricilərini Çəkmək (Translated)
+// VIN Texniki Göstəricilərini Çəkmək
 async function fetchVinSpecs(vin) {
     const info = {};
     try {
@@ -99,7 +92,7 @@ async function fetchVinSpecs(vin) {
     } catch (e) { return {}; }
 }
 
-// Zavod Xətalarını Çəkmək (Recalls)
+// Zavod Xətalarını Çəkmək
 async function fetchRecalls(vin) {
     try {
         const url = `https://api.nhtsa.gov/recalls/recallsByVin?vin=${vin}&format=json`;
@@ -143,8 +136,33 @@ async function fetchVehicleImage(vin, fallbackQuery, accidentStatus) {
     return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 }
 
+// Köməkçi Funksiya: Məhsul məlumatını EAN/UPC ilə tapmaq
+async function fetchProductData(ean) {
+    const query = `ean ${ean} product details`;
+    try {
+        const $ = await scrapeGoogleWeb(query); 
+        if (!$) return null;
 
-// Əsas axtarış endpointi
+        const titleElement = $('h3').first();
+        const title = titleElement.text();
+        
+        let snippet = $('div.VwiC3b').first().text() || 'Təsvir tapılmadı';
+        
+        const imageUrl = await scrapeGoogleImage(`product image ${ean}`);
+        
+        return {
+            name: title && title.length > 10 ? title : 'Məhsul Adı Tapılmadı',
+            description: snippet,
+            image: imageUrl,
+            code_type: 'EAN/UPC'
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+
+// Əsas axtarış endpointi (VIN)
 app.get('/api/search', async (req, res) => {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: 'Kod yoxdur' });
@@ -160,29 +178,43 @@ app.get('/api/search', async (req, res) => {
             const fallbackQuery = `${specs["Marka"]} ${specs["Model"]} ${specs["Buraxılış İli"]}`;
             const imageUrl = await fetchVehicleImage(q, fallbackQuery, accidentStatus); 
 
-            // Hesabat statuslarının Azərbaycanca açarları
             const reportSummary = {
-                [translationMap.specifications]: "Mövcuddur",
-                [translationMap.equipment]: "Mövcuddur",
+                [translationMap.specifications]: "Mövcuddur", [translationMap.equipment]: "Mövcuddur",
                 [translationMap.manufacturer_info]: `${Object.keys(specs).length} məlumat tapıldı`,
-                [translationMap.title_history]: "Ödənişli bazada yoxlanılmalıdır", 
-                [translationMap.odometer_history]: "Ödənişli bazada yoxlanılmalıdır", 
+                [translationMap.title_history]: "Ödənişli bazada yoxlanılmalıdır", [translationMap.odometer_history]: "Ödənişli bazada yoxlanılmalıdır", 
                 [translationMap.stolen_database]: "4 Yoxlanış Uğurlu Oldu", 
                 [translationMap.recalls_found]: recalls.length > 0 ? `${recalls.length} Problem Tapıldı` : "Açıq Xəta Tapılmadı",
                 [translationMap.accident_status]: accidentStatus
             };
 
             res.json({
-                success: true,
-                type: 'vin_report',
+                success: true, type: 'vin_report',
                 data: { specs: specs, recalls: recalls, summary: reportSummary, image: imageUrl }
             });
 
         } catch (error) {
-            res.status(500).json({ success: false, message: "Server xətası baş verdi. Logları yoxlayın." });
+            res.status(500).json({ success: false, message: "Server xətası baş verdi." });
         }
     } else {
         res.json({ success: false, message: "Yalnız 17 rəqəmli VIN kodu dəstəklənir." });
+    }
+});
+
+// Yeni endpoint: Məhsul barkodunu axtarmaq üçün
+app.get('/api/product', async (req, res) => {
+    const { ean } = req.query;
+    if (!ean || ean.length < 8) return res.status(400).json({ error: 'Etibarlı EAN kodu tələb olunur' });
+
+    try {
+        const productData = await fetchProductData(ean);
+
+        if (productData && productData.name !== 'Məhsul Adı Tapılmadı') {
+            res.json({ success: true, data: productData });
+        } else {
+            res.json({ success: false, message: "Məhsul məlumatı ödənişsiz bazalarda tapılmadı." });
+        }
+    } catch (e) {
+        res.status(500).json({ success: false, message: "Server xətası." });
     }
 });
 
