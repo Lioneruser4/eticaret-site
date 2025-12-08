@@ -1,226 +1,108 @@
-
 <!DOCTYPE html>
 <html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN & Universal Barkod Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>FullSong Yükləyici Bot</title>
     <style>
-        :root {
-            --bg-dark: #1f2937; --surface-blur: rgba(55, 65, 81, 0.7); --accent: #10b981; 
-            --text-light: #f3f4f6; --danger: #ef4444; --warning: #f59e0b; --radius: 16px;
-        }
-        body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-dark); color: var(--text-light); margin: 0; padding: 40px 20px; }
-        .search-container { max-width: 800px; margin: 0 auto 50px; display: flex; flex-direction: column; gap: 20px; align-items: center; padding: 20px; }
-        .search-title { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
-        .input-group { display: flex; gap: 10px; width: 100%; max-width: 650px; }
-        input { flex: 1; padding: 16px; border-radius: var(--radius); background: var(--surface-blur); backdrop-filter: blur(8px); color: var(--text-light); font-size: 16px; }
-        .btn { padding: 16px 20px; border-radius: var(--radius); cursor: pointer; font-weight: 700; color: var(--text-light); }
-        .btn-scan { background: var(--accent); }
-        .btn-search { background: #3b82f6; }
-
-        .dashboard { display: none; max-width: 1200px; margin: 0 auto; grid-template-columns: 1fr 1fr; gap: 30px; animation: fadeIn 0.8s ease-out; }
-        .card { background: var(--surface-blur); border-radius: var(--radius); padding: 30px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.18); }
-
-        /* Məhsul Kartı Stili */
-        #product-dashboard .card { grid-column: 1 / -1; display: flex; gap: 20px; align-items: center; }
-        #product-dashboard .product-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; }
-
-        .status-checked { color: var(--accent); } .status-danger { color: var(--danger); } .status-warning { color: var(--warning); }
-        .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f6f9; }
+        .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; width: 90%; text-align: center; }
+        h1 { color: #0088cc; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #0088cc; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; }
+        button:hover { background-color: #0077b3; }
+        #auth-status { margin-top: 15px; font-weight: bold; }
+        #download-form { display: none; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="search-container">
-        <div class="search-title">Universal Kod Scanner</div>
-        <div class="input-group">
-            <input type="text" id="codeInput" placeholder="VIN və ya Barkod daxil edin">
-            <button class="btn btn-scan" onclick="openScanner()">
-                <i class="fas fa-camera"></i> Skan et
-            </button>
-            <button class="btn btn-search" onclick="checkCodeType()">
-                <i class="fas fa-search"></i> Axtar
-            </button>
+    <div class="container">
+        <h1>🎵 FullSong Bot Yükləyici</h1>
+        
+        <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                data-telegram-login="fullsongbot" 
+                data-size="large" 
+                data-auth-url="javascript:onTelegramAuth(user)" 
+                data-request-access="write"></script>
+
+        <div id="auth-status">Zəhmət olmasa, Telegram ilə daxil olun.</div>
+
+        <div id="download-form">
+            <p id="welcome-message">Xoş gəlmisiniz!</p>
+            <input type="text" id="query-input" placeholder="Mahnı adı və ya YouTube linki daxil edin" required>
+            <button onclick="sendDownloadRequest()">Yükləməni Başlat</button>
+            <div id="status-message" style="margin-top: 15px; color: green;"></div>
         </div>
     </div>
 
-    <div class="loader" id="loader" style="display:none;">
-        <div class="spinner"></div>
-        <p style="margin-top:10px; color:var(--text-muted);">Məlumat bazaları yoxlanılır...</p>
-    </div>
-
-    <div class="dashboard" id="vin-dashboard"></div>
-
-    <div class="dashboard" id="product-dashboard"></div>
-
-    <div id="scanner-modal" style="display: none;">
-        <div class="close-scan" onclick="closeScanner()">&times;</div>
-        <div id="reader" style="width: 90%; max-width: 400px;"></div>
-        <p style="color:white; margin-top:20px;">Kodu kameranın mərkəzinə tutun.</p>
-    </div>
-
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        const API_VIN = "https://saskioyunu.onrender.com/api/search"; 
-        const API_PRODUCT = "https://saskioyunu.onrender.com/api/product"; 
-        let html5QrcodeScanner = null;
-
-        // KOD TİPİNİ YOXLAYAN ƏSAS FUNKSİYA
-        function checkCodeType(code = null) {
-            const inputCode = code || document.getElementById('codeInput').value.trim().toUpperCase();
-            
-            document.getElementById('vin-dashboard').style.display = 'none';
-            document.getElementById('product-dashboard').style.display = 'none';
-
-            // VIN Kodu (17 simvol, hərflər və rəqəmlər)
-            if (inputCode.length === 17 && /^[A-HJ-NPR-Z0-9]{17}$/.test(inputCode)) {
-                fetchVINData(inputCode);
-            } 
-            // EAN/UPC Barkodu (8, 12 və ya 13 rəqəm)
-            else if ((inputCode.length === 8 || inputCode.length === 12 || inputCode.length === 13) && /^\d+$/.test(inputCode)) {
-                fetchProductData(inputCode);
-            } 
-            else {
-                alert("Daxil edilən kod etibarlı VIN (17 simvol) və ya EAN/UPC (8, 12, 13 rəqəm) kodu deyil.");
-            }
-        }
+        // Sizin Node.js API ünvanınız
+        const RENDER_API_URL = "https://fullsongnodejs.onrender.com"; 
+        let userId = null; 
         
-        // VIN Məlumatını Çəkmək (Əvvəlki loqika)
-        async function fetchVINData(vin) {
-            document.getElementById('loader').style.display = 'block';
-            try {
-                const res = await fetch(`${API_VIN}?q=${vin}`);
-                const json = await res.json();
-                if (json.success) {
-                    renderVINDashboard(json.data, vin);
-                } else {
-                    alert("VIN Axtarış Uğursuz Oldu: " + json.message);
-                }
-            } catch (error) {
-                alert("Server bağlantı xətası (VIN).");
-            } finally {
-                document.getElementById('loader').style.display = 'none';
+        // --- TELEGRAM AUTH FUNKSİYASI ---
+        function onTelegramAuth(user) {
+            userId = user.id;
+            const firstName = user.first_name;
+            
+            document.getElementById('auth-status').style.display = 'none';
+            document.getElementById('download-form').style.display = 'block';
+            document.getElementById('welcome-message').innerText = `Xoş gəlmisiniz, ${firstName}! Musiqi sifariş edin.`;
+
+            console.log("İstifadəçi ID-si:", userId);
+        }
+
+        // --- YÜKLƏMƏ SORĞUSUNU GÖNDƏRMƏ FUNKSİYASI ---
+        function sendDownloadRequest() {
+            const query = document.getElementById('query-input').value.trim();
+            const statusDiv = document.getElementById('status-message');
+
+            if (!userId) {
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Xahiş edirik, əvvəlcə Telegram ilə daxil olun.';
+                return;
             }
-        }
 
-        // MƏHSUL MƏLUMATINI ÇƏKMƏK (YENİ LOQİKA)
-        async function fetchProductData(ean) {
-            document.getElementById('loader').style.display = 'block';
-            try {
-                const res = await fetch(`${API_PRODUCT}?ean=${ean}`);
-                const json = await res.json();
-                
-                if (json.success) {
-                    renderProductDashboard(json.data, ean);
-                } else {
-                    alert("Məhsul Axtarış Uğursuz Oldu: " + json.message);
-                }
-            } catch (error) {
-                alert("Server bağlantı xətası (Məhsul).");
-            } finally {
-                document.getElementById('loader').style.display = 'none';
+            if (!query) {
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Zəhmət olmasa, mahnı adı və ya link daxil edin.';
+                return;
             }
-        }
 
-        // MƏHSUL PANELİNİ GÖSTƏRMƏK
-        function renderProductDashboard(data, ean) {
-            const dash = document.getElementById('product-dashboard');
-            dash.innerHTML = `
-                <div class="card">
-                    <img src="${data.image}" alt="${data.name} Şəkli" class="product-image">
-                    <div>
-                        <h1 style="color:var(--accent);">${data.name}</h1>
-                        <p style="color:var(--text-muted)">Barkod Tipi: ${data.code_type} | Kod: ${ean}</p>
-                        <h3>Təsvir</h3>
-                        <p>${data.description}</p>
-                    </div>
-                </div>
-            `;
-            dash.style.display = 'grid';
-        }
-
-        // VIN PANELİNİ GÖSTƏRMƏK (Əvvəlki loqika)
-        function getStatusClass(value) {
-            if (value.includes('Problem Tapıldı') || value.includes('Hərrac/Zərər')) return 'status-danger';
-            if (value.includes('Ödənişli bazada') || value.includes('Yoxlama Tələb Olunur')) return 'status-warning';
-            if (value.includes('Mövcuddur') || value.includes('Uğurlu') || value.includes('Tapılmadı')) return 'status-checked';
-            return '';
-        }
-
-        function renderVINDashboard(data, vin) {
-            const dash = document.getElementById('vin-dashboard');
-            const summary = data.summary;
-            const specs = data.specs;
-            const recalls = data.recalls; 
-            const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
+            statusDiv.style.color = 'orange';
+            statusDiv.innerText = 'Sifariş qəbul edildi. Bot qısa zamanda sizə Telegram-da cavab göndərəcək...';
             
-            // Recalls və digər HTML hissələri (qısaldıldı)
-            let recallsHTML = recalls.length > 0 ? recalls.map(r => `...`).join('') : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
-            const summaryHTML = Object.entries(summary).map(([key, val]) => `...`).join('');
-            const specsHTML = Object.entries(specs).map(([key, val]) => `...`).join('');
-
-            dash.innerHTML = `
-                <div class="card hero-card">
-                    <img src="${imageUrl}" alt="${specs.Marka || ''} Şəkli" class="car-image">
-                    <div class="hero-details">
-                        <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
-                        <h1 class="car-title">${specs.Marka || 'Məlumat Yoxdur'} ${specs.Model || ''}</h1>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header" style="color:var(--text-light);"><i class="fas fa-clipboard-check"></i> Hesabat Yoxlanışları</div>
-                    <ul class="check-list">${summaryHTML}</ul>
-                </div>
-                <div class="card">
-                    <div class="card-header" style="color:var(--text-light);"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
-                    <div class="specs-grid">${specsHTML}</div>
-                </div>
-                <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları</div>
-                    ${recallsHTML}
-                </div>
-            `;
-            dash.style.display = 'grid';
-        }
-
-        // KAMERA FİKSİ VƏ İNİSİALİZASİYA
-        function openScanner() {
-            document.getElementById('scanner-modal').style.display = 'flex';
+            // Node.js API-nizə Sorğu Göndəririk
+            const apiEndpoint = `${RENDER_API_URL}/process-request`;
             
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("reader");
-            }
-            
-            const config = { fps: 10, qrbox: 250, disableFlip: false };
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                config,
-                (decodedText) => {
-                    closeScanner();
-                    document.getElementById('codeInput').value = decodedText;
-                    checkCodeType(decodedText); 
+            fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 },
-                (errorMessage) => {
-                    console.warn("QR/Barkod Skan Xətası:", errorMessage);
+                body: JSON.stringify({
+                    chat_id: userId,
+                    query: query 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusDiv.style.color = 'green';
+                    statusDiv.innerText = 'Sifariş uğurla göndərildi! Telegramınızı yoxlayın.';
+                } else {
+                    statusDiv.style.color = 'red';
+                    statusDiv.innerText = `Sifariş xətası: ${data.message || 'Bilinməyən xəta'}`;
                 }
-            ).catch(err => {
-                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın.");
-                console.error("Kamera Başlatma Xətası:", err);
-                closeScanner();
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = 'Serverlə əlaqə qurularkən problem yarandı.';
             });
         }
-
-        function closeScanner() {
-            document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                html5QrcodeScanner.stop().catch(err => console.error("Scanner stop failed:", err));
-            }
-        }
     </script>
+
 </body>
 </html>
