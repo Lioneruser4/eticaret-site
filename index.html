@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Master Pro Scanner (Dark Mode)</title>
+    <title>VIN Master Pro Scanner (Azərbaycanca)</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Rəng Palitrası */
         :root {
             --bg-dark: #1f2937;
             --surface-dark: #374151;
@@ -26,14 +27,15 @@
             padding: 20px;
         }
 
-        /* Search Area */
+        /* 1. Mərkəzləşdirmə Fix-i */
         .search-container { 
             max-width: 700px; 
-            margin: 0 auto 40px; 
+            margin: 0 auto 40px; /* Ortaya gətirir */
             display: flex; 
             flex-direction: column; 
             gap: 20px; 
             text-align: center;
+            align-items: center; /* Mərkəzləşdirir */
         }
         .search-title { 
             font-size: 2rem; 
@@ -43,6 +45,7 @@
         .input-group { 
             display: flex; 
             gap: 10px; 
+            width: 100%; /* Tam eni istifadə edir */
         }
         input { 
             flex: 1; 
@@ -54,9 +57,6 @@
             font-size: 16px; 
             outline: none; 
             transition: border-color 0.3s;
-        }
-        input:focus { 
-            border-color: var(--accent); 
         }
         .btn { 
             padding: 15px 25px; 
@@ -73,9 +73,6 @@
             align-items: center; 
             gap: 8px;
         }
-        .btn-scan:hover { 
-            background: #0d9468;
-        }
 
         /* Dashboard Grid */
         .dashboard { 
@@ -86,7 +83,7 @@
             gap: 25px; 
         }
         
-        /* Cards */
+        /* Cards & Details */
         .card { 
             background: var(--surface-dark); 
             border-radius: var(--radius); 
@@ -101,111 +98,35 @@
         }
         .car-image { 
             width: 40%; 
-            max-height: 200px; 
+            max-height: 250px; /* Şəkil hündürlüyü tənzimləndi */
             object-fit: cover; 
             border-radius: var(--radius); 
-            background: #555;
+            background: #4b5563;
         }
-        .hero-details { 
-            width: 60%; 
-        }
-        .car-title { 
-            font-size: 1.8rem; 
-            color: var(--accent); 
-            margin: 0 0 5px; 
-        }
-        .vin-badge { 
-            background: #4b5563; 
-            padding: 5px 10px; 
-            border-radius: 6px; 
-            font-size: 0.8rem; 
-            letter-spacing: 1px;
-        }
-
-        /* Check List */
-        .check-list { 
-            list-style: none; 
-            padding: 0; 
-        }
+        
+        /* Data Display */
+        .check-list, .specs-grid { list-style: none; padding: 0; }
         .check-item { 
             display: flex; 
             justify-content: space-between; 
             padding: 12px 0; 
             border-bottom: 1px solid #4b5563; 
         }
-        .check-label { 
-            font-weight: 500; 
-            color: var(--text-light); 
-        }
-        .status-checked { 
-            color: var(--accent); 
-        }
-        .status-available { 
-            color: #3b82f6; 
-        }
-        .status-danger { 
-            color: var(--danger); 
-        }
+        .status-checked { color: var(--accent); }
+        .status-available { color: #3b82f6; }
+        .spec-box { background: #4b5563; padding: 15px; border-radius: 8px; }
+        .spec-title { font-size: 0.8rem; color: var(--text-muted); }
+        .spec-val { font-weight: 600; font-size: 1.1rem; margin-top: 5px; }
 
-        /* Specs Table */
-        .specs-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-        }
-        .spec-box { 
-            background: #4b5563; 
-            padding: 15px; 
-            border-radius: 8px; 
-        }
-        .spec-title { 
-            font-size: 0.8rem; 
-            color: var(--text-muted); 
-        }
-        .spec-val { 
-            font-weight: 600; 
-            font-size: 1.1rem; 
-            margin-top: 5px;
-        }
-
-        /* Recalls / Problems */
-        .recall-item { 
-            background: #4b5563; 
-            border-left: 4px solid var(--danger); 
-            padding: 15px; 
-            margin-bottom: 15px; 
-            border-radius: 8px;
-        }
-        .recall-title { 
-            color: var(--danger); 
-            font-weight: bold; 
-            font-size: 1rem; 
-            margin-bottom: 5px;
-        }
-        
-        /* Loader */
-        .loader { 
-            display: none; 
-            text-align: center; 
-            padding: 40px; 
-        }
-        .spinner { 
-            width: 50px; 
-            height: 50px; 
-            border: 5px solid #4b5563; 
-            border-top-color: var(--accent); 
-            border-radius: 50%; 
-            animation: spin 1s infinite; 
-            margin: 0 auto; 
-        }
-        
-        /* Scanner Modal */
+        /* Scanner Modal Fix (Kameranın açılması üçün vacibdir) */
         #scanner-modal { 
             position: fixed; 
             inset: 0; 
             background: rgba(0,0,0,0.95); 
             z-index: 1000; 
             display: none; 
+            /* Flex-i əlavə etdik */
+            display: flex; 
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -213,33 +134,7 @@
         #reader { 
             width: 100%; 
             max-width: 500px; 
-            height: 300px; /* Skaner üçün sabit hündürlük */
-        }
-        .close-scan { 
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            color: var(--text-light); 
-            font-size: 2rem; 
-            cursor: pointer; 
-        }
-        .camera-info {
-            color: var(--text-light);
-            margin-top: 15px;
-            font-size: 1.1rem;
-        }
-
-        @media (max-width: 768px) {
-            .hero-card { 
-                flex-direction: column; 
-                text-align: center;
-            }
-            .car-image, .hero-details { 
-                width: 100%; 
-            }
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
+            height: 350px; 
         }
     </style>
 </head>
@@ -260,13 +155,13 @@
 
     <div class="loader" id="loader">
         <div class="spinner"></div>
-        <p style="margin-top:10px; color:var(--text-muted);">Qlobal bazalar (NHTSA, eBay, Google) yoxlanılır...</p>
+        <p style="margin-top:10px; color:var(--text-muted);">Məlumat bazaları yoxlanılır...</p>
     </div>
 
     <div class="dashboard" id="dashboard">
         </div>
 
-    <div id="scanner-modal">
+    <div id="scanner-modal" style="display: none;">
         <div class="close-scan" onclick="closeScanner()">&times;</div>
         <div id="reader"></div>
         <p class="camera-info">Kodu kameranın mərkəzinə tutun. Avtomatik oxunacaq.</p>
@@ -274,7 +169,7 @@
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        // Render Linkiniz
+        // Render Linkiniz (lazım gələrsə yeniləyin)
         const API = "https://saskioyunu.onrender.com/api/search"; 
         let html5QrcodeScanner = null;
 
@@ -301,21 +196,39 @@
             }
         }
 
+        // TƏRCÜMƏ SİNXRONİZASİYASI VƏ GÖRÜNTÜLƏNMƏ FİKSİ
         function renderDashboard(data, vin) {
             const dash = document.getElementById('dashboard');
-            const summary = data.summary;
-            const specs = data.specs;
-            const recalls = data.recalls;
-            // Placeholder şəkil əgər tapılmasa (serverdən gəlir)
-            const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Image+Not+Found';
+            const summary = data.summary; // Azərbaycanca açarlar gəlir
+            const specs = data.specs;     // Azərbaycanca açarlar gəlir
+            const recalls = data.recalls; 
+            const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 
             let recallsHTML = recalls.length > 0 
                 ? recalls.map(r => `
                     <div class="recall-item">
-                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> ${r.component || 'N/A'}</div>
-                        <div class="recall-desc">${r.summary ? r.summary.substring(0, 150) + '...' : 'Təfərrüat yoxdur.'}</div>
+                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> Komponent: ${r.komponent || 'N/A'}</div>
+                        <div class="recall-desc">Xülasə (EN): ${r.xülasə ? r.xülasə.substring(0, 150) + '...' : 'Təfərrüat yoxdur.'}</div>
                     </div>`).join('')
-                : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq zavod problemi tapılmadı.</p>';
+                : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
+
+            // 1. Report Summary (Hesabat Yoxlanışları)
+            const summaryHTML = Object.entries(summary).map(([key, val]) => `
+                <li class="check-item">
+                    <span class="check-label">${key}</span> 
+                    <span class="check-status status-${val.includes('Uğurlu') || val.includes('Mövcud') ? 'checked' : 'available'}">
+                        ${val}
+                    </span>
+                </li>
+            `).join('');
+
+            // 2. Specs Details (Texniki Məlumat)
+            const specsHTML = Object.entries(specs).map(([key, val]) => `
+                <div class="spec-box">
+                    <div class="spec-title">${key}</div>
+                    <div class="spec-val">${val}</div>
+                </div>
+            `).join('');
 
             dash.innerHTML = `
                 <div class="card hero-card">
@@ -323,48 +236,22 @@
                     <div class="hero-details">
                         <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
                         <h1 class="car-title">${specs.Marka || 'Məlumat Yoxdur'} ${specs.Model || ''}</h1>
-                        <p style="color:var(--text-muted)">Buraxılış İli: ${specs.Il || 'N/A'}</p>
+                        <p style="color:var(--text-muted)">Buraxılış İli: ${specs["Buraxılış İli"] || 'N/A'}</p>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="card-header" style="color:var(--text-light);"><i class="fas fa-clipboard-check"></i> Hesabat Yoxlanışları</div>
-                    <ul class="check-list">
-                        <li class="check-item">
-                            <span class="check-label">Specifications</span>
-                            <span class="check-status status-checked"><i class="fas fa-check"></i> ${summary.specifications}</span>
-                        </li>
-                        <li class="check-item">
-                            <span class="check-label">Manufacturer Info</span>
-                            <span class="check-status status-checked">${summary.manufacturer_info}</span>
-                        </li>
-                        <li class="check-item">
-                            <span class="check-label">Title History</span>
-                            <span class="check-status status-available"><i class="fas fa-download"></i> ${summary.title_history}</span>
-                        </li>
-                        <li class="check-item">
-                            <span class="check-label">Stolen Databases</span>
-                            <span class="check-status status-checked"><i class="fas fa-shield-alt"></i> ${summary.stolen_database}</span>
-                        </li>
-                        <li class="check-item">
-                            <span class="check-label">Odometer Rollback</span>
-                            <span class="check-status status-available">${summary.odometer_history}</span>
-                        </li>
-                    </ul>
+                    <ul class="check-list">${summaryHTML}</ul>
                 </div>
 
                 <div class="card">
                     <div class="card-header" style="color:var(--text-light);"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
-                    <div class="specs-grid">
-                        <div class="spec-box"><div class="spec-title">Mühərrik</div><div class="spec-val">${specs.Silindr || 'N/A'} Silindr</div></div>
-                        <div class="spec-box"><div class="spec-title">Yanacaq</div><div class="spec-val">${specs.Yanacaq || 'N/A'}</div></div>
-                        <div class="spec-box"><div class="spec-title">Kuzov</div><div class="spec-val">${specs.Kuzov || 'N/A'}</div></div>
-                        <div class="spec-box"><div class="spec-title">İstehsal Ölkəsi</div><div class="spec-val">${specs.Olke || 'N/A'}</div></div>
-                    </div>
+                    <div class="specs-grid">${specsHTML}</div>
                 </div>
 
                 <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları (${summary.recalls_found})</div>
+                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları</div>
                     ${recallsHTML}
                 </div>
             `;
@@ -372,35 +259,30 @@
             dash.style.display = 'grid';
         }
 
-        // KAMERA FİKSİ: Kamera açılmamasının və avtomatik oxumanın təminatı
+        // KAMERA FİKSİ: Kamera icazəsi və açılması
         function openScanner() {
+            // Modal-ı görünən edirik
             document.getElementById('scanner-modal').style.display = 'flex';
             
-            // Əgər scanner mövcud deyilsə, onu ilkinləşdir
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
             
-            // Ən son istifadə edilmiş kameranı və ya arxa kameranı istifadə et
             const config = { fps: 10, qrbox: 250 };
             
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Arxa kameranı prioritet edir (VIN üçün vacibdir)
+                { facingMode: "environment" }, // Arxa kameranı prioritet edir
                 config,
                 (decodedText) => {
                     // Uğurla oxunduqda
                     closeScanner();
                     document.getElementById('vinInput').value = decodedText;
                     fetchData(decodedText);
-                },
-                (errorMessage) => {
-                    // Avtomatik skan edən zaman xəta (məsələn, zəif işıq)
-                    // Konsola yaz, istifadəçini narahat etmə
-                    console.warn(errorMessage);
                 }
             ).catch(err => {
                 // Kamera icazəsi və ya cihaz tapılmadıqda
-                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın.");
+                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın və ya kodu əl ilə daxil edin.");
+                console.error(err);
                 closeScanner();
             });
         }
