@@ -1,89 +1,347 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN VIN / Barkod Pro</title>
-<style>
-body{margin:0;font-family:sans-serif;background:#121212;color:#fff;}
-header{padding:20px;text-align:center;background:#1f1f1f;font-size:1.6rem;font-weight:bold;}
-#camera-container{position:relative;text-align:center;margin:20px;}
-video{width:100%;max-width:400px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,0.5);}
-button,input{padding:10px 20px;margin:10px;font-size:1rem;border:none;border-radius:5px;cursor:pointer;}
-input{width:calc(100% - 60px);}
-#results{margin:20px;animation:fadeIn 0.5s;}
-.result-card{background:#1f1f1f;padding:15px;margin:10px 0;border-radius:10px;transition:0.3s;animation:fadeInUp 0.5s;}
-.result-card:hover{background:#333;}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-img.result-img{max-width:100%;border-radius:5px;margin-top:10px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Scanner Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --danger: #ef4444;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand { font-weight: 700; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+
+        /* Controls */
+        .controls { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; max-width: 600px; margin: 0 auto; }
+        
+        .input-group { position: relative; display: flex; gap: 10px; }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-scan { width: 100%; justify-content: center; background: #10b981; color: white; font-size: 1.1rem; padding: 16px; }
+
+        /* Scanner Modal */
+        #scanner-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #reader { width: 100%; max-width: 500px; }
+        .close-scanner {
+            position: absolute; top: 20px; right: 20px;
+            background: white; color: black; border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Results Grid */
+        .results-container {
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        .card:hover { transform: translateY(-5px); }
+        
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .card-img { height: 180px; width: 100%; object-fit: cover; background: #e5e7eb; }
+        .card-body { padding: 1.25rem; }
+        .source-tag { 
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; 
+            color: var(--primary); font-weight: 700; margin-bottom: 0.5rem; display: block;
+        }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.4; }
+        .card-desc { font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-btn { 
+            display: block; text-align: center; background: var(--bg); 
+            color: var(--text); padding: 10px; border-radius: 8px; text-decoration: none; font-weight: 600; 
+        }
+        .card-btn:hover { background: #e5e7eb; }
+
+        /* Loader */
+        .loader {
+            display: none;
+            margin: 2rem auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* History Panel */
+        .history-panel {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--surface); border-top: 1px solid #e5e7eb;
+            max-height: 0; overflow-y: auto; transition: 0.3s;
+            z-index: 90;
+        }
+        .history-panel.open { max-height: 300px; padding: 1rem; }
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; cursor: pointer; }
+        .history-item:hover { background: var(--bg); }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .input-group { flex-direction: column; }
+            .btn-scan { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(37,99,235,0.4); font-size: 0; }
+            .btn-scan::after { content: '\f029'; font-family: 'Font Awesome 6 Free'; font-size: 24px; }
+        }
+    </style>
 </head>
 <body>
-<header>XSCAN VIN / Barkod Pro</header>
 
-<div id="camera-container">
-  <video id="video" autoplay></video><br>
-  <button id="start-btn">Kamera Aç</button>
-  <button id="stop-btn">Kamera Bağla</button><br>
-  <input type="text" id="manual-input" placeholder="Kod daxil edin"/>
-  <button id="manual-btn">Axtar</button>
-</div>
+    <header>
+        <div class="brand"><i class="fas fa-barcode"></i> ScanPro</div>
+        <button class="btn" onclick="toggleHistory()"><i class="fas fa-history"></i> Tarixçə</button>
+    </header>
 
-<div id="results"></div>
+    <div class="controls">
+        <div class="input-group">
+            <input type="text" id="manualInput" placeholder="VIN, Barkod və ya QR kodu daxil edin...">
+            <button class="btn btn-primary" onclick="handleManualSearch()">
+                <i class="fas fa-search"></i> Axtar
+            </button>
+        </div>
+        <button class="btn btn-scan" onclick="startScanner()">Skaneri Aç</button>
+    </div>
 
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-<script>
-const video=document.getElementById('video');
-const startBtn=document.getElementById('start-btn');
-const stopBtn=document.getElementById('stop-btn');
-const manualBtn=document.getElementById('manual-btn');
-const manualInput=document.getElementById('manual-input');
-const resultsDiv=document.getElementById('results');
-let stream;
+    <div class="loader" id="loader"></div>
+    <div class="results-container" id="results">
+        </div>
 
-// Kamera aç
-startBtn.onclick=async()=>{
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-    video.srcObject=stream;
-  }catch(e){alert('Kamera açıla bilmədi: '+e.message);}
-}
+    <div id="scanner-container">
+        <div class="close-scanner" onclick="stopScanner()"><i class="fas fa-times"></i></div>
+        <div id="reader"></div>
+        <p style="color: white; margin-top: 1rem;">Kodu kameraya tutun</p>
+    </div>
 
-// Kamera bağla
-stopBtn.onclick=()=>{if(stream){stream.getTracks().forEach(t=>t.stop());video.srcObject=null;}}
+    <div class="history-panel" id="historyPanel">
+        <h3>Son Axtarışlar</h3>
+        <div id="historyList"></div>
+    </div>
 
-// ZXing barcode reader
-const codeReader=new ZXing.BrowserMultiFormatReader();
-codeReader.decodeFromVideoDevice(null,video,(result,err)=>{
-  if(result){handleCode(result.text);stopBtn.click();}
-});
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        const API_URL = "https://saskioyunu.onrender.com/api/search";
+        let html5QrcodeScanner = null;
+        let searchHistory = JSON.parse(localStorage.getItem('scanHistory')) || [];
 
-// Manual input
-manualBtn.onclick=()=>{if(manualInput.value.trim()!==""){handleCode(manualInput.value.trim());}}
+        // 1. Axtarış Funksiyası
+        async function searchCode(code) {
+            if (!code) return;
+            
+            // UI Yeniləmə
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('loader').style.display = 'block';
+            addToHistory(code);
 
-// Kod işləmə + server fetch
-async function handleCode(code){
-  resultsDiv.innerHTML="<p>Axtarılır...</p>";
-  try{
-    const res=await fetch(`https://saskioyunu.onrender.com/search?code=${encodeURIComponent(code)}`);
-    const data=await res.json();
-    displayResults(data);
-  }catch(e){resultsDiv.innerHTML="<p>Xəta: "+e.message+"</p>";}
-}
+            try {
+                // Render Serverinə Sorğu
+                const response = await fetch(`${API_URL}?q=${encodeURIComponent(code)}`);
+                
+                if (!response.ok) throw new Error('Server xətası');
+                
+                const data = await response.json();
+                renderResults(data.results);
 
-// Nəticələri göstər
-function displayResults(data){
-  resultsDiv.innerHTML="";
-  if(data.error){resultsDiv.innerHTML="<p>"+data.error+"</p>";return;}
-  if(!data.results||data.results.length===0){resultsDiv.innerHTML="<p>Nəticə tapılmadı</p>";return;}
-  data.results.forEach(item=>{
-    const card=document.createElement('div');
-    card.className="result-card";
-    card.innerHTML=`<p><strong>${item.source}:</strong> <a href="${item.link}" target="_blank">${item.link}</a></p>`;
-    resultsDiv.appendChild(card);
-  });
-}
-</script>
+            } catch (error) {
+                renderError(error.message, code);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // 2. Manual Axtarış
+        function handleManualSearch() {
+            const code = document.getElementById('manualInput').value;
+            searchCode(code);
+        }
+
+        // 3. UI Render
+        function renderResults(results) {
+            const container = document.getElementById('results');
+            
+            if (results.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-light);">Heç nə tapılmadı.</div>`;
+                return;
+            }
+
+            results.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                // Placeholder şəkil əgər şəkil yoxdursa
+                const imageSrc = item.image || 'https://via.placeholder.com/400x200?text=No+Preview';
+                
+                card.innerHTML = `
+                    <img src="${imageSrc}" class="card-img" alt="${item.title}">
+                    <div class="card-body">
+                        <span class="source-tag">${item.source}</span>
+                        <h3 class="card-title">${item.title}</h3>
+                        <p class="card-desc">${item.description}</p>
+                        <a href="${item.link}" target="_blank" class="card-btn">Keçid Et <i class="fas fa-external-link-alt"></i></a>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderError(msg, code) {
+            const container = document.getElementById('results');
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: var(--danger); margin-bottom: 1rem;"></i>
+                    <h3>Xəta baş verdi</h3>
+                    <p>${msg}</p>
+                    <a href="https://www.google.com/search?q=${code}" target="_blank" class="btn btn-primary" style="display:inline-flex; margin-top:1rem;">
+                        Google-da axtar
+                    </a>
+                </div>
+            `;
+        }
+
+        // 4. Skaner Məntiqi
+        function startScanner() {
+            document.getElementById('scanner-container').style.display = 'flex';
+            
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                config,
+                onScanSuccess
+            ).catch(err => {
+                console.error("Camera start failed", err);
+                alert("Kamera icazəsi verilmədi və ya xəta baş verdi.");
+                stopScanner();
+            });
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Kod oxundu, skaneri dərhal dayandır
+            stopScanner();
+            // Input sahəsini doldur
+            document.getElementById('manualInput').value = decodedText;
+            // Vibrasiya (feedback)
+            if (navigator.vibrate) navigator.vibrate(200);
+            // Axtarışı başlat
+            searchCode(decodedText);
+        }
+
+        function stopScanner() {
+            document.getElementById('scanner-container').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                }).catch(err => console.error(err));
+            }
+        }
+
+        // 5. Tarixçə İdarəetməsi
+        function addToHistory(code) {
+            // Dublikatları sil
+            searchHistory = searchHistory.filter(item => item !== code);
+            // Əvvələ əlavə et
+            searchHistory.unshift(code);
+            // Max 10 ədəd saxla
+            if (searchHistory.length > 10) searchHistory.pop();
+            
+            localStorage.setItem('scanHistory', JSON.stringify(searchHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = searchHistory.map(code => `
+                <div class="history-item" onclick="document.getElementById('manualInput').value='${code}'; searchCode('${code}'); toggleHistory()">
+                    <span>${code}</span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            `).join('');
+        }
+
+        function toggleHistory() {
+            document.getElementById('historyPanel').classList.toggle('open');
+            renderHistory();
+        }
+        
+        // Kliklənəndə tarixçəni bağla (panel xaricində)
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('historyPanel');
+            const btn = document.querySelector('header button');
+            if (!panel.contains(e.target) && !btn.contains(e.target) && panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            }
+        });
+
+        // Başlanğıcda render
+        renderHistory();
+    </script>
 </body>
 </html>
