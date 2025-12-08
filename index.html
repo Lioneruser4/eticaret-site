@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Master Pro Scanner (Azərbaycanca)</title>
+    <title>VIN Master Pro (Animated UI)</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Rəng Palitrası */
+        /* Glassmorphism/Dark Theme */
         :root {
             --bg-dark: #1f2937;
-            --surface-dark: #374151;
-            --accent: #10b981; /* Yaşıl */
+            --surface-blur: rgba(55, 65, 81, 0.7); /* Yarı-şəffaf səth */
+            --accent: #10b981;
             --text-light: #f3f4f6;
             --text-muted: #9ca3af;
             --danger: #ef4444;
-            --radius: 12px;
+            --radius: 16px;
         }
 
         body { 
@@ -24,55 +24,59 @@
             background: var(--bg-dark); 
             color: var(--text-light); 
             margin: 0; 
-            padding: 20px;
+            padding: 40px 20px;
         }
 
-        /* 1. Mərkəzləşdirmə Fix-i */
+        /* Başlıq və Mərkəzləşdirmə (VIN bar ortada) */
         .search-container { 
-            max-width: 700px; 
-            margin: 0 auto 40px; /* Ortaya gətirir */
+            max-width: 800px; 
+            margin: 0 auto 50px; 
             display: flex; 
             flex-direction: column; 
             gap: 20px; 
-            text-align: center;
-            align-items: center; /* Mərkəzləşdirir */
+            align-items: center; /* Mərkəzləşdirmə */
+            padding: 20px;
         }
         .search-title { 
-            font-size: 2rem; 
+            font-size: 2.5rem; 
             font-weight: 700; 
             color: var(--accent);
+            text-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
         }
         .input-group { 
             display: flex; 
             gap: 10px; 
-            width: 100%; /* Tam eni istifadə edir */
+            width: 100%; 
+            max-width: 650px;
         }
         input { 
             flex: 1; 
-            padding: 15px; 
-            border: 2px solid var(--surface-dark); 
+            padding: 16px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
             border-radius: var(--radius); 
-            background: var(--surface-dark);
+            background: var(--surface-blur);
+            backdrop-filter: blur(8px); /* Glassmorphism effekti */
             color: var(--text-light);
             font-size: 16px; 
-            outline: none; 
-            transition: border-color 0.3s;
+            transition: all 0.3s ease-in-out;
+        }
+        input:focus { 
+            border-color: var(--accent); 
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
         }
         .btn { 
-            padding: 15px 25px; 
+            padding: 16px 20px; 
             border: none; 
             border-radius: var(--radius); 
             cursor: pointer; 
             font-weight: 700; 
             color: var(--text-light); 
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, transform 0.2s;
         }
-        .btn-scan { 
-            background: var(--accent); 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;
-        }
+        .btn-scan { background: var(--accent); }
+        .btn-scan:hover { background: #0d9468; transform: translateY(-2px); }
+        .btn-search { background: #3b82f6; }
+        .btn-search:hover { background: #2563eb; transform: translateY(-2px); }
 
         /* Dashboard Grid */
         .dashboard { 
@@ -80,74 +84,80 @@
             max-width: 1200px; 
             margin: 0 auto; 
             grid-template-columns: 1fr 1fr;
-            gap: 25px; 
+            gap: 30px; 
+            /* Animasiyalı görünmə */
+            animation: fadeIn 0.8s ease-out;
         }
         
-        /* Cards & Details */
+        /* Cards & Glass Effect */
         .card { 
-            background: var(--surface-dark); 
+            background: var(--surface-blur); 
             border-radius: var(--radius); 
-            padding: 25px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            padding: 30px; 
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transition: transform 0.3s ease-in-out;
         }
-        .hero-card { 
-            grid-column: 1 / -1; 
-            display: flex; 
-            gap: 20px; 
-            align-items: center; 
+        .card:hover {
+            transform: translateY(-5px);
         }
+
+        /* Texniki Məlumat Detalları Fix-i üçün CSS */
+        .specs-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+        }
+        .spec-box { 
+            background: rgba(75, 85, 99, 0.6); 
+            padding: 15px; 
+            border-radius: 8px; 
+            transition: background 0.3s;
+        }
+        .spec-box:hover {
+            background: rgba(75, 85, 99, 0.8);
+        }
+
+        /* Digər elementlər */
         .car-image { 
             width: 40%; 
-            max-height: 250px; /* Şəkil hündürlüyü tənzimləndi */
+            max-height: 250px; 
             object-fit: cover; 
             border-radius: var(--radius); 
             background: #4b5563;
         }
-        
-        /* Data Display */
-        .check-list, .specs-grid { list-style: none; padding: 0; }
-        .check-item { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 12px 0; 
-            border-bottom: 1px solid #4b5563; 
+        .recall-item { 
+            background: rgba(239, 68, 68, 0.2); 
+            border-left: 4px solid var(--danger); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px;
         }
-        .status-checked { color: var(--accent); }
-        .status-available { color: #3b82f6; }
-        .spec-box { background: #4b5563; padding: 15px; border-radius: 8px; }
-        .spec-title { font-size: 0.8rem; color: var(--text-muted); }
-        .spec-val { font-weight: 600; font-size: 1.1rem; margin-top: 5px; }
 
-        /* Scanner Modal Fix (Kameranın açılması üçün vacibdir) */
-        #scanner-modal { 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(0,0,0,0.95); 
-            z-index: 1000; 
-            display: none; 
-            /* Flex-i əlavə etdik */
-            display: flex; 
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* Animasiyalar */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        #reader { 
-            width: 100%; 
-            max-width: 500px; 
-            height: 350px; 
+        
+        @media (max-width: 768px) {
+            .hero-card { flex-direction: column; text-align: center; }
+            .car-image, .hero-details { width: 100%; }
+            .dashboard { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <div class="search-title">VIN Master Pro</div>
+        <div class="search-title">VIN Master Pro Scanner</div>
         <div class="input-group">
             <input type="text" id="vinInput" placeholder="VIN kodu daxil edin (17 simvol)">
             <button class="btn btn-scan" onclick="openScanner()">
                 <i class="fas fa-camera"></i> Skan et
             </button>
-            <button class="btn" style="background: var(--surface-dark);" onclick="fetchData()">
+            <button class="btn btn-search" onclick="fetchData()">
                 <i class="fas fa-search"></i> Axtar
             </button>
         </div>
@@ -169,7 +179,7 @@
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        // Render Linkiniz (lazım gələrsə yeniləyin)
+        // Render Linkiniz (server.js-in aktiv olduğundan əmin olun)
         const API = "https://saskioyunu.onrender.com/api/search"; 
         let html5QrcodeScanner = null;
 
@@ -190,13 +200,13 @@
                     alert("Axtarış uğursuz oldu: " + json.message);
                 }
             } catch (error) {
-                alert("Server bağlantı xətası baş verdi. Render serveri aktiv olduğundan əmin olun.");
+                alert("Server bağlantı xətası baş verdi. Server.js-in aktiv olduğunu yoxlayın.");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
-        // TƏRCÜMƏ SİNXRONİZASİYASI VƏ GÖRÜNTÜLƏNMƏ FİKSİ
+        // MƏLUMATIN GÖSTƏRİLMƏSİ VƏ AZƏRBAYCANCA AÇAR FİKSİ
         function renderDashboard(data, vin) {
             const dash = document.getElementById('dashboard');
             const summary = data.summary; // Azərbaycanca açarlar gəlir
@@ -204,6 +214,7 @@
             const recalls = data.recalls; 
             const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 
+            // Zavod Xətaları (Recalls)
             let recallsHTML = recalls.length > 0 
                 ? recalls.map(r => `
                     <div class="recall-item">
@@ -213,6 +224,7 @@
                 : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
 
             // 1. Report Summary (Hesabat Yoxlanışları)
+            // Object.entries ilə Azərbaycanca açarları tam göstəririk
             const summaryHTML = Object.entries(summary).map(([key, val]) => `
                 <li class="check-item">
                     <span class="check-label">${key}</span> 
@@ -222,13 +234,15 @@
                 </li>
             `).join('');
 
-            // 2. Specs Details (Texniki Məlumat)
+            // 2. Specs Details (Texniki Məlumat) - İSTEHSALÇI MƏLUMATI FIX-İ BURDADIR!
+            // Object.entries ilə bütün Azərbaycanca açarları düzgün göstəririk
             const specsHTML = Object.entries(specs).map(([key, val]) => `
                 <div class="spec-box">
                     <div class="spec-title">${key}</div>
                     <div class="spec-val">${val}</div>
                 </div>
             `).join('');
+
 
             dash.innerHTML = `
                 <div class="card hero-card">
@@ -259,9 +273,8 @@
             dash.style.display = 'grid';
         }
 
-        // KAMERA FİKSİ: Kamera icazəsi və açılması
+        // KAMERA İNİSİALİZASİYASI
         function openScanner() {
-            // Modal-ı görünən edirik
             document.getElementById('scanner-modal').style.display = 'flex';
             
             if (!html5QrcodeScanner) {
@@ -271,17 +284,15 @@
             const config = { fps: 10, qrbox: 250 };
             
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Arxa kameranı prioritet edir
+                { facingMode: "environment" }, 
                 config,
                 (decodedText) => {
-                    // Uğurla oxunduqda
                     closeScanner();
                     document.getElementById('vinInput').value = decodedText;
                     fetchData(decodedText);
                 }
             ).catch(err => {
-                // Kamera icazəsi və ya cihaz tapılmadıqda
-                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın və ya kodu əl ilə daxil edin.");
+                alert("Kamera başlatıla bilmədi. İcazələri yoxlayın.");
                 console.error(err);
                 closeScanner();
             });
