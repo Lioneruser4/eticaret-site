@@ -3,154 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>VIN Master Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        :root { --primary: #007AFF; --bg: #F2F2F7; --card: #FFFFFF; }
-        body { font-family: 'Poppins', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        
-        /* Axtarış hissəsi */
-        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 15px; border-radius: 12px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .btn { padding: 15px 25px; border: none; border-radius: 12px; background: var(--primary); color: white; cursor: pointer; font-weight: 600; }
-        
-        /* Nəticə Kartı Dizaynı */
-        .result-card {
-            background: var(--card); border-radius: 20px; overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: none;
-            animation: slideUp 0.4s ease;
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --bg: #ecf0f1;
+            --card-bg: #ffffff;
         }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        body { font-family: 'Roboto', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+
+        /* Search Area */
+        .search-container { max-width: 800px; margin: 0 auto 30px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        .btn { padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-search { background: var(--accent); }
+        .btn-scan { background: var(--primary); }
+
+        /* Dashboard Grid */
+        .dashboard { display: none; max-width: 1000px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         
-        .card-header { background: #333; color: white; padding: 20px; position: relative; }
-        .card-header h2 { margin: 0; font-size: 1.2rem; }
-        .product-img { width: 100%; height: 250px; object-fit: cover; background: #eee; }
-        
-        /* Məlumat Cədvəli */
-        .info-table { padding: 20px; }
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .info-label { color: #888; font-weight: 500; }
-        .info-val { font-weight: 600; color: #333; text-align: right; }
-        
-        .price-tag { font-size: 2rem; color: #2ecc71; font-weight: bold; padding: 0 20px; }
+        /* Cards */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .card-header i { color: var(--accent); }
+
+        /* Car Hero Section */
+        .hero-card { grid-column: 1 / -1; text-align: center; }
+        .car-title { font-size: 2rem; color: var(--primary); margin: 10px 0; }
+        .vin-badge { background: #eee; padding: 5px 15px; border-radius: 20px; font-family: monospace; letter-spacing: 1px; color: #555; }
+
+        /* Data Check List (Sənin istədiyin hissə) */
+        .check-list { list-style: none; padding: 0; }
+        .check-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #eee; }
+        .check-label { font-weight: 500; color: #555; }
+        .check-status { font-weight: 700; font-size: 0.9rem; }
+        .status-available { color: var(--accent); }
+        .status-checked { color: var(--success); }
+        .status-danger { color: var(--danger); }
+
+        /* Specs Table */
+        .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .spec-box { background: #f8f9fa; padding: 10px; border-radius: 6px; }
+        .spec-title { font-size: 0.8rem; color: #888; }
+        .spec-val { font-weight: 600; font-size: 1rem; }
+
+        /* Recalls / Problems */
+        .recall-item { background: #fff5f5; border-left: 4px solid var(--danger); padding: 10px; margin-bottom: 10px; }
+        .recall-title { color: var(--danger); font-weight: bold; font-size: 0.9rem; }
+        .recall-desc { font-size: 0.85rem; color: #555; margin-top: 5px; }
 
         /* Loader */
-        .loader { display: none; text-align: center; padding: 20px; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite; margin: 0 auto; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .loader { display: none; text-align: center; padding: 40px; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Scanner */
-        #scanner-modal { position: fixed; inset: 0; background: #000; z-index: 999; display: none; }
-        #reader { width: 100%; height: 100%; }
-        .close-scan { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; z-index: 1000; cursor: pointer; }
+        /* Scanner Modal */
+        #scanner-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: none; }
+        .close-scan { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="search-box">
-        <input type="text" id="inputCode" placeholder="VIN və ya Barkod...">
-        <button class="btn" onclick="startSearch()"><i class="fas fa-search"></i></button>
-        <button class="btn" style="background:#333" onclick="openScanner()"><i class="fas fa-camera"></i></button>
+    <div class="search-container">
+        <input type="text" id="vinInput" placeholder="VIN kodu daxil edin (17 simvol)">
+        <button class="btn btn-search" onclick="fetchData()">Yoxla</button>
+        <button class="btn btn-scan" onclick="openScanner()"><i class="fas fa-camera"></i></button>
     </div>
 
-    <div class="loader" id="loader"><div class="spinner"></div><p>Bazalar axtarılır...</p></div>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top:10px; color:#666;">Qlobal bazalar (NHTSA, NMVTIS) yoxlanılır...</p>
+    </div>
 
-    <div id="resultArea" class="result-card">
+    <div class="dashboard" id="dashboard">
         </div>
 
     <div id="scanner-modal">
         <div class="close-scan" onclick="closeScanner()">&times;</div>
-        <div id="reader"></div>
+        <div id="reader" style="width:100%; height:100%"></div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        const API_URL = "https://saskioyunu.onrender.com/api/search"; // Render linkin
+        const API = "https://saskioyunu.onrender.com/api/search"; // Sənin Render Linkin
         let html5QrcodeScanner = null;
 
-        async function startSearch(code = null) {
-            const query = code || document.getElementById('inputCode').value;
-            if(!query) return;
+        async function fetchData(code = null) {
+            const vin = code || document.getElementById('vinInput').value.trim();
+            if (vin.length !== 17) return alert("VIN kod 17 simvol olmalıdır!");
 
-            // UI Reset
-            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
 
             try {
-                const res = await fetch(`${API_URL}?q=${query}`);
+                const res = await fetch(`${API}?q=${vin}`);
                 const json = await res.json();
 
-                if(json.success) {
-                    renderData(json.data);
+                if (json.success) {
+                    renderDashboard(json.data, vin);
                 } else {
-                    alert("Məlumat tapılmadı: " + json.message);
+                    alert(json.message);
                 }
-            } catch(e) {
+            } catch (error) {
                 alert("Server xətası!");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
         }
 
-        function renderData(data) {
-            const area = document.getElementById('resultArea');
-            let html = '';
+        function renderDashboard(data, vin) {
+            const dash = document.getElementById('dashboard');
+            const summary = data.summary;
+            const specs = data.specs;
+            const recalls = data.recalls;
 
-            // Əgər VIN məlumatıdırsa
-            if(data.type === 'vin_data') {
-                html = `
-                    <div class="card-header">
-                        <h2>VIN: ${data.details.Marka} ${data.details.Model}</h2>
-                    </div>
-                    <div class="info-table">
-                        ${Object.entries(data.details).map(([key, val]) => `
-                            <div class="info-row">
-                                <span class="info-label">${key}</span>
-                                <span class="info-val">${val}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } 
-            // Əgər Məhsul məlumatıdırsa
-            else {
-                html = `
-                    <img src="${data.image}" class="product-img">
-                    <div class="card-header" style="background:white; color:black">
-                        <h2>${data.title}</h2>
-                    </div>
-                    <div class="price-tag">${data.price}</div>
-                    <div class="info-table">
-                        <div class="info-row">
-                            <span class="info-label">Mənbə</span>
-                            <span class="info-val">${data.source}</span>
-                        </div>
-                         <div style="text-align:center; margin-top:10px;">
-                            <a href="${data.link}" target="_blank" style="color:#007AFF">Orijinal elana bax</a>
-                        </div>
-                    </div>
-                `;
-            }
+            let recallsHTML = recalls.length > 0 
+                ? recalls.map(r => `
+                    <div class="recall-item">
+                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> ${r.component}</div>
+                        <div class="recall-desc">${r.summary.substring(0, 150)}...</div>
+                    </div>`).join('')
+                : '<p style="color:#27ae60"><i class="fas fa-check-circle"></i> Açıq zavod problemi tapılmadı.</p>';
 
-            area.innerHTML = html;
-            area.style.display = 'block';
+            dash.innerHTML = `
+                <div class="card hero-card">
+                    <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
+                    <h1 class="car-title">${specs.Marka || ''} ${specs.Model || ''} ${specs.Il || ''}</h1>
+                    <p style="color:#666">${specs.Olke || 'Global'} istehsalı</p>
+                    <a href="${data.image}" target="_blank" style="color:var(--accent); text-decoration:none;">
+                        <i class="far fa-image"></i> Şəkilləri axtar
+                    </a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-clipboard-check"></i> Database Checks</div>
+                    <ul class="check-list">
+                        <li class="check-item">
+                            <span class="check-label">Specifications</span>
+                            <span class="check-status status-checked"><i class="fas fa-check"></i> ${summary.specifications}</span>
+                        </li>
+                        <li class="check-item">
+                            <span class="check-label">Manufacturer Info</span>
+                            <span class="check-status status-checked">${summary.manufacturer_info}</span>
+                        </li>
+                        <li class="check-item">
+                            <span class="check-label">Title History</span>
+                            <span class="check-status status-available"><i class="fas fa-download"></i> ${summary.title_history}</span>
+                        </li>
+                        <li class="check-item">
+                            <span class="check-label">Stolen Databases</span>
+                            <span class="check-status status-checked"><i class="fas fa-shield-alt"></i> ${summary.stolen_database}</span>
+                        </li>
+                        <li class="check-item">
+                            <span class="check-label">Odometer Rollback</span>
+                            <span class="check-status status-available">${summary.odometer_history}</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
+                    <div class="specs-grid">
+                        <div class="spec-box"><div class="spec-title">Mühərrik</div><div class="spec-val">${specs.Silindr || 'N/A'} Silindr</div></div>
+                        <div class="spec-box"><div class="spec-title">Yanacaq</div><div class="spec-val">${specs.Yanacaq || 'N/A'}</div></div>
+                        <div class="spec-box"><div class="spec-title">Kuzov</div><div class="spec-val">${specs.Kuzov || 'N/A'}</div></div>
+                        <div class="spec-box"><div class="spec-title">Buraxılış</div><div class="spec-val">${specs.Il || 'N/A'}</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları (Recalls)</div>
+                    ${recallsHTML}
+                </div>
+            `;
+
+            dash.style.display = 'grid';
         }
 
-        // Scanner Functions
         function openScanner() {
             document.getElementById('scanner-modal').style.display = 'block';
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
                 (decodedText) => {
                     closeScanner();
-                    document.getElementById('inputCode').value = decodedText;
-                    startSearch(decodedText);
-                }
-            );
+                    document.getElementById('vinInput').value = decodedText;
+                    fetchData(decodedText);
+                });
         }
-
         function closeScanner() {
             document.getElementById('scanner-modal').style.display = 'none';
             if(html5QrcodeScanner) html5QrcodeScanner.stop();
