@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Master Pro (Animated UI)</title>
+    <title>VIN Master Pro (Final Version)</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -11,11 +11,12 @@
         /* Glassmorphism/Dark Theme */
         :root {
             --bg-dark: #1f2937;
-            --surface-blur: rgba(55, 65, 81, 0.7); /* Yarı-şəffaf səth */
-            --accent: #10b981;
+            --surface-blur: rgba(55, 65, 81, 0.7); 
+            --accent: #10b981; 
             --text-light: #f3f4f6;
             --text-muted: #9ca3af;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --radius: 16px;
         }
 
@@ -27,14 +28,14 @@
             padding: 40px 20px;
         }
 
-        /* Başlıq və Mərkəzləşdirmə (VIN bar ortada) */
+        /* Başlıq və Mərkəzləşdirmə */
         .search-container { 
             max-width: 800px; 
             margin: 0 auto 50px; 
             display: flex; 
             flex-direction: column; 
             gap: 20px; 
-            align-items: center; /* Mərkəzləşdirmə */
+            align-items: center; 
             padding: 20px;
         }
         .search-title { 
@@ -55,14 +56,10 @@
             border: 1px solid rgba(255, 255, 255, 0.1); 
             border-radius: var(--radius); 
             background: var(--surface-blur);
-            backdrop-filter: blur(8px); /* Glassmorphism effekti */
+            backdrop-filter: blur(8px); 
             color: var(--text-light);
             font-size: 16px; 
             transition: all 0.3s ease-in-out;
-        }
-        input:focus { 
-            border-color: var(--accent); 
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
         }
         .btn { 
             padding: 16px 20px; 
@@ -74,9 +71,7 @@
             transition: background-color 0.3s, transform 0.2s;
         }
         .btn-scan { background: var(--accent); }
-        .btn-scan:hover { background: #0d9468; transform: translateY(-2px); }
         .btn-search { background: #3b82f6; }
-        .btn-search:hover { background: #2563eb; transform: translateY(-2px); }
 
         /* Dashboard Grid */
         .dashboard { 
@@ -85,7 +80,6 @@
             margin: 0 auto; 
             grid-template-columns: 1fr 1fr;
             gap: 30px; 
-            /* Animasiyalı görünmə */
             animation: fadeIn 0.8s ease-out;
         }
         
@@ -99,11 +93,20 @@
             border: 1px solid rgba(255, 255, 255, 0.18);
             transition: transform 0.3s ease-in-out;
         }
-        .card:hover {
-            transform: translateY(-5px);
-        }
+        .card:hover { transform: translateY(-5px); }
 
-        /* Texniki Məlumat Detalları Fix-i üçün CSS */
+        /* Data Display */
+        .check-list, .specs-grid { list-style: none; padding: 0; }
+        .check-item { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+        .status-checked { color: var(--accent); }
+        .status-danger { color: var(--danger); }
+        .status-warning { color: var(--warning); } /* Yeni rəng əlavə edildi */
+        
         .specs-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -115,36 +118,11 @@
             border-radius: 8px; 
             transition: background 0.3s;
         }
-        .spec-box:hover {
-            background: rgba(75, 85, 99, 0.8);
-        }
-
-        /* Digər elementlər */
-        .car-image { 
-            width: 40%; 
-            max-height: 250px; 
-            object-fit: cover; 
-            border-radius: var(--radius); 
-            background: #4b5563;
-        }
-        .recall-item { 
-            background: rgba(239, 68, 68, 0.2); 
-            border-left: 4px solid var(--danger); 
-            padding: 15px; 
-            margin-bottom: 15px; 
-            border-radius: 8px;
-        }
 
         /* Animasiyalar */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @media (max-width: 768px) {
-            .hero-card { flex-direction: column; text-align: center; }
-            .car-image, .hero-details { width: 100%; }
-            .dashboard { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -179,7 +157,6 @@
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        // Render Linkiniz (server.js-in aktiv olduğundan əmin olun)
         const API = "https://saskioyunu.onrender.com/api/search"; 
         let html5QrcodeScanner = null;
 
@@ -206,11 +183,17 @@
             }
         }
 
-        // MƏLUMATIN GÖSTƏRİLMƏSİ VƏ AZƏRBAYCANCA AÇAR FİKSİ
+        function getStatusClass(value) {
+            if (value.includes('Problem Tapıldı') || value.includes('Hərrac/Zərər')) return 'status-danger';
+            if (value.includes('Ödənişli bazada') || value.includes('Yoxlama Tələb Olunur')) return 'status-warning';
+            if (value.includes('Mövcuddur') || value.includes('Uğurlu')) return 'status-checked';
+            return '';
+        }
+
         function renderDashboard(data, vin) {
             const dash = document.getElementById('dashboard');
-            const summary = data.summary; // Azərbaycanca açarlar gəlir
-            const specs = data.specs;     // Azərbaycanca açarlar gəlir
+            const summary = data.summary;
+            const specs = data.specs;
             const recalls = data.recalls; 
             const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 
@@ -224,18 +207,16 @@
                 : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq Zavod Xətası Tapılmadı.</p>';
 
             // 1. Report Summary (Hesabat Yoxlanışları)
-            // Object.entries ilə Azərbaycanca açarları tam göstəririk
             const summaryHTML = Object.entries(summary).map(([key, val]) => `
                 <li class="check-item">
-                    <span class="check-label">${key}</span> 
-                    <span class="check-status status-${val.includes('Uğurlu') || val.includes('Mövcud') ? 'checked' : 'available'}">
+                    <span class="check-label ${getStatusClass(val)}">${key}</span> 
+                    <span class="check-status ${getStatusClass(val)}">
                         ${val}
                     </span>
                 </li>
             `).join('');
 
-            // 2. Specs Details (Texniki Məlumat) - İSTEHSALÇI MƏLUMATI FIX-İ BURDADIR!
-            // Object.entries ilə bütün Azərbaycanca açarları düzgün göstəririk
+            // 2. Specs Details (Texniki Məlumat)
             const specsHTML = Object.entries(specs).map(([key, val]) => `
                 <div class="spec-box">
                     <div class="spec-title">${key}</div>
