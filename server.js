@@ -2,14 +2,15 @@ const express = require('express');
 const ytdl = require('ytdl-core');
 const cors = require('cors');
 const { HttpsProxyAgent } = require('https-proxy-agent'); 
-const axios = require('axios'); // Telegram API çağırışı üçün
-const yts = require('youtube-search-without-api-key'); // Axtarış üçün
+const axios = require('axios');
+const yts = require('youtube-search-without-api-key');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
 
-// --- DƏYİŞƏNLƏRİNİZ VƏ KONFİQURASİYALAR ---
-const BOT_TOKEN = "2138035413:AAGYaGtgvQ4thyJKW2TXLS5n3wyZ6vVx3I8";
+// --- DƏYİŞƏNLƏRİNİZ ---
+// BOT_TOKEN-i buraya daxil edilmişdir
+const BOT_TOKEN = "2138035413:AAGYaGtgvQ4thyJKW2TXLS5n3wyZ6vVx3I8"; 
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const PROXY_URL = process.env.PROXY_URL; // Render Environment Variables-dan oxunur
 
@@ -34,26 +35,32 @@ async function sendAudioToTelegram(chatId, title, audioBuffer) {
     console.log(`[TELEGRAM] ${chatId}-ə səs göndərilir.`);
 
     try {
+        // FormData istifadəsi üçün əlavə konfiqurasiya
+        const { default: FormData } = await import('form-data');
         const formData = new FormData();
+        
+        // Blob yerinə Buffer-i birbaşa əlavə edirik (Node.js mühiti üçün daha uyğundur)
         formData.append('chat_id', chatId);
-        formData.append('audio', new Blob([audioBuffer], { type: 'audio/mpeg' }), `${title}.mp3`);
+        formData.append('audio', audioBuffer, { filename: `${title}.mp3`, contentType: 'audio/mpeg' });
         formData.append('caption', `✅ Uğurla yükləndi: ${title}`);
 
         await axios.post(url, formData, {
             headers: {
-                'Content-Type': `multipart/form-data; boundary=${formData._boundary}`
+                ...formData.getHeaders() // Doğru multipart/form-data başlığını təmin edir
             },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
             timeout: 720000 // 12 dəqiqə
         });
         console.log(`[TELEGRAM] Audio ${chatId}-ə uğurla çatdırıldı.`);
         return true;
     } catch (error) {
-        console.error("[TELEGRAM ERROR] Audio göndərilmədi:", error.response?.data || error.message);
+        console.error("[TELEGRAM ERROR] Audio göndərilmədi:", error.response?.data?.description || error.message);
         return false;
     }
 }
 
-// --- Veb Saytdan Gələn Sorğuları İdarə Edən Yeni Endpoint ---
+// --- Veb Saytdan Gələn Sorğuları İdarə Edən Endpoint ---
 app.post('/process-request', async (req, res) => {
     const { chat_id, query } = req.body;
     let videoUrl = query;
@@ -96,7 +103,9 @@ app.post('/process-request', async (req, res) => {
         
         audioStream.on('error', (err) => {
             console.error('[YTDL ERROR]', err.message);
-            res.status(500).json({ status: 'error', message: 'Yükləmə zamanı xəta: IP bloklanması.' });
+            if (!res.headersSent) {
+                res.status(500).json({ status: 'error', message: 'Yükləmə zamanı xəta: IP bloklanması.' });
+            }
         });
 
         // 3. Yükləmə tamamlandıqdan sonra Telegram-a göndərmək
@@ -107,23 +116,23 @@ app.post('/process-request', async (req, res) => {
             const success = await sendAudioToTelegram(chat_id, videoTitle, audioBuffer);
             
             if (success) {
-                res.json({ status: 'success', message: 'Musiqi uğurla bota göndərildi.' });
+                if (!res.headersSent) {
+                    res.json({ status: 'success', message: 'Musiqi uğurla bota göndərildi.' });
+                }
             } else {
-                res.status(500).json({ status: 'error', message: 'Telegram-a göndərilmədi.' });
+                if (!res.headersSent) {
+                    res.status(500).json({ status: 'error', message: 'Telegram-a göndərilmədi.' });
+                }
             }
         });
 
     } catch (error) {
         console.error("[GLOBAL ERROR]", error.message);
-        res.status(500).json({ status: 'error', message: `Server xətası: ${error.message}` });
+        if (!res.headersSent) {
+            res.status(500).json({ status: 'error', message: `Server xətası: ${error.message}` });
+        }
     }
 });
-// ----------------------------------------------------
-
-// Köhnə API endpoint-i ləğv edilir, bütün iş /process-request-də görülür.
-/*
-app.get('/download', async (req, res) => { ... }); 
-*/
 
 app.listen(PORT, () => {
     console.log(`Node.js API Server ${PORT}-də aktivdir.`);
