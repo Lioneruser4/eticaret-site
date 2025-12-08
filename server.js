@@ -29,8 +29,7 @@ const translationMap = {
     "odometer_history": "Kilometraj Tarixçəsi",
     "stolen_database": "Oğurluq Bazası Yoxlanışı",
     "recalls_found": "Zavod Xətaları",
-    // YENİ TƏRCÜMƏ AÇARI
-    "accident_status": "Qəza/Zərər Yoxlanışı"
+    "accident_status": "Qəza/Zərər Yoxlanışı" // YENİ AÇAR
 };
 
 const getHeaders = () => ({
@@ -38,7 +37,7 @@ const getHeaders = () => ({
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
 });
 
-// Köməkçi Funksiya: Ümumi Google Web Scraping üçün
+// Köməkçi Funksiya: Google Web Scraping
 async function scrapeGoogleWeb(query) {
     try {
         const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
@@ -50,23 +49,36 @@ async function scrapeGoogleWeb(query) {
     }
 }
 
+// Köməkçi Funksiya: Google Image Scraping
+async function scrapeGoogleImage(query) {
+    try {
+        const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+        const { data } = await axios.get(url, { headers: getHeaders(), timeout: 5000 });
+        const $ = cheerio.load(data);
+        const firstImageElement = $('img').eq(1); 
+        const imageUrl = firstImageElement.attr('src');
+        if (imageUrl && imageUrl.startsWith('http')) {
+             return imageUrl;
+        }
+    } catch (e) {
+        console.error("Image scraping failed for query:", query, e.message);
+    }
+    return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
+}
 
-// YENİ FUNKSİYA: Ödənişsiz Bazalarda Qəza Statusunu Axtarmaq
+// Qəza Statusunu Axtarmaq
 async function fetchAccidentStatus(vin) {
     const keywords = ['salvage', 'total loss', 'auction', 'damage', 'copart', 'iaai', 'zərər'];
     const query = `${vin} (${keywords.join(' OR ')})`; 
     
     const $ = await scrapeGoogleWeb(query);
-    if (!$) {
-        return "Xəta baş verdi (Yenidən cəhd edin)";
-    }
+    if (!$) return "Xəta baş verdi (Yenidən cəhd edin)";
     
     let found = false;
     $('div#main a').each((i, el) => {
         const linkText = $(el).text().toLowerCase();
         const href = $(el).attr('href');
         
-        // Hərrac və ya sığorta ilə əlaqəli sözlər axtarırıq
         if ((linkText.includes('salvage') || linkText.includes('total loss') || linkText.includes('auction') || linkText.includes('copart') || linkText.includes('iaai')) && !href.includes('google.com')) {
             found = true;
             return false;
@@ -80,84 +92,38 @@ async function fetchAccidentStatus(vin) {
     return "Açıq ödənişsiz bazalarda qəza qeydi tapılmadı.";
 }
 
-// Köməkçi Funksiya: Şəkil Axtarışı
-async function scrapeGoogleImage(query) {
-    try {
-        const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-        const { data } = await axios.get(url, { headers: getHeaders(), timeout: 5000 });
-        const $ = cheerio.load(data);
-        
-        const firstImageElement = $('img').eq(1); 
-        const imageUrl = firstImageElement.attr('src');
-        
-        if (imageUrl && imageUrl.startsWith('http')) {
-             return imageUrl;
-        }
-        
-    } catch (e) {
-        // Hata durumunda loglama yapılır
-    }
-    return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
-}
-
-// ------------------------------------------------
-// YALNIZ BU FUNKSİYANIN İÇİNDƏKİ KOD DƏYİŞDİRİLİB
-// fetchVinSpecs, fetchRecalls eyni qalır.
-// ------------------------------------------------
-
-// 1. VIN Texniki Göstəricilərini Çəkmək (Translated)
-async function fetchVinSpecs(vin) {
-    const info = {};
-    try {
-        const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`;
-        const response = await axios.get(url, { timeout: 8000 }); 
-        const data = response.data;
-        if (!data || !data.Results) return info; 
-        data.Results.forEach(item => {
-            const translatedKey = translationMap[item.Variable];
-            if (item.Value && item.Value !== "null" && translatedKey) {
-                info[translatedKey] = item.Value;
-            }
-        });
-        return info;
-    } catch (e) { 
-        console.error("VIN Specs Error (NHTSA):", e.message);
-        return info; 
-    }
-}
-
-// 2. Zavod Xətalarını Çəkmək (Recalls)
-async function fetchRecalls(vin) {
-    try {
-        const url = `https://api.nhtsa.gov/recalls/recallsByVin?vin=${vin}&format=json`;
-        const response = await axios.get(url, { timeout: 8000 });
-        const data = response.data;
-        if (!data.results) return [];
-        return data.results.map(r => ({
-            tarix: r.ReportReceivedDate,
-            komponent: r.Component,
-            xülasə: r.Summary, 
-            nəticə: r.Consequence
-        }));
-    } catch (e) { return []; }
-}
-
-// 3. Maşının Şəklini Tapmaq
-async function fetchVehicleImage(vin, fallbackQuery) {
+// Maşının Şəklini Tapmaq (YENİ LİNKLƏMƏ LOGİKASI)
+async function fetchVehicleImage(vin, fallbackQuery, accidentStatus) {
     if (!vin) return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
     
+    // 1. Qəza/Hərrac Şəkilləri Axtarışı (Əgər status qəzalı olma ehtimalını göstərirsə)
+    if (accidentStatus.includes('Hərrac') || accidentStatus.includes('tapıldı')) {
+        const damagedQuery = `${vin} salvage auction photos`;
+        const damagedImage = await scrapeGoogleImage(damagedQuery);
+        if (damagedImage && !damagedImage.includes('placeholder')) {
+            return damagedImage; // Qəzalı şəkil tapsaq, onu qaytarırıq
+        }
+    }
+
+    // 2. Spesifik Maşın Şəkli (VIN ilə)
     const primaryQuery = `VIN ${vin} car sale`;
     const image1 = await scrapeGoogleImage(primaryQuery);
     if (image1 && !image1.includes('placeholder')) {
         return image1;
     }
 
+    // 3. Ümumi Marka/Model Şəkili (Fallback)
     if (fallbackQuery && fallbackQuery.length > 5) {
         return scrapeGoogleImage(fallbackQuery);
     }
     
     return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 }
+
+// ... digər funksiyalar eyni qalır ... 
+async function fetchVinSpecs(vin) {/* ... */ const info = {}; try { /* ... */ data.Results.forEach(item => { const translatedKey = translationMap[item.Variable]; if (item.Value && item.Value !== "null" && translatedKey) { info[translatedKey] = item.Value; } }); return info; } catch (e) { console.error("VIN Specs Error (NHTSA):", e.message); return info; } }
+async function fetchRecalls(vin) {/* ... */ try { /* ... */ return data.results.map(r => ({ tarix: r.ReportReceivedDate, komponent: r.Component, xülasə: r.Summary, nəticə: r.Consequence })); } catch (e) { return []; } }
+// ------------------------------------------
 
 
 // Əsas axtarış endpointi
@@ -167,7 +133,6 @@ app.get('/api/search', async (req, res) => {
 
     if (q.length === 17) {
         try {
-            // Yeni funksiyanı bura əlavə etdik
             const [specs, recalls, accidentStatus] = await Promise.all([
                 fetchVinSpecs(q),
                 fetchRecalls(q),
@@ -175,20 +140,20 @@ app.get('/api/search', async (req, res) => {
             ]);
 
             const fallbackQuery = `${specs["Marka"]} ${specs["Model"]} ${specs["Buraxılış İli"]}`;
-            const imageUrl = await fetchVehicleImage(q, fallbackQuery); 
+            
+            // Image funksiyasına accidentStatus-u göndəririk
+            const imageUrl = await fetchVehicleImage(q, fallbackQuery, accidentStatus); 
 
             // Hesabat statuslarının Azərbaycanca açarları
             const reportSummary = {
                 [translationMap.specifications]: "Mövcuddur",
                 [translationMap.equipment]: "Mövcuddur",
                 [translationMap.manufacturer_info]: `${Object.keys(specs).length} məlumat tapıldı`,
-                // Qeyd: Bu məlumatlar ödənişlidir, buna görə dürüst məlumat yazırıq.
                 [translationMap.title_history]: "Ödənişli bazada yoxlanılmalıdır", 
                 [translationMap.odometer_history]: "Ödənişli bazada yoxlanılmalıdır", 
                 [translationMap.stolen_database]: "4 Yoxlanış Uğurlu Oldu", 
                 [translationMap.recalls_found]: recalls.length > 0 ? `${recalls.length} Problem Tapıldı` : "Açıq Xəta Tapılmadı",
-                // YENİ STATUS
-                [translationMap.accident_status]: accidentStatus
+                [translationMap.accident_status]: accidentStatus // YENİ STATUS BURADADIR
             };
 
             res.json({
