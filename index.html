@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FullSong Yükləyici Bot</title>
     <style>
+        /* ... (Stil Kodları eynidir) ... */
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f6f9; }
         .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; width: 90%; text-align: center; }
         h1 { color: #0088cc; margin-bottom: 20px; }
@@ -39,11 +40,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <script>
-        // Sizin Node.js API ünvanınız
         const RENDER_API_URL = "https://fullsongnodejs.onrender.com"; 
         let userId = null; 
         
-        // --- TELEGRAM AUTH FUNKSİYASI (ID alındıqda çağırılır) ---
         function onTelegramAuth(user) {
             userId = user.id;
             const firstName = user.first_name || "İstifadəçi";
@@ -51,47 +50,29 @@
             document.getElementById('auth-status').style.display = 'none';
             document.getElementById('download-form').style.display = 'block';
             document.getElementById('welcome-message').innerText = `Xoş gəlmisiniz, ${firstName}! Musiqi sifariş edin.`;
-
             console.log("İstifadəçi ID-si:", userId);
         }
 
-        // --- BÜTÜN AVTOMATİK LOGIN METODLARINI YOXLAYAN ƏSAS FUNKSİYA ---
         function checkAutoLogin() {
             // METOD 1: TELEGRAM WEBACTUAL APP SDK İLƏ YOXLAMA (Ən etibarlı yol)
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                 const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-                
-                onTelegramAuth({
-                    id: tgUser.id,
-                    first_name: tgUser.first_name
-                });
-                
+                onTelegramAuth({ id: tgUser.id, first_name: tgUser.first_name });
                 window.Telegram.WebApp.ready();
-                
-                console.log("METOD 1: WebApp SDK vasitəsilə avtomatik ID alındı.");
                 return true;
             }
 
             // METOD 2: URL PARAMETRLƏRİ İLƏ YOXLAMA (Köhnə metod)
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('id') && urlParams.has('hash')) {
-                const user = {
-                    id: urlParams.get('id'),
-                    first_name: urlParams.get('first_name')
-                };
-                
+                const user = { id: urlParams.get('id'), first_name: urlParams.get('first_name') };
                 onTelegramAuth(user);
                 window.history.replaceState({}, document.title, window.location.pathname);
-                console.log("METOD 2: URL Parametrləri vasitəsilə avtomatik ID alındı.");
                 return true;
             }
-
-            // METOD 3: Əgər heç biri işləməzsə, klassik widget-ın kliklənməsini gözləyir.
-            console.log("Avtomatik ID alınmadı. İstifadəçinin klikləməsi gözlənilir.");
             return false;
         }
 
-        // --- YÜKLƏMƏ SORĞUSUNU GÖNDƏRMƏ FUNKSİYASI ---
         function sendDownloadRequest() {
             const query = document.getElementById('query-input').value.trim();
             const statusDiv = document.getElementById('status-message');
@@ -111,18 +92,12 @@
             statusDiv.style.color = 'orange';
             statusDiv.innerText = 'Sifariş qəbul edildi. Bot qısa zamanda sizə Telegram-da cavab göndərəcək...';
             
-            // Node.js API-nizə Sorğu Göndəririk
             const apiEndpoint = `${RENDER_API_URL}/process-request`;
             
             fetch(apiEndpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    chat_id: userId,
-                    query: query 
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: userId, query: query })
             })
             .then(response => response.json())
             .then(data => {
@@ -137,11 +112,10 @@
             .catch(error => {
                 console.error('API Error:', error);
                 statusDiv.style.color = 'red';
-                statusDiv.innerText = 'Serverlə əlaqə qurularkən problem yarandı.';
+                statusDiv.innerText = 'Serverlə əlaqə qurularkən problem yarandı (Render Yuxu Rejimində ola bilər).';
             });
         }
 
-        // Səhifə yükləndikdən sonra avtomatik yoxlamağı başlat
         checkAutoLogin();
     </script>
 
