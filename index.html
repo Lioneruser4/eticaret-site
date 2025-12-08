@@ -5,77 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XSCAN – Professional Global Barcode & QR Scanner</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+
 <style>
+    :root {
+        --bg-dark: #0c0f16;
+        --primary-color: #00e0ff;
+        --secondary-color: #008cff;
+        --error-color: #ff4d4d;
+    }
+    
     body {
         margin: 0;
-        background: #0c0f16;
+        background: var(--bg-dark);
         color: white;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Roboto', sans-serif;
         text-align: center;
         padding-bottom: 50px;
+        transition: background-color 0.5s;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    .header {
+        padding: 40px 0 20px 0;
     }
 
     .title {
-        margin-top: 40px;
-        font-size: 44px;
+        font-size: 48px;
         font-weight: 900;
-        animation: glow 3s infinite alternate;
-        letter-spacing: 2px;
-        color: #0ff;
+        animation: neon-glow 3s infinite alternate;
+        letter-spacing: 3px;
+        color: var(--primary-color);
+        margin: 0;
     }
 
-    @keyframes glow {
-        0% { text-shadow: 0 0 10px #0ff, 0 0 20px #00e0ff; }
-        100% { text-shadow: 0 0 25px #00f7ff, 0 0 40px #00e0ff; }
+    @keyframes neon-glow {
+        0% { text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color); }
+        100% { text-shadow: 0 0 30px var(--secondary-color), 0 0 50px var(--primary-color); }
     }
 
-    button {
-        background: linear-gradient(45deg, #00e0ff, #008cff);
+    .subtitle {
+        color: #aaa;
+        font-size: 16px;
+        margin-top: 5px;
+    }
+
+    .btn {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
         padding: 15px 40px;
         border-radius: 50px;
         border: none;
         margin-top: 30px;
         font-size: 20px;
         font-weight: bold;
-        color: #0c0f16;
+        color: var(--bg-dark);
         cursor: pointer;
         transition: 0.3s ease-in-out, transform 0.1s;
-        box-shadow: 0 5px 15px rgba(0, 224, 255, 0.4);
+        box-shadow: 0 5px 20px rgba(0, 224, 255, 0.4);
+        display: inline-block;
+        text-decoration: none;
     }
 
-    button:hover {
+    .btn:hover {
         background: linear-gradient(45deg, #00c2e0, #0070c7);
         transform: translateY(-2px);
     }
+    
+    .btn-stop {
+        background: var(--error-color);
+        box-shadow: 0 5px 20px rgba(255, 77, 77, 0.4);
+    }
 
-    #reader {
-        width: 90%;
-        max-width: 500px;
-        margin: 20px auto;
-        border: 4px solid #00e0ff;
+    #reader-container {
+        display: none;
+        width: 100%;
+        max-width: 450px;
+        margin: 30px auto 0 auto;
+        border: 4px solid var(--primary-color);
         border-radius: 15px;
         overflow: hidden;
-        box-shadow: 0 0 30px rgba(0, 224, 255, 0.6);
+        box-shadow: 0 0 40px rgba(0, 224, 255, 0.7);
         position: relative;
     }
 
     /* Skaner Lazer Animasiyası */
-    #reader::before {
+    #reader-container::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 3px;
-        background: red;
-        box-shadow: 0 0 15px red;
+        background: var(--error-color);
+        box-shadow: 0 0 15px var(--error-color);
         animation: scanline 2s infinite ease-in-out alternate;
         z-index: 10;
+        display: none; /* JS ilə aktiv ediləcək */
     }
 
     @keyframes scanline {
-        0% { transform: translateY(0%); }
-        100% { transform: translateY(10000%); } /* Hündürlüyə görə tənzimlənə bilər */
+        0% { transform: translateY(0%); opacity: 0.8; }
+        100% { transform: translateY(calc(100% * (450/450) - 3px)); opacity: 0.8; } /* Hündürlüyə uyğun tənzimlənir */
     }
 
     .result-box {
@@ -83,7 +118,7 @@
         backdrop-filter: blur(5px);
         padding: 30px;
         border-radius: 20px;
-        margin: 20px;
+        margin-top: 30px;
         display: none;
         animation: fadein 0.8s ease-in-out;
         border: 1px solid rgba(0, 224, 255, 0.5);
@@ -91,18 +126,19 @@
     }
 
     .result-box h2 {
-        color: #0ff;
-        border-bottom: 2px solid #0ff;
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--primary-color);
         padding-bottom: 10px;
+        margin-top: 0;
     }
 
     /* Yüklənmə Animasiyası */
     .loader {
-        border: 8px solid #f3f3f3;
-        border-top: 8px solid #00e0ff;
+        border: 8px solid #333;
+        border-top: 8px solid var(--primary-color);
         border-radius: 50%;
-        width: 60px;
-        height: 60px;
+        width: 40px;
+        height: 40px;
         animation: spin 1s linear infinite;
         margin: 20px auto;
     }
@@ -123,34 +159,49 @@
 </head>
 <body>
 
-<div class="title">XSCAN</div>
-<p>Global məhsulları, QR və bütün barkodları tanıyan sistem</p>
+<div class="container">
+    <div class="header">
+        <h1 class="title">XSCAN</h1>
+        <p class="subtitle">Global məhsul kodlarını (QR & Barcode) sürətli və etibarlı skan edin</p>
+    </div>
 
-<button id="startButton" onclick="startScanner()">🚀 Skan etməyə Başla</button>
-<button id="stopButton" style="display:none; background-color: #ff4d4d;" onclick="stopScanner()">⏸ Dayandır</button>
+    <div id="button-area">
+        <a href="#" id="startButton" class="btn" onclick="startScanner(event)">🚀 Skan etməyə Başla</a>
+        <a href="#" id="stopButton" class="btn btn-stop" style="display:none;" onclick="stopScanner(event)">⏸ Dayandır</a>
+    </div>
 
-<div id="reader"></div>
+    <div id="reader-container">
+        <div id="reader"></div>
+    </div>
+    
+    <div id="result" class="result-box"></div>
 
-<div id="result" class="result-box"></div>
+</div>
 
 <script>
     const resultBox = document.getElementById("result");
-    const readerElement = document.getElementById("reader");
+    const readerContainer = document.getElementById("reader-container");
     const startButton = document.getElementById("startButton");
     const stopButton = document.getElementById("stopButton");
     let html5QrCode;
 
     // Skaneri işə salır
-    function startScanner() {
+    async function startScanner(event) {
+        event.preventDefault(); // Səhifənin yenilənməsini qarşısını alır
+
         resultBox.style.display = "none";
         startButton.style.display = "none";
         stopButton.style.display = "inline-block";
-        readerElement.style.display = "block";
+        readerContainer.style.display = "block";
+        
+        // Lazer effektini aktiv et
+        readerContainer.querySelector('::before').style.display = 'block';
 
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("reader");
         }
-
+        
+        // Skaner konfiqurasiyası
         const config = { 
             fps: 10, 
             qrbox: { width: 250, height: 250 },
@@ -158,45 +209,62 @@
                 Html5QrcodeSupportedFormats.QR_CODE,
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.UPC_A
-            ]
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.ITF
+            ] // Bütün əsas barkod növləri əlavə edildi
         };
 
-        html5QrCode.start(
-            { facingMode: "environment" }, // Arxa kameranı istifadə et
-            config,
-            (decodedText, decodedResult) => {
-                // Skan uğurlu olduqda
-                stopScanner(false); // Kameranı dayandır
-                fetchProduct(decodedText);
-            },
-            (errorMessage) => {
-                // Skan hələ başa çatmayıb
-                // console.log(errorMessage); 
-            }
-        ).catch((err) => {
+        try {
+            await html5QrCode.start(
+                { facingMode: "environment" }, // Arxa kameranı istifadə et
+                config,
+                (decodedText, decodedResult) => {
+                    // Skan uğurlu olduqda
+                    stopScanner(null, false); // Kameranı dayandır, düymələri sıfırlama
+                    fetchProduct(decodedText);
+                },
+                (errorMessage) => {
+                    // Skan hələ başa çatmayıb, passiv
+                }
+            );
+            
+        } catch (err) {
+            // Kamera icazəsi xətası və ya açıla bilməməsi
+            stopScanner(null, true);
             resultBox.style.display = "block";
-            resultBox.innerHTML = `<h2>XƏTA ❗</h2><p>Kamera açıla bilmədi. Zəhmət olmasa icazə verdiyinizdən əmin olun: ${err}</p>`;
-            stopScanner(true);
-        });
+            resultBox.innerHTML = `
+                <h2>Kamera Xətası ❗</h2>
+                <p>Kamera açıla bilmədi. Zəhmət olmasa, brauzerinizdə bu sayt üçün kamera icazəsini ${err.includes("Permission denied") ? 'aktivləşdirin' : 'yoxlayın'}.</p>
+                <p style="color: var(--error-color);">${err}</p>
+                <a href="#" class="btn" onclick="startScanner(event)">Yenidən Cəhd Et</a>
+            `;
+        }
     }
 
     // Skaneri dayandırır
-    function stopScanner(resetButtons = true) {
+    function stopScanner(event, resetButtons = true) {
+        if(event) event.preventDefault(); 
+
+        // Lazer effektini söndür
+        readerContainer.querySelector('::before').style.display = 'none';
+
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
                 if (resetButtons) {
                     startButton.style.display = "inline-block";
                     stopButton.style.display = "none";
-                    readerElement.style.display = "none";
+                    readerContainer.style.display = "none";
                 }
             }).catch((err) => {
+                // Dayandırma xətası ciddi deyil, amma qeyd edirik
                 console.error("Kameranı dayandırmaq xətası:", err);
             });
         } else if (resetButtons) {
+            // Əgər artıq skan etmirsə, düymələri sıfırla
             startButton.style.display = "inline-block";
             stopButton.style.display = "none";
-            readerElement.style.display = "none";
+            readerContainer.style.display = "none";
         }
     }
 
@@ -206,10 +274,10 @@
         resultBox.innerHTML = `
             <h2>Kod oxundu: ${code}</h2>
             <div class="loader"></div>
-            <p style="text-align: center;">Məlumat axtarılır, zəhmət olmasa gözləyin...</p>
+            <p style="text-align: center;">Məlumat bazalarında axtarılır...</p>
         `;
 
-        // Əsas etibarlı API
+        // Əsas etibarlı API - (Qida, Gözəllik və Ümumi)
         const url = `https://world.openfoodfacts.org/api/v0/product/${code}.json`;
 
         try {
@@ -218,14 +286,20 @@
 
             if (data && data.product && data.status === 1) {
                 const product = data.product;
-                showProduct(product.product_name || "Adı qeyd edilməyib", product.brands || "Məlum deyil", code, product.image_front_url);
+                showProduct(
+                    product.product_name || "Adı qeyd edilməyib", 
+                    product.brands || "Məlum deyil", 
+                    code, 
+                    product.image_front_url || product.image_url, 
+                    product.ingredients_text_az || product.ingredients_text
+                );
             } else {
                 // Məhsul tapılmadı
                 resultBox.innerHTML = `
                     <h2>Məhsul Tapılmadı ⚠️</h2>
                     <p><b>Kod:</b> ${code}</p>
-                    <p>Bu məhsul Open Food Facts verilənlər bazasında tapılmadı. Lokal və ya qeyri-qeydiyyatlı ola bilər.</p>
-                    <button onclick="startScanner()">Yenidən Skan Et</button>
+                    <p>Məhsul heç bir global verilənlər bazasında qeyd edilməyib.</p>
+                    <a href="#" class="btn" onclick="startScanner(event)">Yenidən Skan Et</a>
                 `;
             }
 
@@ -233,22 +307,23 @@
             resultBox.innerHTML = `
                 <h2>XƏTA ❗</h2>
                 <p><b>Kod:</b> ${code}</p>
-                <p>Şəbəkə xətası baş verdi. İnternet bağlantınızı yoxlayın.</p>
-                <button onclick="startScanner()">Yenidən Skan Et</button>
+                <p>Şəbəkə bağlantısı yoxlanılarkən problem yarandı. İnternetinizi yoxlayın.</p>
+                <a href="#" class="btn" onclick="startScanner(event)">Yenidən Skan Et</a>
             `;
         }
     }
 
     // Məlumatı animativ şəkildə göstərir
-    function showProduct(name, brand, code, imageUrl) {
+    function showProduct(name, brand, code, imageUrl, ingredients) {
         resultBox.innerHTML = `
             <h2>Məhsul Tapıldı ✔</h2>
-            ${imageUrl ? `<img src="${imageUrl}" alt="Məhsul şəkli" style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 15px; border: 2px solid #0ff;">` : ''}
+            ${imageUrl ? `<img src="${imageUrl}" alt="Məhsul şəkli" style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 15px; border: 2px solid var(--primary-color);">` : ''}
             <p><b>💡 Ad:</b> ${name}</p>
             <p><b>🏷️ Brend:</b> ${brand}</p>
+            ${ingredients ? `<p><b>🧪 Tərkib:</b> ${ingredients.substring(0, 150)}...</p>` : ''}
             <p><b>#️⃣ Kod:</b> ${code}</p>
-            <p style="margin-top: 20px;"><a href="https://world.openfoodfacts.org/product/${code}" target="_blank" style="color: #0ff;">Ətraflı Məlumat üçün Bax</a></p>
-            <button onclick="startScanner()">Yenidən Skan Et</button>
+            <p style="margin-top: 20px;"><a href="https://world.openfoodfacts.org/product/${code}" target="_blank" style="color: var(--primary-color); font-weight: bold; text-decoration: none;">Ətraflı Məlumat üçün Bax →</a></p>
+            <a href="#" class="btn" onclick="startScanner(event)">Yenidən Skan Et</a>
         `;
     }
 </script>
