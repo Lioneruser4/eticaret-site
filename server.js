@@ -12,24 +12,14 @@ const PORT = process.env.PORT || 3000;
 
 // Tərcümə Lüğəti
 const translationMap = {
-    // NHTSA Specs Keys
-    "Make": "Marka",
-    "Model": "Model",
-    "Model Year": "Buraxılış İli",
-    "Body Class": "Kuzov Növü",
-    "Engine Cylinders": "Mühərrik Silindrləri",
-    "Fuel Type - Primary": "Əsas Yanacaq Növü",
-    "Plant Country": "İstehsal Ölkəsi",
-    
-    // Report Summary Status Keys
-    "specifications": "Texniki Göstəricilər",
-    "equipment": "Avadanlıq",
-    "manufacturer_info": "İstehsalçı Məlumatı",
-    "title_history": "Başlıq Tarixçəsi",
-    "odometer_history": "Kilometraj Tarixçəsi",
-    "stolen_database": "Oğurluq Bazası Yoxlanışı",
+    "Make": "Marka", "Model": "Model", "Model Year": "Buraxılış İli", 
+    "Body Class": "Kuzov Növü", "Engine Cylinders": "Mühərrik Silindrləri", 
+    "Fuel Type - Primary": "Əsas Yanacaq Növü", "Plant Country": "İstehsal Ölkəsi",
+    "specifications": "Texniki Göstəricilər", "equipment": "Avadanlıq",
+    "manufacturer_info": "İstehsalçı Məlumatı", "title_history": "Başlıq Tarixçəsi",
+    "odometer_history": "Kilometraj Tarixçəsi", "stolen_database": "Oğurluq Bazası Yoxlanışı",
     "recalls_found": "Zavod Xətaları",
-    "accident_status": "Qəza/Zərər Yoxlanışı" // YENİ AÇAR
+    "accident_status": "Qəza/Zərər Yoxlanışı"
 };
 
 const getHeaders = () => ({
@@ -44,7 +34,6 @@ async function scrapeGoogleWeb(query) {
         const { data } = await axios.get(url, { headers: getHeaders(), timeout: 7000 });
         return cheerio.load(data);
     } catch (e) {
-        console.error("Google Web Scraping failed:", e.message);
         return null;
     }
 }
@@ -61,7 +50,7 @@ async function scrapeGoogleImage(query) {
              return imageUrl;
         }
     } catch (e) {
-        console.error("Image scraping failed for query:", query, e.message);
+        // Hata
     }
     return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 }
@@ -92,16 +81,50 @@ async function fetchAccidentStatus(vin) {
     return "Açıq ödənişsiz bazalarda qəza qeydi tapılmadı.";
 }
 
-// Maşının Şəklini Tapmaq (YENİ LİNKLƏMƏ LOGİKASI)
+// VIN Texniki Göstəricilərini Çəkmək (Translated)
+async function fetchVinSpecs(vin) {
+    const info = {};
+    try {
+        const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`;
+        const response = await axios.get(url, { timeout: 8000 }); 
+        const data = response.data;
+        if (!data || !data.Results) return info; 
+        data.Results.forEach(item => {
+            const translatedKey = translationMap[item.Variable];
+            if (item.Value && item.Value !== "null" && translatedKey) {
+                info[translatedKey] = item.Value;
+            }
+        });
+        return info;
+    } catch (e) { return {}; }
+}
+
+// Zavod Xətalarını Çəkmək (Recalls)
+async function fetchRecalls(vin) {
+    try {
+        const url = `https://api.nhtsa.gov/recalls/recallsByVin?vin=${vin}&format=json`;
+        const response = await axios.get(url, { timeout: 8000 });
+        const data = response.data;
+        if (!data.results) return [];
+        return data.results.map(r => ({
+            tarix: r.ReportReceivedDate,
+            komponent: r.Component,
+            xülasə: r.Summary, 
+            nəticə: r.Consequence
+        }));
+    } catch (e) { return []; }
+}
+
+// Maşının Şəklini Tapmaq (Qəza statusu ilə əlaqəli)
 async function fetchVehicleImage(vin, fallbackQuery, accidentStatus) {
     if (!vin) return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
     
-    // 1. Qəza/Hərrac Şəkilləri Axtarışı (Əgər status qəzalı olma ehtimalını göstərirsə)
+    // 1. Qəza/Hərrac Şəkilləri Axtarışı
     if (accidentStatus.includes('Hərrac') || accidentStatus.includes('tapıldı')) {
         const damagedQuery = `${vin} salvage auction photos`;
         const damagedImage = await scrapeGoogleImage(damagedQuery);
         if (damagedImage && !damagedImage.includes('placeholder')) {
-            return damagedImage; // Qəzalı şəkil tapsaq, onu qaytarırıq
+            return damagedImage;
         }
     }
 
@@ -120,11 +143,6 @@ async function fetchVehicleImage(vin, fallbackQuery, accidentStatus) {
     return 'https://via.placeholder.com/400x200?text=Şəkil+Tapılmadı';
 }
 
-// ... digər funksiyalar eyni qalır ... 
-async function fetchVinSpecs(vin) {/* ... */ const info = {}; try { /* ... */ data.Results.forEach(item => { const translatedKey = translationMap[item.Variable]; if (item.Value && item.Value !== "null" && translatedKey) { info[translatedKey] = item.Value; } }); return info; } catch (e) { console.error("VIN Specs Error (NHTSA):", e.message); return info; } }
-async function fetchRecalls(vin) {/* ... */ try { /* ... */ return data.results.map(r => ({ tarix: r.ReportReceivedDate, komponent: r.Component, xülasə: r.Summary, nəticə: r.Consequence })); } catch (e) { return []; } }
-// ------------------------------------------
-
 
 // Əsas axtarış endpointi
 app.get('/api/search', async (req, res) => {
@@ -136,12 +154,10 @@ app.get('/api/search', async (req, res) => {
             const [specs, recalls, accidentStatus] = await Promise.all([
                 fetchVinSpecs(q),
                 fetchRecalls(q),
-                fetchAccidentStatus(q) // Qəza statusunu yoxlayır
+                fetchAccidentStatus(q)
             ]);
 
             const fallbackQuery = `${specs["Marka"]} ${specs["Model"]} ${specs["Buraxılış İli"]}`;
-            
-            // Image funksiyasına accidentStatus-u göndəririk
             const imageUrl = await fetchVehicleImage(q, fallbackQuery, accidentStatus); 
 
             // Hesabat statuslarının Azərbaycanca açarları
@@ -153,22 +169,16 @@ app.get('/api/search', async (req, res) => {
                 [translationMap.odometer_history]: "Ödənişli bazada yoxlanılmalıdır", 
                 [translationMap.stolen_database]: "4 Yoxlanış Uğurlu Oldu", 
                 [translationMap.recalls_found]: recalls.length > 0 ? `${recalls.length} Problem Tapıldı` : "Açıq Xəta Tapılmadı",
-                [translationMap.accident_status]: accidentStatus // YENİ STATUS BURADADIR
+                [translationMap.accident_status]: accidentStatus
             };
 
             res.json({
                 success: true,
                 type: 'vin_report',
-                data: {
-                    specs: specs, 
-                    recalls: recalls, 
-                    summary: reportSummary, 
-                    image: imageUrl 
-                }
+                data: { specs: specs, recalls: recalls, summary: reportSummary, image: imageUrl }
             });
 
         } catch (error) {
-            console.error("Main API Crash Error:", error);
             res.status(500).json({ success: false, message: "Server xətası baş verdi. Logları yoxlayın." });
         }
     } else {
