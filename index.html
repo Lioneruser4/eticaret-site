@@ -3,84 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Master Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>VIN Master Pro Scanner (Dark Mode)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --primary: #2c3e50;
-            --accent: #3498db;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --bg: #ecf0f1;
-            --card-bg: #ffffff;
+            --bg-dark: #1f2937;
+            --surface-dark: #374151;
+            --accent: #10b981; /* Yaşıl */
+            --text-light: #f3f4f6;
+            --text-muted: #9ca3af;
+            --danger: #ef4444;
+            --radius: 12px;
         }
 
-        body { font-family: 'Roboto', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        body { 
+            font-family: 'Space Grotesk', sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-light); 
+            margin: 0; 
+            padding: 20px;
+        }
 
         /* Search Area */
-        .search-container { max-width: 800px; margin: 0 auto 30px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
-        .btn { padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
-        .btn-search { background: var(--accent); }
-        .btn-scan { background: var(--primary); }
+        .search-container { 
+            max-width: 700px; 
+            margin: 0 auto 40px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            text-align: center;
+        }
+        .search-title { 
+            font-size: 2rem; 
+            font-weight: 700; 
+            color: var(--accent);
+        }
+        .input-group { 
+            display: flex; 
+            gap: 10px; 
+        }
+        input { 
+            flex: 1; 
+            padding: 15px; 
+            border: 2px solid var(--surface-dark); 
+            border-radius: var(--radius); 
+            background: var(--surface-dark);
+            color: var(--text-light);
+            font-size: 16px; 
+            outline: none; 
+            transition: border-color 0.3s;
+        }
+        input:focus { 
+            border-color: var(--accent); 
+        }
+        .btn { 
+            padding: 15px 25px; 
+            border: none; 
+            border-radius: var(--radius); 
+            cursor: pointer; 
+            font-weight: 700; 
+            color: var(--text-light); 
+            transition: background-color 0.3s;
+        }
+        .btn-scan { 
+            background: var(--accent); 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+        }
+        .btn-scan:hover { 
+            background: #0d9468;
+        }
 
         /* Dashboard Grid */
-        .dashboard { display: none; max-width: 1000px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .dashboard { 
+            display: none; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            grid-template-columns: 1fr 1fr;
+            gap: 25px; 
+        }
         
         /* Cards */
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .card-header i { color: var(--accent); }
+        .card { 
+            background: var(--surface-dark); 
+            border-radius: var(--radius); 
+            padding: 25px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+        }
+        .hero-card { 
+            grid-column: 1 / -1; 
+            display: flex; 
+            gap: 20px; 
+            align-items: center; 
+        }
+        .car-image { 
+            width: 40%; 
+            max-height: 200px; 
+            object-fit: cover; 
+            border-radius: var(--radius); 
+            background: #555;
+        }
+        .hero-details { 
+            width: 60%; 
+        }
+        .car-title { 
+            font-size: 1.8rem; 
+            color: var(--accent); 
+            margin: 0 0 5px; 
+        }
+        .vin-badge { 
+            background: #4b5563; 
+            padding: 5px 10px; 
+            border-radius: 6px; 
+            font-size: 0.8rem; 
+            letter-spacing: 1px;
+        }
 
-        /* Car Hero Section */
-        .hero-card { grid-column: 1 / -1; text-align: center; }
-        .car-title { font-size: 2rem; color: var(--primary); margin: 10px 0; }
-        .vin-badge { background: #eee; padding: 5px 15px; border-radius: 20px; font-family: monospace; letter-spacing: 1px; color: #555; }
-
-        /* Data Check List (Sənin istədiyin hissə) */
-        .check-list { list-style: none; padding: 0; }
-        .check-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #eee; }
-        .check-label { font-weight: 500; color: #555; }
-        .check-status { font-weight: 700; font-size: 0.9rem; }
-        .status-available { color: var(--accent); }
-        .status-checked { color: var(--success); }
-        .status-danger { color: var(--danger); }
+        /* Check List */
+        .check-list { 
+            list-style: none; 
+            padding: 0; 
+        }
+        .check-item { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px solid #4b5563; 
+        }
+        .check-label { 
+            font-weight: 500; 
+            color: var(--text-light); 
+        }
+        .status-checked { 
+            color: var(--accent); 
+        }
+        .status-available { 
+            color: #3b82f6; 
+        }
+        .status-danger { 
+            color: var(--danger); 
+        }
 
         /* Specs Table */
-        .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .spec-box { background: #f8f9fa; padding: 10px; border-radius: 6px; }
-        .spec-title { font-size: 0.8rem; color: #888; }
-        .spec-val { font-weight: 600; font-size: 1rem; }
+        .specs-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+        }
+        .spec-box { 
+            background: #4b5563; 
+            padding: 15px; 
+            border-radius: 8px; 
+        }
+        .spec-title { 
+            font-size: 0.8rem; 
+            color: var(--text-muted); 
+        }
+        .spec-val { 
+            font-weight: 600; 
+            font-size: 1.1rem; 
+            margin-top: 5px;
+        }
 
         /* Recalls / Problems */
-        .recall-item { background: #fff5f5; border-left: 4px solid var(--danger); padding: 10px; margin-bottom: 10px; }
-        .recall-title { color: var(--danger); font-weight: bold; font-size: 0.9rem; }
-        .recall-desc { font-size: 0.85rem; color: #555; margin-top: 5px; }
-
+        .recall-item { 
+            background: #4b5563; 
+            border-left: 4px solid var(--danger); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px;
+        }
+        .recall-title { 
+            color: var(--danger); 
+            font-weight: bold; 
+            font-size: 1rem; 
+            margin-bottom: 5px;
+        }
+        
         /* Loader */
-        .loader { display: none; text-align: center; padding: 40px; }
-        .spinner { width: 50px; height: 50px; border: 5px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite; margin: 0 auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
+        .loader { 
+            display: none; 
+            text-align: center; 
+            padding: 40px; 
+        }
+        .spinner { 
+            width: 50px; 
+            height: 50px; 
+            border: 5px solid #4b5563; 
+            border-top-color: var(--accent); 
+            border-radius: 50%; 
+            animation: spin 1s infinite; 
+            margin: 0 auto; 
+        }
+        
         /* Scanner Modal */
-        #scanner-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: none; }
-        .close-scan { position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem; cursor: pointer; }
+        #scanner-modal { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.95); 
+            z-index: 1000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #reader { 
+            width: 100%; 
+            max-width: 500px; 
+            height: 300px; /* Skaner üçün sabit hündürlük */
+        }
+        .close-scan { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            color: var(--text-light); 
+            font-size: 2rem; 
+            cursor: pointer; 
+        }
+        .camera-info {
+            color: var(--text-light);
+            margin-top: 15px;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero-card { 
+                flex-direction: column; 
+                text-align: center;
+            }
+            .car-image, .hero-details { 
+                width: 100%; 
+            }
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <input type="text" id="vinInput" placeholder="VIN kodu daxil edin (17 simvol)">
-        <button class="btn btn-search" onclick="fetchData()">Yoxla</button>
-        <button class="btn btn-scan" onclick="openScanner()"><i class="fas fa-camera"></i></button>
+        <div class="search-title">VIN Master Pro</div>
+        <div class="input-group">
+            <input type="text" id="vinInput" placeholder="VIN kodu daxil edin (17 simvol)">
+            <button class="btn btn-scan" onclick="openScanner()">
+                <i class="fas fa-camera"></i> Skan et
+            </button>
+            <button class="btn" style="background: var(--surface-dark);" onclick="fetchData()">
+                <i class="fas fa-search"></i> Axtar
+            </button>
+        </div>
     </div>
 
     <div class="loader" id="loader">
         <div class="spinner"></div>
-        <p style="margin-top:10px; color:#666;">Qlobal bazalar (NHTSA, NMVTIS) yoxlanılır...</p>
+        <p style="margin-top:10px; color:var(--text-muted);">Qlobal bazalar (NHTSA, eBay, Google) yoxlanılır...</p>
     </div>
 
     <div class="dashboard" id="dashboard">
@@ -88,12 +268,14 @@
 
     <div id="scanner-modal">
         <div class="close-scan" onclick="closeScanner()">&times;</div>
-        <div id="reader" style="width:100%; height:100%"></div>
+        <div id="reader"></div>
+        <p class="camera-info">Kodu kameranın mərkəzinə tutun. Avtomatik oxunacaq.</p>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        const API = "https://saskioyunu.onrender.com/api/search"; // Sənin Render Linkin
+        // Render Linkiniz
+        const API = "https://saskioyunu.onrender.com/api/search"; 
         let html5QrcodeScanner = null;
 
         async function fetchData(code = null) {
@@ -110,10 +292,10 @@
                 if (json.success) {
                     renderDashboard(json.data, vin);
                 } else {
-                    alert(json.message);
+                    alert("Axtarış uğursuz oldu: " + json.message);
                 }
             } catch (error) {
-                alert("Server xətası!");
+                alert("Server bağlantı xətası baş verdi. Render serveri aktiv olduğundan əmin olun.");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
@@ -124,27 +306,29 @@
             const summary = data.summary;
             const specs = data.specs;
             const recalls = data.recalls;
+            // Placeholder şəkil əgər tapılmasa (serverdən gəlir)
+            const imageUrl = data.image || 'https://via.placeholder.com/400x200?text=Image+Not+Found';
 
             let recallsHTML = recalls.length > 0 
                 ? recalls.map(r => `
                     <div class="recall-item">
-                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> ${r.component}</div>
-                        <div class="recall-desc">${r.summary.substring(0, 150)}...</div>
+                        <div class="recall-title"><i class="fas fa-exclamation-triangle"></i> ${r.component || 'N/A'}</div>
+                        <div class="recall-desc">${r.summary ? r.summary.substring(0, 150) + '...' : 'Təfərrüat yoxdur.'}</div>
                     </div>`).join('')
-                : '<p style="color:#27ae60"><i class="fas fa-check-circle"></i> Açıq zavod problemi tapılmadı.</p>';
+                : '<p style="color:var(--accent)"><i class="fas fa-check-circle"></i> Açıq zavod problemi tapılmadı.</p>';
 
             dash.innerHTML = `
                 <div class="card hero-card">
-                    <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
-                    <h1 class="car-title">${specs.Marka || ''} ${specs.Model || ''} ${specs.Il || ''}</h1>
-                    <p style="color:#666">${specs.Olke || 'Global'} istehsalı</p>
-                    <a href="${data.image}" target="_blank" style="color:var(--accent); text-decoration:none;">
-                        <i class="far fa-image"></i> Şəkilləri axtar
-                    </a>
+                    <img src="${imageUrl}" alt="${specs.Marka || ''} Şəkli" class="car-image">
+                    <div class="hero-details">
+                        <span class="vin-badge"><i class="fas fa-fingerprint"></i> ${vin}</span>
+                        <h1 class="car-title">${specs.Marka || 'Məlumat Yoxdur'} ${specs.Model || ''}</h1>
+                        <p style="color:var(--text-muted)">Buraxılış İli: ${specs.Il || 'N/A'}</p>
+                    </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-header"><i class="fas fa-clipboard-check"></i> Database Checks</div>
+                    <div class="card-header" style="color:var(--text-light);"><i class="fas fa-clipboard-check"></i> Hesabat Yoxlanışları</div>
                     <ul class="check-list">
                         <li class="check-item">
                             <span class="check-label">Specifications</span>
@@ -170,17 +354,17 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
+                    <div class="card-header" style="color:var(--text-light);"><i class="fas fa-cogs"></i> Texniki Məlumat</div>
                     <div class="specs-grid">
                         <div class="spec-box"><div class="spec-title">Mühərrik</div><div class="spec-val">${specs.Silindr || 'N/A'} Silindr</div></div>
                         <div class="spec-box"><div class="spec-title">Yanacaq</div><div class="spec-val">${specs.Yanacaq || 'N/A'}</div></div>
                         <div class="spec-box"><div class="spec-title">Kuzov</div><div class="spec-val">${specs.Kuzov || 'N/A'}</div></div>
-                        <div class="spec-box"><div class="spec-title">Buraxılış</div><div class="spec-val">${specs.Il || 'N/A'}</div></div>
+                        <div class="spec-box"><div class="spec-title">İstehsal Ölkəsi</div><div class="spec-val">${specs.Olke || 'N/A'}</div></div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları (Recalls)</div>
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header" style="color:var(--danger)"><i class="fas fa-bullhorn"></i> Zavod Xətaları (${summary.recalls_found})</div>
                     ${recallsHTML}
                 </div>
             `;
@@ -188,19 +372,44 @@
             dash.style.display = 'grid';
         }
 
+        // KAMERA FİKSİ: Kamera açılmamasının və avtomatik oxumanın təminatı
         function openScanner() {
-            document.getElementById('scanner-modal').style.display = 'block';
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+            document.getElementById('scanner-modal').style.display = 'flex';
+            
+            // Əgər scanner mövcud deyilsə, onu ilkinləşdir
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5Qrcode("reader");
+            }
+            
+            // Ən son istifadə edilmiş kameranı və ya arxa kameranı istifadə et
+            const config = { fps: 10, qrbox: 250 };
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, // Arxa kameranı prioritet edir (VIN üçün vacibdir)
+                config,
                 (decodedText) => {
+                    // Uğurla oxunduqda
                     closeScanner();
                     document.getElementById('vinInput').value = decodedText;
                     fetchData(decodedText);
-                });
+                },
+                (errorMessage) => {
+                    // Avtomatik skan edən zaman xəta (məsələn, zəif işıq)
+                    // Konsola yaz, istifadəçini narahat etmə
+                    console.warn(errorMessage);
+                }
+            ).catch(err => {
+                // Kamera icazəsi və ya cihaz tapılmadıqda
+                alert("Kamera başlatıla bilmədi. Zəhmət olmasa, brauzerinizdə kamera icazəsini yoxlayın.");
+                closeScanner();
+            });
         }
+
         function closeScanner() {
             document.getElementById('scanner-modal').style.display = 'none';
-            if(html5QrcodeScanner) html5QrcodeScanner.stop();
+            if(html5QrcodeScanner && html5QrcodeScanner.isscanning) {
+                html5QrcodeScanner.stop().catch(err => console.error("Scanner stop failed:", err));
+            }
         }
     </script>
 </body>
