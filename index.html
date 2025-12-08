@@ -28,7 +28,6 @@
             padding: 40px 20px;
         }
 
-        /* Başlıq və Mərkəzləşdirmə */
         .search-container { 
             max-width: 800px; 
             margin: 0 auto 50px; 
@@ -73,7 +72,6 @@
         .btn-scan { background: var(--accent); }
         .btn-search { background: #3b82f6; }
 
-        /* Dashboard Grid */
         .dashboard { 
             display: none; 
             max-width: 1200px; 
@@ -83,7 +81,6 @@
             animation: fadeIn 0.8s ease-out;
         }
         
-        /* Cards & Glass Effect */
         .card { 
             background: var(--surface-blur); 
             border-radius: var(--radius); 
@@ -93,10 +90,7 @@
             border: 1px solid rgba(255, 255, 255, 0.18);
             transition: transform 0.3s ease-in-out;
         }
-        .card:hover { transform: translateY(-5px); }
-
-        /* Data Display */
-        .check-list, .specs-grid { list-style: none; padding: 0; }
+        
         .check-item { 
             display: flex; 
             justify-content: space-between; 
@@ -105,7 +99,7 @@
         }
         .status-checked { color: var(--accent); }
         .status-danger { color: var(--danger); }
-        .status-warning { color: var(--warning); } /* Yeni rəng əlavə edildi */
+        .status-warning { color: var(--warning); }
         
         .specs-grid { 
             display: grid; 
@@ -118,8 +112,7 @@
             border-radius: 8px; 
             transition: background 0.3s;
         }
-
-        /* Animasiyalar */
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -177,7 +170,7 @@
                     alert("Axtarış uğursuz oldu: " + json.message);
                 }
             } catch (error) {
-                alert("Server bağlantı xətası baş verdi. Server.js-in aktiv olduğunu yoxlayın.");
+                alert("Server bağlantı xətası baş verdi. Serverin aktiv olduğundan əmin olun.");
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
@@ -186,7 +179,7 @@
         function getStatusClass(value) {
             if (value.includes('Problem Tapıldı') || value.includes('Hərrac/Zərər')) return 'status-danger';
             if (value.includes('Ödənişli bazada') || value.includes('Yoxlama Tələb Olunur')) return 'status-warning';
-            if (value.includes('Mövcuddur') || value.includes('Uğurlu')) return 'status-checked';
+            if (value.includes('Mövcuddur') || value.includes('Uğurlu') || value.includes('Tapılmadı')) return 'status-checked';
             return '';
         }
 
@@ -274,7 +267,6 @@
                 }
             ).catch(err => {
                 alert("Kamera başlatıla bilmədi. İcazələri yoxlayın.");
-                console.error(err);
                 closeScanner();
             });
         }
