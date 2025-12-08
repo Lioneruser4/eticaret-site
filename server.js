@@ -1,4 +1,4 @@
-// server.js - Render backend
+// server.js
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -21,22 +21,39 @@ app.get('/search', async (req, res) => {
   if(!code) return res.json({ error: "Kod boş ola bilməz" });
 
   try {
-    // Google axtarış nümunəsi
-    const url = `https://www.google.com/search?q=${encodeURIComponent(code)}`;
-    const { data } = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const $ = cheerio.load(data);
     const results = [];
-    $('a').each((i, el)=>{
+
+    // Google search
+    const googleURL = `https://www.google.com/search?q=${encodeURIComponent(code)}`;
+    const { data: googleData } = await axios.get(googleURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
+    const $ = cheerio.load(googleData);
+    $('a').each((i, el) => {
       const link = $(el).attr('href');
-      if(link && link.startsWith('http')) results.push(link);
+      if(link && link.startsWith('http')) results.push({ source:'Google', link });
     });
 
-    res.json({ results: results.slice(0, 15) }); // İlk 15 nəticə
-  } catch(e){
+    // Bing search
+    const bingURL = `https://www.bing.com/search?q=${encodeURIComponent(code)}`;
+    const { data: bingData } = await axios.get(bingURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
+    const $$ = cheerio.load(bingData);
+    $$('a').each((i, el) => {
+      const link = $$(el).attr('href');
+      if(link && link.startsWith('http')) results.push({ source:'Bing', link });
+    });
+
+    // Yandex search
+    const yandexURL = `https://yandex.com/search/?text=${encodeURIComponent(code)}`;
+    const { data: yandexData } = await axios.get(yandexURL, { headers: { 'User-Agent':'Mozilla/5.0' } });
+    const $$$ = cheerio.load(yandexData);
+    $$$('a').each((i, el) => {
+      const link = $$$(el).attr('href');
+      if(link && link.startsWith('http')) results.push({ source:'Yandex', link });
+    });
+
+    res.json({ code, results: results.slice(0, 25) }); // İlk 25 nəticə
+  } catch(e) {
     res.json({ error: e.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`XSCAN Backend running on port ${PORT}`);
-});
+app.listen(PORT, ()=>console.log(`XSCAN Backend running on port ${PORT}`));
