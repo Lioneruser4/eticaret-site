@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FullSong Yükləyici Bot</title>
     <style>
-        /* ... (Stil Kodları eynidir) ... */
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f6f9; }
         .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; width: 90%; text-align: center; }
         h1 { color: #0088cc; margin-bottom: 20px; }
@@ -54,7 +53,7 @@
         }
 
         function checkAutoLogin() {
-            // METOD 1: TELEGRAM WEBACTUAL APP SDK İLƏ YOXLAMA (Ən etibarlı yol)
+            // METOD 1: TELEGRAM WEBACTUAL APP SDK İLƏ YOXLAMA
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                 const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
                 onTelegramAuth({ id: tgUser.id, first_name: tgUser.first_name });
@@ -62,7 +61,7 @@
                 return true;
             }
 
-            // METOD 2: URL PARAMETRLƏRİ İLƏ YOXLAMA (Köhnə metod)
+            // METOD 2: URL PARAMETRLƏRİ İLƏ YOXLAMA
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('id') && urlParams.has('hash')) {
                 const user = { id: urlParams.get('id'), first_name: urlParams.get('first_name') };
@@ -111,8 +110,9 @@
             })
             .catch(error => {
                 console.error('API Error:', error);
+                // KRİTİK DİAQNOSTİKA MESAJI
                 statusDiv.style.color = 'red';
-                statusDiv.innerText = 'Serverlə əlaqə qurularkən problem yarandı (Render Yuxu Rejimində ola bilər).';
+                statusDiv.innerText = `Serverlə əlaqə qurularkən kritik xəta: ${error.message || 'Render Yatıb/URL Səhvdir'}. Zəhmət olmasa URL-ni brauzerdə yoxlayın.`;
             });
         }
 
