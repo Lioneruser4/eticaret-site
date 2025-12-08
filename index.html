@@ -3,205 +3,197 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN – Global Scanner</title>
+<title>XSCAN – Universal Kod Oxuyucu</title>
 
-<!-- Quagga2 (barkod) -->
-<script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
-
-<!-- ZXing (QR + barkod) -->
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-
-<!-- Tesseract OCR (VIN üçün) -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+<!-- QR + Barkod + VIN oxuma kitabxanası -->
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
     body {
-        background: #0c0f16;
+        font-family: Arial, sans-serif;
+        background: #0d0d0d;
         color: white;
-        font-family: Arial;
-        text-align: center;
         margin: 0;
         padding: 0;
+        text-align: center;
     }
-    .title {
-        margin-top: 40px;
-        font-size: 38px;
+
+    header {
+        padding: 20px;
+        font-size: 26px;
         font-weight: bold;
-        animation: glow 3s infinite;
+        animation: fadeIn 1s ease;
     }
-    @keyframes glow {
-        0% { text-shadow: 0 0 10px #00eaff; }
-        50% { text-shadow: 0 0 25px #00f7ff; }
-        100% { text-shadow: 0 0 10px #00eaff; }
+
+    .container {
+        padding: 20px;
+        animation: fadeInUp 1s ease;
     }
-    button {
-        margin-top: 20px;
-        padding: 15px 30px;
-        font-size: 18px;
-        background: #00eaff;
-        border: none;
+
+    #reader {
+        width: 320px;
+        margin: auto;
+        display: none;
+    }
+
+    .info-box {
+        background: #1a1a1a;
+        padding: 20px;
         border-radius: 12px;
-        cursor: pointer;
-        transition: .3s;
-    }
-    button:hover {
-        background: #00c9dd;
-    }
-    #video {
-        width: 90%;
         margin-top: 20px;
+        display: none;
+        animation: fadeIn 0.5s ease;
+    }
+
+    .product-img {
+        width: 150px;
         border-radius: 10px;
-        display: none;
-        border: 3px solid #00eaff;
-    }
-    .result {
-        display: none;
-        margin-top: 25px;
-        padding: 18px;
-        background: rgba(255,255,255,0.08);
-        border-radius: 12px;
-        animation: fade .6s;
-    }
-    @keyframes fade {
-        from { opacity: 0; transform: translateY(15px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .vin-box {
-        margin-top: 25px;
-    }
-    input {
-        padding: 10px;
-        width: 70%;
-        border-radius: 8px;
-        border: none;
         margin-top: 10px;
     }
-</style>
 
+    .button {
+        background: #ff6b00;
+        color: white;
+        padding: 12px 20px;
+        margin-top: 20px;
+        border:none;
+        border-radius: 10px;
+        font-size: 18px;
+        cursor: pointer;
+        animation: fadeIn 1s ease;
+    }
+
+    .input-box {
+        margin-top: 20px;
+    }
+
+    input {
+        width: 80%;
+        padding: 12px;
+        border-radius: 10px;
+        border: none;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0;} to {opacity: 1;}
+    }
+    @keyframes fadeInUp {
+        from {opacity: 0; transform: translateY(20px);} 
+        to {opacity: 1; transform: translateY(0);}
+    }
+</style>
 </head>
 <body>
 
-<div class="title">XSCAN PRO</div>
-<p>Dünyanın bütün barkod, QR və VIN kodlarını oxuyan sistem</p>
+<header>XSCAN – Universal Kod Oxuyucu</header>
 
-<button onclick="startCamera()">📷 Kamera ilə oxut</button>
+<div class="container" id="startScreen">
+    XSCAN bütün <b>barkod, QR, VIN</b> kodlarını oxuyur və məhsulun <br>
+    <b>şəkli, adı, təsviri, istehsalçı</b> kimi məlumatları göstərir. <br><br>
 
-<div class="vin-box">
-    <h3>VIN kod daxil et:</h3>
-    <input id="vinInput" placeholder="Məs: 1HGCM82633A123456">
-    <button onclick="decodeVIN()">VIN analiz</button>
+    <button class="button" onclick="startScanner()">Oxutmağa Başla</button>
+
+    <div class="input-box">
+        <input type="text" id="manualInput" placeholder="VIN və ya Barkod daxil et">
+        <button class="button" onclick="manualLookup()">Axtar</button>
+    </div>
 </div>
 
-<video id="video" autoplay></video>
+<div id="reader"></div>
 
-<div id="result" class="result"></div>
+<div class="info-box" id="resultBox"></div>
+<button class="button" id="backBtn" style="display:none;" onclick="goBack()">Geri</button>
 
 <script>
-let video = document.getElementById("video");
-let resultBox = document.getElementById("result");
-let codeReader = new ZXing.BrowserMultiFormatReader();
-let cameraStream;
+let scanner;
 
-// Kamera başlat
-async function startCamera() {
-    resultBox.style.display = "none";
+// Kamera aç
+function startScanner() {
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("reader").style.display = "block";
 
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-        });
+    scanner = new Html5Qrcode("reader");
 
-        video.style.display = "block";
-        video.srcObject = cameraStream;
-
-        codeReader.decodeFromVideoDevice(null, "video", (res, err) => {
-            if (res) {
-                stopCamera();
-                fetchProductData(res.text);
-            }
-        });
-
-    } catch (e) {
-        alert("Kamera açıla bilmədi!");
-    }
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        code => {
+            scanner.stop();
+            document.getElementById("reader").style.display = "none";
+            showResult(code);
+        }
+    );
 }
 
-// Kameranı dayandır
-function stopCamera() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-    }
-    video.style.display = "none";
+// Əllə daxil etmə
+function manualLookup() {
+    const code = document.getElementById("manualInput").value.trim();
+    if (!code) return alert("Kod daxil et");
+    showResult(code);
 }
 
-// Məhsul API-ləri
-async function fetchProductData(code) {
-    resultBox.style.display = "block";
-    resultBox.innerHTML = `<h2>Kod: ${code}</h2><p>Axtarılır...</p>`;
+// Nəticə göstər
+function showResult(code) {
+    document.getElementById("backBtn").style.display = "block";
+    const box = document.getElementById("resultBox");
+    box.style.display = "block";
+    box.innerHTML = `<h2>Axtarılır...</h2>`;
 
-    const apis = [
-        `https://world.openfoodfacts.org/api/v0/product/${code}.json`,
-        `https://world.openbeautyfacts.org/api/v0/product/${code}.json`,
-        `https://world.openproducts.org/api/v0/product/${code}.json`,
-        `https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`
-    ];
-
-    for (let url of apis) {
-        try {
-            let r = await fetch(url);
-            let data = await r.json();
-
-            if (data.product && data.product.product_name) {
-                showProduct(data.product.product_name, data.product.brands, code);
-                return;
-            }
-
-            if (data.items && data.items.length > 0) {
-                showProduct(data.items[0].title, data.items[0].brand, code);
-                return;
-            }
-
-        } catch (err) {}
+    // 1) VIN yoxlaması
+    if (code.length === 17 && /^[A-HJ-NPR-Z0-9]+$/.test(code)) {
+        fetchVIN(code);
+        return;
     }
 
-    resultBox.innerHTML = `
-        <h2>Kod: ${code}</h2>
-        <p>Məhsul tapılmadı.</p>
-    `;
+    // 2) Barkod – Global bazadan axtarış
+    fetchProduct(code);
 }
 
-// Məlumat göstər
-function showProduct(name, brand, code) {
-    resultBox.innerHTML = `
-        <h2>Məhsul Tapıldı ✔</h2>
-        <p><b>Ad:</b> ${name}</p>
-        <p><b>Brend:</b> ${brand}</p>
-        <p><b>Kod:</b> ${code}</p>
-    `;
+// VIN API
+function fetchVIN(vin) {
+    fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${vin}?format=json`)
+    .then(r => r.json())
+    .then(data => {
+        const info = data.Results[0];
+        document.getElementById("resultBox").innerHTML = `
+            <h2>🚗 Avtomobil Məlumatı</h2>
+            <p><b>Marka:</b> ${info.Make}</p>
+            <p><b>Model:</b> ${info.Model}</p>
+            <p><b>İl:</b> ${info.ModelYear}</p>
+            <p><b>Tip:</b> ${info.VehicleType}</p>
+        `;
+    });
 }
 
-// VIN analiz
-async function decodeVIN() {
-    let vin = document.getElementById("vinInput").value;
-    if (vin.length < 10) return alert("VIN düzgün deyil!");
+// Məhsul məlumatları – Global Open Product API
+function fetchProduct(code) {
+    fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
+    .then(r => r.json())
+    .then(data => {
+        if (!data.product) {
+            document.getElementById("resultBox").innerHTML = "<h2>Məlumat tapılmadı</h2>";
+            return;
+        }
 
-    let url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`;
+        const p = data.product;
 
-    let r = await fetch(url);
-    let data = await r.json();
+        document.getElementById("resultBox").innerHTML = `
+            <h2>${p.product_name || "Məhsul"}</h2>
+            <img src="${p.image_front_url || ""}" class="product-img">
+            <p><b>Marka:</b> ${p.brands || "Yoxdur"}</p>
+            <p><b>Kategoriya:</b> ${p.categories || "Yoxdur"}</p>
+            <p><b>Təsvir:</b> ${p.generic_name || "Təsvir yoxdur"}</p>
+        `;
+    });
+}
 
-    let make = data.Results.find(e => e.Variable == "Make")?.Value;
-    let model = data.Results.find(e => e.Variable == "Model")?.Value;
-    let year = data.Results.find(e => e.Variable == "Model Year")?.Value;
-
-    resultBox.style.display = "block";
-    resultBox.innerHTML = `
-        <h2>VIN analizi ✔</h2>
-        <p><b>Marka:</b> ${make}</p>
-        <p><b>Model:</b> ${model}</p>
-        <p><b>İl:</b> ${year}</p>
-        <p><b>VIN:</b> ${vin}</p>
-    `;
+// Geri kameraya qayıt
+function goBack() {
+    document.getElementById("resultBox").style.display = "none";
+    document.getElementById("backBtn").style.display = "none";
+    startScanner();
 }
 </script>
 
