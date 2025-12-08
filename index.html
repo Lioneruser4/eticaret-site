@@ -3,115 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XSCAN – Universal Kod Oxuyucu</title>
+<title>XSCAN ENTERPRISE</title>
 
-<!-- QR + Barkod + VIN oxuma kitabxanası -->
+<!-- PWA APP ICONS -->
+<link rel="icon" href="data:," />
+<meta name="theme-color" content="#000">
+
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+
+<!-- QR + Barkod Scanner -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #0d0d0d;
-        color: white;
-        margin: 0;
-        padding: 0;
-        text-align: center;
-    }
 
-    header {
-        padding: 20px;
-        font-size: 26px;
-        font-weight: bold;
-        animation: fadeIn 1s ease;
-    }
+/* -------------------------------
+   GLOBAL STYLES
+--------------------------------*/
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0a0a0a;
+    color: white;
+    overflow-x: hidden;
+}
 
-    .container {
-        padding: 20px;
-        animation: fadeInUp 1s ease;
-    }
+/* Glassmorphism */
+.glass {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 15px;
+}
 
-    #reader {
-        width: 320px;
-        margin: auto;
-        display: none;
-    }
+/* Page Animations */
+.page {
+    display: none;
+    padding: 20px;
+    animation: fadeIn 0.35s ease;
+}
 
-    .info-box {
-        background: #1a1a1a;
-        padding: 20px;
-        border-radius: 12px;
-        margin-top: 20px;
-        display: none;
-        animation: fadeIn 0.5s ease;
-    }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px);}
+    to { opacity: 1; transform: translateY(0); }
+}
 
-    .product-img {
-        width: 150px;
-        border-radius: 10px;
-        margin-top: 10px;
-    }
+/* Active page */
+.activePage {
+    display: block !important;
+}
 
-    .button {
-        background: #ff6b00;
-        color: white;
-        padding: 12px 20px;
-        margin-top: 20px;
-        border:none;
-        border-radius: 10px;
-        font-size: 18px;
-        cursor: pointer;
-        animation: fadeIn 1s ease;
-    }
+/* Header */
+header {
+    text-align: center;
+    padding: 25px 10px;
+    background: linear-gradient(to bottom, #151515, #0a0a0a);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+}
 
-    .input-box {
-        margin-top: 20px;
-    }
+header .title {
+    font-size: 26px;
+    font-weight: bold;
+}
 
-    input {
-        width: 80%;
-        padding: 12px;
-        border-radius: 10px;
-        border: none;
-        font-size: 16px;
-        margin-bottom: 10px;
-    }
+header .sub {
+    margin-top: 5px;
+    opacity: .7;
+}
 
-    @keyframes fadeIn {
-        from {opacity: 0;} to {opacity: 1;}
-    }
-    @keyframes fadeInUp {
-        from {opacity: 0; transform: translateY(20px);} 
-        to {opacity: 1; transform: translateY(0);}
-    }
+/* NAVIGATION BAR */
+#bottomNav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #111;
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #333;
+    padding: 8px 0;
+    z-index: 999;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 13px;
+    text-align: center;
+}
+
+.nav-btn.active {
+    color: #ff6600;
+}
+
+.nav-btn span {
+    font-size: 26px;
+    display: block;
+}
+
+/* Scan Button */
+.scanButton {
+    width: 90%;
+    margin: auto;
+    background: #ff6600;
+    color: white;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 20px;
+    border: none;
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+/* Scanner Box */
+#reader {
+    width: 100%;
+    max-width: 350px;
+    margin: auto;
+    display: none;
+}
+
+/* Result Card */
+.productCard {
+    margin-top: 20px;
+}
+
+.productImg {
+    width: 180px;
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+/* Back button */
+.backBtn {
+    background: #444;
+    padding: 10px 18px;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
 </style>
+
 </head>
 <body>
 
-<header>XSCAN – Universal Kod Oxuyucu</header>
+<header>
+    <div class="title">XSCAN ENTERPRISE</div>
+    <div class="sub">Universal Barkod + QR + VIN Analiz Sistemi</div>
+</header>
 
-<div class="container" id="startScreen">
-    XSCAN bütün <b>barkod, QR, VIN</b> kodlarını oxuyur və məhsulun <br>
-    <b>şəkli, adı, təsviri, istehsalçı</b> kimi məlumatları göstərir. <br><br>
-
-    <button class="button" onclick="startScanner()">Oxutmağa Başla</button>
-
-    <div class="input-box">
-        <input type="text" id="manualInput" placeholder="VIN və ya Barkod daxil et">
-        <button class="button" onclick="manualLookup()">Axtar</button>
+<!-- ============ HOME PAGE ============ -->
+<div class="page activePage" id="homePage">
+    <div class="glass">
+        XSCAN Enterprise bütün barkod, QR və VIN kodlarını oxuyur və məhsul,
+        içki, qida, kosmetika, elektronika və avtomobil məlumatlarını global
+        bazalardan çəkir.
     </div>
+
+    <button class="scanButton" onclick="goPage('scanPage')">
+        Scan Et
+    </button>
+
+    <h3>Manual Kod Daxiletmə</h3>
+    <input id="manualInput" type="text" placeholder="Barkod və ya VIN yaz" 
+        style="width:90%;padding:12px;border-radius:10px;border:none;margin-top:10px;">
+    <button class="scanButton" onclick="manualLookup()">Axtar</button>
 </div>
 
-<div id="reader"></div>
+<!-- ============ SCAN PAGE ============ -->
+<div class="page" id="scanPage">
+    <div id="reader"></div>
+    <button class="backBtn" onclick="stopScan();goPage('homePage')">Geri</button>
+</div>
 
-<div class="info-box" id="resultBox"></div>
-<button class="button" id="backBtn" style="display:none;" onclick="goBack()">Geri</button>
+<!-- ============ RESULT PAGE ============ -->
+<div class="page" id="resultPage">
+    <div id="resultBox" class="glass"></div>
+    <button class="backBtn" onclick="goPage('homePage')">Ana Səhifə</button>
+</div>
+
+<!-- ============ HISTORY PAGE ============ -->
+<div class="page" id="historyPage">
+    <h2>Keçmiş Oxutmalar</h2>
+    <div id="historyList" class="glass"></div>
+</div>
+
+
+<!-- BOTTOM NAV -->
+<nav id="bottomNav">
+    <button class="nav-btn active" onclick="goPage('homePage')" id="navHome">
+        <span class="material-symbols-rounded">home</span>
+        Home
+    </button>
+
+    <button class="nav-btn" onclick="goPage('scanPage')" id="navScan">
+        <span class="material-symbols-rounded">qr_code_scanner</span>
+        Scan
+    </button>
+
+    <button class="nav-btn" onclick="goPage('historyPage')" id="navHistory">
+        <span class="material-symbols-rounded">history</span>
+        History
+    </button>
+</nav>
+
 
 <script>
+
+/* ==============================================
+   PAGE NAVIGATION
+================================================*/
+function goPage(pageId){
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("activePage"));
+    document.getElementById(pageId).classList.add("activePage");
+
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+    if(pageId === "homePage") navHome.classList.add("active");
+    if(pageId === "scanPage") navScan.classList.add("active");
+    if(pageId === "historyPage") navHistory.classList.add("active");
+
+    if(pageId === "scanPage") startScan();
+    else stopScan();
+}
+
+
+/* ==============================================
+   SCANNER
+================================================*/
 let scanner;
 
-// Kamera aç
-function startScanner() {
-    document.getElementById("startScreen").style.display = "none";
+function startScan(){
     document.getElementById("reader").style.display = "block";
 
     scanner = new Html5Qrcode("reader");
@@ -119,82 +245,117 @@ function startScanner() {
     scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
-        code => {
-            scanner.stop();
-            document.getElementById("reader").style.display = "none";
-            showResult(code);
+
+        decoded => {
+            stopScan();
+            fetchData(decoded);
+            saveHistory(decoded);
         }
     );
 }
 
-// Əllə daxil etmə
-function manualLookup() {
-    const code = document.getElementById("manualInput").value.trim();
-    if (!code) return alert("Kod daxil et");
-    showResult(code);
-}
-
-// Nəticə göstər
-function showResult(code) {
-    document.getElementById("backBtn").style.display = "block";
-    const box = document.getElementById("resultBox");
-    box.style.display = "block";
-    box.innerHTML = `<h2>Axtarılır...</h2>`;
-
-    // 1) VIN yoxlaması
-    if (code.length === 17 && /^[A-HJ-NPR-Z0-9]+$/.test(code)) {
-        fetchVIN(code);
-        return;
+function stopScan(){
+    if(scanner){
+        scanner.stop();
+        scanner.clear();
     }
-
-    // 2) Barkod – Global bazadan axtarış
-    fetchProduct(code);
+    document.getElementById("reader").style.display = "none";
 }
 
-// VIN API
-function fetchVIN(vin) {
+
+/* ==============================================
+   MANUAL INPUT
+================================================*/
+function manualLookup(){
+    const code = manualInput.value.trim();
+    if(!code) return alert("Kod yaz!");
+    fetchData(code);
+}
+
+
+/* ==============================================
+   SAVE HISTORY (localStorage)
+================================================*/
+function saveHistory(code){
+    let h = JSON.parse(localStorage.getItem("xscan_history") || "[]");
+    h.unshift({code:code, time:new Date().toLocaleString()});
+    localStorage.setItem("xscan_history", JSON.stringify(h));
+    loadHistory();
+}
+
+function loadHistory(){
+    let h = JSON.parse(localStorage.getItem("xscan_history") || "[]");
+    historyList.innerHTML = h.map(item => `
+        <div class="glass" style="margin-bottom:10px">
+            <b>${item.code}</b><br>
+            <small>${item.time}</small>
+        </div>
+    `).join("");
+}
+loadHistory();
+
+
+/* ======================================================
+   FETCH DATA (VIN + BARKOD + QR)
+=======================================================*/
+function fetchData(code){
+    goPage("resultPage");
+    resultBox.innerHTML = "<h2>Axtarılır...</h2>";
+
+    if(code.length === 17 && /^[A-HJ-NPR-Z0-9]+$/.test(code)){
+        fetchVIN(code);
+    } else {
+        fetchProduct(code);
+    }
+}
+
+
+/* ==============================================
+   VIN API
+================================================*/
+function fetchVIN(vin){
     fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${vin}?format=json`)
     .then(r => r.json())
     .then(data => {
-        const info = data.Results[0];
-        document.getElementById("resultBox").innerHTML = `
-            <h2>🚗 Avtomobil Məlumatı</h2>
-            <p><b>Marka:</b> ${info.Make}</p>
-            <p><b>Model:</b> ${info.Model}</p>
-            <p><b>İl:</b> ${info.ModelYear}</p>
-            <p><b>Tip:</b> ${info.VehicleType}</p>
+        let v = data.Results[0];
+        resultBox.innerHTML = `
+            <h2>Avtomobil Məlumatı</h2>
+            <b>Marka:</b> ${v.Make}<br>
+            <b>Model:</b> ${v.Model}<br>
+            <b>İl:</b> ${v.ModelYear}<br>
+            <b>Tip:</b> ${v.VehicleType}<br>
         `;
     });
 }
 
-// Məhsul məlumatları – Global Open Product API
-function fetchProduct(code) {
+
+/* ==============================================
+   PRODUCT API
+================================================*/
+function fetchProduct(code){
     fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
     .then(r => r.json())
+
     .then(data => {
-        if (!data.product) {
-            document.getElementById("resultBox").innerHTML = "<h2>Məlumat tapılmadı</h2>";
+        if(!data.product){
+            resultBox.innerHTML = `<h2>Məlumat tapılmadı</h2>`;
             return;
         }
 
-        const p = data.product;
+        let p = data.product;
 
-        document.getElementById("resultBox").innerHTML = `
+        resultBox.innerHTML = `
             <h2>${p.product_name || "Məhsul"}</h2>
-            <img src="${p.image_front_url || ""}" class="product-img">
-            <p><b>Marka:</b> ${p.brands || "Yoxdur"}</p>
-            <p><b>Kategoriya:</b> ${p.categories || "Yoxdur"}</p>
-            <p><b>Təsvir:</b> ${p.generic_name || "Təsvir yoxdur"}</p>
+            <img class="productImg" src="${p.image_front_url || ""}">
+            <br><br>
+
+            <b>Marka:</b> ${p.brands}<br>
+            <b>Kategoriya:</b> ${p.categories}<br>
+            <b>Təsvir:</b> ${p.generic_name}<br>
         `;
     });
 }
 
-// Geri kameraya qayıt
-function goBack() {
-    document.getElementById("resultBox").style.display = "none";
-    document.getElementById("backBtn").style.display = "none";
-    startScanner();
-}
 </script>
 
 </body>
