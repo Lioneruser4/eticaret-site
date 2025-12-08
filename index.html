@@ -61,13 +61,11 @@
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                 const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
                 
-                // Məlumatı onTelegramAuth funksiyasına ötürürük
                 onTelegramAuth({
                     id: tgUser.id,
                     first_name: tgUser.first_name
                 });
                 
-                // WebView pəncərəsini bağlama düyməsini də göstəririk
                 window.Telegram.WebApp.ready();
                 
                 console.log("METOD 1: WebApp SDK vasitəsilə avtomatik ID alındı.");
@@ -83,7 +81,6 @@
                 };
                 
                 onTelegramAuth(user);
-                // URL-dən tokenləri silməyə çalışırıq (təmizlik üçün)
                 window.history.replaceState({}, document.title, window.location.pathname);
                 console.log("METOD 2: URL Parametrləri vasitəsilə avtomatik ID alındı.");
                 return true;
