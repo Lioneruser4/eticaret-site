@@ -36,14 +36,15 @@
         </div>
     </div>
 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
     <script>
         // Sizin Node.js API ünvanınız
         const RENDER_API_URL = "https://fullsongnodejs.onrender.com"; 
         let userId = null; 
         
-        // --- TELEGRAM AUTH FUNKSİYASI ---
+        // --- TELEGRAM AUTH FUNKSİYASI (ID alındıqda çağırılır) ---
         function onTelegramAuth(user) {
-            // Telegram ID-ni qəbul edir və formanı aktivləşdirir
             userId = user.id;
             const firstName = user.first_name || "İstifadəçi";
             
@@ -54,24 +55,43 @@
             console.log("İstifadəçi ID-si:", userId);
         }
 
-        // --- AVTOMATİK LOGIN YOXLANILMASI (WebView üçün) ---
-        function checkUrlForTelegramAuth() {
-            // URL-dəki bütün parametrləri (query parameters) yoxlayırıq
+        // --- BÜTÜN AVTOMATİK LOGIN METODLARINI YOXLAYAN ƏSAS FUNKSİYA ---
+        function checkAutoLogin() {
+            // METOD 1: TELEGRAM WEBACTUAL APP SDK İLƏ YOXLAMA (Ən etibarlı yol)
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+                
+                // Məlumatı onTelegramAuth funksiyasına ötürürük
+                onTelegramAuth({
+                    id: tgUser.id,
+                    first_name: tgUser.first_name
+                });
+                
+                // WebView pəncərəsini bağlama düyməsini də göstəririk
+                window.Telegram.WebApp.ready();
+                
+                console.log("METOD 1: WebApp SDK vasitəsilə avtomatik ID alındı.");
+                return true;
+            }
+
+            // METOD 2: URL PARAMETRLƏRİ İLƏ YOXLAMA (Köhnə metod)
             const urlParams = new URLSearchParams(window.location.search);
-            
-            // Telegram bəzən ID-ni birbaşa URL-ə əlavə edir.
             if (urlParams.has('id') && urlParams.has('hash')) {
                 const user = {
                     id: urlParams.get('id'),
                     first_name: urlParams.get('first_name')
                 };
                 
-                // Avtomatik olaraq onTelegramAuth funksiyasını çağırırıq
                 onTelegramAuth(user);
-                
                 // URL-dən tokenləri silməyə çalışırıq (təmizlik üçün)
                 window.history.replaceState({}, document.title, window.location.pathname);
+                console.log("METOD 2: URL Parametrləri vasitəsilə avtomatik ID alındı.");
+                return true;
             }
+
+            // METOD 3: Əgər heç biri işləməzsə, klassik widget-ın kliklənməsini gözləyir.
+            console.log("Avtomatik ID alınmadı. İstifadəçinin klikləməsi gözlənilir.");
+            return false;
         }
 
         // --- YÜKLƏMƏ SORĞUSUNU GÖNDƏRMƏ FUNKSİYASI ---
@@ -125,7 +145,7 @@
         }
 
         // Səhifə yükləndikdən sonra avtomatik yoxlamağı başlat
-        checkUrlForTelegramAuth();
+        checkAutoLogin();
     </script>
 
 </body>
