@@ -4,14 +4,17 @@ const cors = require('cors');
 const { HttpsProxyAgent } = require('https-proxy-agent'); 
 const axios = require('axios');
 const yts = require('youtube-search-without-api-key');
-const FormData = require('form-data');
+const FormData = require('form-data'); // Yükləmə üçün vacibdir
 
 const app = express();
+// Render-də işləmək üçün vacibdir: PORT-u Environment Variable-dan götürür
 const PORT = process.env.PORT || 3000; 
 
-// --- KONFİQURASİYA ---
+// --- KONFİQURASİYA DƏYİŞƏNLƏRİ ---
+// Bot Token (sizə məxsusdur)
 const BOT_TOKEN = "2138035413:AAGYaGtgvQ4thyJKW2TXLS5n3wyZ6vVx3I8"; 
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
+// Render Environment Variable-dan oxunur.
 const PROXY_URL = process.env.PROXY_URL; 
 
 let proxyAgent = null;
@@ -24,12 +27,13 @@ if (PROXY_URL) {
         console.error("[PROXY ERROR] Proxy URL formatı səhvdir:", e.message);
     }
 }
-// --------------------
+// ------------------------------------
 
+// CORS və JSON-u tətbiqin başlanğıcında istifadə edirik
 app.use(cors());
 app.use(express.json());
 
-// Serverin aktiv olduğunu yoxlamaq üçün endpoint
+// Serverin işlək olduğunu yoxlamaq üçün əsas endpoint
 app.get('/', (req, res) => {
     res.status(200).send('FullSong API aktivdir. Yükləmə endpoint-i: /process-request');
 });
@@ -37,11 +41,11 @@ app.get('/', (req, res) => {
 // Yükləməni birbaşa Telegram-a göndərən funksiya
 async function sendAudioToTelegram(chatId, title, audioBuffer) {
     const url = `${TELEGRAM_API_URL}/sendAudio`;
-    console.log(`[TELEGRAM] ${chatId}-ə səs göndərilir...`);
 
     try {
         const formData = new FormData();
         formData.append('chat_id', chatId);
+        // Buffer-i Node.js mühitində göndəririk
         formData.append('audio', audioBuffer, { filename: `${title}.mp3`, contentType: 'audio/mpeg' }); 
         formData.append('caption', `✅ Uğurla yükləndi: ${title}`);
 
@@ -59,7 +63,7 @@ async function sendAudioToTelegram(chatId, title, audioBuffer) {
     }
 }
 
-// --- Əsas Yükləmə Endpoint-i ---
+// --- Əsas Yükləmə və Axtarış Endpoint-i ---
 app.post('/process-request', async (req, res) => {
     const { chat_id, query } = req.body;
     let videoUrl = query;
@@ -72,9 +76,10 @@ app.post('/process-request', async (req, res) => {
     try {
         // 1. Axtarış və ya URL yoxlanılması
         if (!ytdl.validateURL(query)) {
+            console.log(`[SEARCH] Mahnı axtarılır: ${query}`);
             const results = await yts.search(query);
             if (results && results.length > 0) {
-                videoUrl = results[0].url;
+                videoUrl = results[0].url; // İlk nəticəni seçirik
                 videoTitle = results[0].title;
             } else {
                 return res.status(404).json({ status: 'error', message: 'Mahnı tapılmadı.' });
@@ -85,6 +90,8 @@ app.post('/process-request', async (req, res) => {
         }
         
         // 2. Yükləməni başlatmaq
+        console.log(`[YTDL] Yüklənmə başladı: ${videoUrl}`);
+        
         const audioStream = ytdl(videoUrl, {
             filter: 'audioonly',
             quality: 'highestaudio',
@@ -93,15 +100,16 @@ app.post('/process-request', async (req, res) => {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Referer': 'https://www.youtube.com/'
                 },
-                agent: proxyAgent
+                agent: proxyAgent // Proxy istifadə etmək
             }
         });
 
         const chunks = [];
         audioStream.on('data', chunk => chunks.push(chunk));
         
+        // Yükləmə zamanı xəta olarsa (IP bloklanması)
         audioStream.on('error', (err) => {
-            console.error('[YTDL CRITICAL ERROR]', err.message);
+            console.error('[YTDL CRITICAL ERROR] IP Bloklanması ehtimalı:', err.message);
             if (!res.headersSent) {
                 res.status(503).json({ status: 'error', message: 'Yükləmə zamanı YouTube əlaqəni kəsdi (IP xətası). Proxy-i yoxlayın.' });
             }
@@ -127,5 +135,6 @@ app.post('/process-request', async (req, res) => {
 });
 
 app.listen(PORT, () => {
+    // Portun düzgün dinlənildiyi təsdiqlənir
     console.log(`Node.js API Server ${PORT}-də aktivdir.`);
 });
