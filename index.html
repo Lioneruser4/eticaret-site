@@ -1,216 +1,192 @@
+<!-- Yeni bir dosyaya kaydedin veya mevcut index.html'nin içeriğini bu kodla değiştirin -->
 <!DOCTYPE html>
 <html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Sorgulama - Avtomobil Məlumatları</title>
+    <title>Avtomobil Məlumatları</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        .container {
+            font-family: Arial, sans-serif;
             max-width: 1000px;
             margin: 0 auto;
-            background: white;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
+            background-color: #f5f5f5;
         }
         .search-box {
-            display: flex;
-            margin: 20px 0;
-            gap: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-        #vinInput {
-            flex: 1;
+        input[type="text"] {
+            width: 70%;
             padding: 10px;
-            font-size: 16px;
+            margin-right: 10px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 5px;
         }
         button {
             padding: 10px 20px;
-            background-color: #3498db;
+            background: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
         }
         button:hover {
-            background-color: #2980b9;
+            background: #45a049;
         }
         .result {
-            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: none;
         }
-        .car-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .car-details {
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
         .car-image {
-            width: 100%;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            max-width: 100%;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .car-info {
+            margin-top: 15px;
         }
         .loading {
             text-align: center;
+            padding: 20px;
             display: none;
-            margin: 20px 0;
         }
         .error {
-            color: #e74c3c;
-            margin: 10px 0;
-            display: none;
-        }
-        @media (max-width: 768px) {
-            .car-info {
-                grid-template-columns: 1fr;
-            }
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚗 Avtomobil VIN Sorgulama</h1>
+        <h1>🚗 Avtomobil Məlumatları Axtarışı</h1>
         
         <div class="search-box">
-            <input type="text" id="vinInput" placeholder="Avtomobilin VIN nömrəsini daxil edin..." maxlength="17">
-            <button onclick="searchVin()">Axtar</button>
+            <input type="text" id="carInput" placeholder="Məsələn: Toyota Camry 2020">
+            <button onclick="searchCar()">Axtar</button>
+            <div id="error" class="error"></div>
         </div>
         
         <div id="loading" class="loading">
-            <p>Məlumatlar yüklənir, zəhmət olmasa gözləyin...</p>
+            <p>Axtarılır... Zəhmət olmasa gözləyin</p>
         </div>
         
-        <div id="error" class="error"></div>
-        
         <div id="result" class="result">
-            <h2>Avtomobil Məlumatları</h2>
-            <div class="car-info">
-                <div class="car-images">
-                    <img id="carImage" class="car-image" src="" alt="Avtomobil şəkli">
-                    <div id="additionalImages"></div>
-                </div>
-                <div class="car-details" id="carDetails">
-                    <!-- Buraya avtomobil məlumatları doldurulacaq -->
-                </div>
-            </div>
+            <h2 id="carTitle"></h2>
+            <img id="carImage" class="car-image" src="" alt="Avtomobil şəkli">
+            <div id="carInfo" class="car-info"></div>
         </div>
     </div>
 
     <script>
-        async function searchVin() {
-            const vin = document.getElementById('vinInput').value.trim().toUpperCase();
+        async function searchCar() {
+            const query = document.getElementById('carInput').value.trim();
             const resultDiv = document.getElementById('result');
             const loadingDiv = document.getElementById('loading');
             const errorDiv = document.getElementById('error');
+            const carTitle = document.getElementById('carTitle');
+            const carImage = document.getElementById('carImage');
+            const carInfo = document.getElementById('carInfo');
             
-            // Əvvəlki xəta mesajlarını təmizlə
-            errorDiv.style.display = 'none';
+            // Temizlik
             errorDiv.textContent = '';
+            resultDiv.style.display = 'none';
             
-            // VIN nömrəsini yoxla
-            if (!vin || vin.length !== 17) {
-                showError('Zəhmət olmasa 17 rəqəmli VIN nömrəsini düzgün daxil edin.');
+            // Doğrulama
+            if (!query) {
+                showError('Zəhmət olmasa bir axtarış sorğusu daxil edin.');
                 return;
             }
             
-            // Yüklənmə göstəricisini göstər
             loadingDiv.style.display = 'block';
-            resultDiv.style.display = 'none';
             
             try {
-                // Burada API çağrısı ediləcək
-                // Mövcud pulsuz API-lar məhdud olduğu üçün nümunə məlumatlar istifadə edirik
-                // Həqiqi bir tətbiqdə, VIN axtarışı üçün peşəkar bir API istifadə etməlisiniz
+                // 1. Önce aracın marka ve modelini çıkar
+                const carData = extractCarInfo(query);
                 
-                // Nümunə gözləmə (simulyasiya)
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // 2. Google Görseller'de ara
+                const imageUrl = await searchGoogleImages(carData.make + ' ' + carData.model + ' ' + (carData.year || ''));
                 
-                // Nümunə məlumatlar
-                const sampleData = {
-                    make: 'Toyota',
-                    model: 'Camry',
-                    year: 2020,
-                    color: 'Ağ',
-                    engine: '2.5L 4-Silindir',
-                    transmission: 'Avtomatik',
-                    vin: vin,
-                    image: 'https://via.placeholder.com/600x400?text=' + encodeURIComponent('Toyota Camry 2020')
-                };
+                // 3. Sonuçları göster
+                carTitle.textContent = `${carData.year || ''} ${carData.make || ''} ${carData.model || ''}`.trim();
+                carImage.src = imageUrl;
+                carImage.alt = `${carData.make} ${carData.model}`;
                 
-                // Məlumatları göstər
-                displayCarInfo(sampleData);
+                // 4. Bilgileri göster
+                carInfo.innerHTML = `
+                    <p><strong>Marka:</strong> ${carData.make || 'Bilinmir'}</p>
+                    <p><strong>Model:</strong> ${carData.model || 'Bilinmir'}</p>
+                    ${carData.year ? `<p><strong>İl:</strong> ${carData.year}</p>` : ''}
+                    <p><strong>Məlumat:</strong> Bu məlumatlar avtomatik yığılıb. Dəqiq məlumat üçün rəsmi mənbələrə müraciət edin.</p>
+                `;
+                
+                resultDiv.style.display = 'block';
                 
             } catch (error) {
-                console.error('Xəta baş verdi:', error);
-                showError('Məlumatlar alınarkən xəta baş verdi. Zəhmət olmasa daha sonra yenidən cəhd edin.');
+                console.error('Xəta:', error);
+                showError('Axtarış zamanı xəta baş verdi. Zəhmət olmasa daha sonra yenidən cəhd edin.');
             } finally {
                 loadingDiv.style.display = 'none';
             }
         }
         
-        function displayCarInfo(car) {
-            const resultDiv = document.getElementById('result');
-            const carImage = document.getElementById('carImage');
-            const carDetails = document.getElementById('carDetails');
-            const additionalImages = document.getElementById('additionalImages');
+        function extractCarInfo(query) {
+            // Basit bir regex ile marka, model ve yılı ayıklama
+            const regex = /([a-zA-ZğüşıöçƏĞÜŞIÖÇ]+)\s*([a-zA-Z0-9ğüşıöçƏĞÜŞIÖÇ\s]+?)(\s*(19|20)\d{2})?$/i;
+            const match = query.match(regex);
             
-            // Avtomobil şəklini təyin et
-            carImage.src = car.image;
-            carImage.alt = `${car.make} ${car.model} ${car.year}`;
+            if (!match) {
+                return { make: query.split(' ')[0], model: query.split(' ').slice(1).join(' ') };
+            }
             
-            // Əlavə şəkillər üçün nümunə (əsl tətbiqdə API-dən gələcək)
-            additionalImages.innerHTML = `
-                <img src="${car.image}" class="car-image" alt="Yan görünüş" style="width: 48%; margin-right: 4%;">
-                <img src="${car.image}" class="car-image" alt="İç hissə" style="width: 48%;">
-            `;
+            return {
+                make: match[1]?.trim(),
+                model: match[2]?.trim(),
+                year: match[3]?.trim()
+            };
+        }
+        
+        async function searchGoogleImages(query) {
+            // Bu fonksiyon sadece örnek amaçlıdır
+            // Gerçek dünyada çalışmaz, sadece fikir vermek içindir
+            console.log("Google'da aranıyor:", query);
             
-            // Avtomobil məlumatlarını göstər
-            carDetails.innerHTML = `
-                <h3>${car.year} ${car.make} ${car.model}</h3>
-                <p><strong>VIN:</strong> ${car.vin}</p>
-                <p><strong>Rəng:</strong> ${car.color}</p>
-                <p><strong>Mühərrik:</strong> ${car.engine}</p>
-                <p><strong>Sürətlər qutusu:</strong> ${car.transmission}</p>
-                <p><strong>Vəziyyəti:</strong> İkinci əl</p>
-                <p><strong>Yürüş:</strong> 45,000 km</p>
-                <p><strong>Yanacaq növü:</strong> Benzin</p>
-                <p><strong>Ötürücü:</strong> Ön təkər</p>
-                <p><strong>Yanacaq sərfi:</strong> 7.5L/100km (qarışıq)</p>
-            `;
+            // Gerçek bir uygulamada burada bir proxy sunucu veya CORS çözümü gerekir
+            // Bu örnek için rastgele araba resimleri döndürelim
+            const sampleImages = [
+                'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&auto=format',
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format',
+                'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format',
+                'https://images.unsplash.com/photo-1544829728-e0cbac75bc96?w=800&auto=format',
+                'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format'
+            ];
             
-            // Nəticələri göstər
-            resultDiv.style.display = 'block';
+            // Rastgele bir resim seç
+            const randomImage = sampleImages[Math.floor(Math.random() * sampleImages.length)];
+            
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve(randomImage);
+                }, 1000); // Simüle edilmiş gecikme
+            });
         }
         
         function showError(message) {
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
         }
         
-        // Enter düyməsi ilə axtarış etmək üçün
-        document.getElementById('vinInput').addEventListener('keypress', function(e) {
+        // Enter tuşu ile arama yapma
+        document.getElementById('carInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                searchVin();
+                searchCar();
             }
         });
     </script>
