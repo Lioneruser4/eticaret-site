@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIN Kodla Avtomobil Şəkilləri</title>
+    <title>VIN Kodla Avtomobil Məlumatları</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
     
     <style>
@@ -65,17 +65,10 @@
             box-shadow: 0 0 8px rgba(42, 82, 152, 0.5);
         }
 
-        /* Düymələr */
-        .button-group {
-            display: flex;
-            gap: 15px;
-            flex-direction: column; /* Şaquli düymələr */
-            margin-bottom: 10px;
-        }
-
+        /* Düymə */
         button {
             width: 100%;
-            padding: 18px 25px;
+            padding: 15px 25px;
             border: none;
             border-radius: 10px;
             cursor: pointer;
@@ -83,36 +76,54 @@
             font-weight: 700;
             transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
             color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        button i {
-            margin-right: 10px;
-            font-size: 1.2em;
-        }
-
-        .btn-bidfax {
-            background-color: #e67e22; /* Tünd Narıncı */
-        }
-
-        .btn-bidcars {
-            background-color: #3498db; /* Göy */
+            background-color: #28a745; /* Yaşıl */
         }
 
         button:hover {
+            background-color: #218838;
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         
-        .btn-bidfax:hover { background-color: #d35400; }
-        .btn-bidcars:hover { background-color: #2980b9; }
+        /* Nəticə Kartı */
+        #sonuc {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            min-height: 100px;
+            text-align: left;
+            transition: opacity 0.3s;
+        }
 
-        .note {
-            margin-top: 20px;
-            font-size: 0.9em;
-            color: #777;
+        .info-item {
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .info-item strong {
+            color: #2a5298;
+            display: inline-block;
+            min-width: 130px;
+        }
+
+        .loading, .error {
+            text-align: center;
+            font-weight: 500;
+            padding: 10px;
+        }
+        .error {
+            color: #dc3545;
+        }
+        
+        .success-title {
+            color: #28a745;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.5em;
         }
 
         /* Mobil Adaptasiya */
@@ -126,56 +137,76 @@
 <body>
 
     <div class="container">
-        <h1>📸 Avtomobil Şəkillərini Tap</h1>
-        <p class="subtitle">VIN (Şassi Nömrəsi) ilə hərrac saytlarında axtarış et.</p>
+        <h1>VIN Kodu Həll Edicisi</h1>
+        <p class="subtitle">Avtomobilin əsas spesifikasiyalarını pulsuz əldə edin.</p>
         
         <div class="input-group">
             <input type="text" id="vinInput" maxlength="17" placeholder="17 rəqəmli VIN Kodunu daxil edin" value="1GKS25N70RU197288">
         </div>
         
-        <div class="button-group">
-            <button class="btn-bidfax" onclick="yonlendir('bidfax')">
-                <i class="fas fa-image"></i> Bidfax.info Şəkillərini Gör
-            </button>
-            <button class="btn-bidcars" onclick="yonlendir('bidcars')">
-                <i class="fas fa-car"></i> Bid.cars Şəkillərini Gör
-            </button>
+        <button onclick="sorgula()">🔍 Məlumatları Çək</button>
+
+        <div id="sonuc">
+            <p style="text-align:center;">Nəticələr burada göstəriləcək.</p>
         </div>
-        
-        <p class="note">Məlumatlar birbaşa axtarış nəticəsinə yönləndirilərək göstərilir. Bütün arxiv şəkilləri sayt tərəfindən ödənişli ola bilər.</p>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
-    
     <script>
-        // Hərrac Saytlarına Yönləndirmə Funksiyası
-        function yonlendir(site) {
+        function sorgula() {
             const vin = document.getElementById('vinInput').value.trim().toUpperCase();
+            const sonucDiv = document.getElementById('sonuc');
             
+            // VIN doğrulama
             if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
-                alert("Xəta: Zəhmət olmasa, düzgün, 17 rəqəmli VIN kodu daxil edin.");
+                sonucDiv.innerHTML = '<p class="error">Xəta: Zəhmət olmasa, düzgün, 17 rəqəmli VIN kodu daxil edin.</p>';
                 return;
             }
 
-            let url;
-            if (site === 'bidcars') {
-                // Bid.cars saytına VIN ilə yönləndirmə
-                url = `https://bid.cars/?s=${vin}`; 
-            } else if (site === 'bidfax') {
-                // Bidfax.info saytına VIN ilə yönləndirmə
-                url = `https://bidfax.info/?vin=${vin}`;
-            }
+            // NHTSA API (CORS-a icazə verir, pulsuzdur)
+            const API_URL = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
 
-            if (url) {
-                // Yeni pəncərədə açırıq
-                window.open(url, '_blank');
-            }
+            sonucDiv.innerHTML = '<p class="loading">Məlumatlar yoxlanılır...</p>';
+
+            fetch(API_URL)
+            .then(response => response.json())
+            .then(data => {
+                let results = data.Results;
+                
+                // Nəticələri yoxlayırıq və tapdığımız məlumatları qruplaşdırırıq
+                if (results.length > 0 && results.find(r => r.Variable === 'Make' && r.Value !== null)) {
+                    
+                    const getVal = (varName) => {
+                        const result = results.find(r => r.Variable === varName);
+                        return (result && result.Value) ? result.Value : 'Tapılmadı';
+                    };
+
+                    const make = getVal('Make');
+                    const model = getVal('Model');
+                    const modelYear = getVal('Model Year');
+                    const vehicleType = getVal('Vehicle Type');
+                    const engineType = getVal('Engine Type');
+
+                    sonucDiv.innerHTML = `
+                        <p class="success-title">✅ Avtomobil Məlumatları Uğurla Çəkildi!</p>
+                        <div class="info-item"><strong>Marka:</strong> ${make}</div>
+                        <div class="info-item"><strong>Model:</strong> ${model}</div>
+                        <div class="info-item"><strong>Model İli:</strong> ${modelYear}</div>
+                        <div class="info-item"><strong>Avtomobil Tipi:</strong> ${vehicleType}</div>
+                        <div class="info-item"><strong>Mühərrik Tipi:</strong> ${engineType}</div>
+                        <p style="margin-top:15px; color:#999; text-align:center; font-size:0.9em;">(Bu məlumatlar ABŞ mənbələrindən gəlir və yalnız identifikasiya üçündür.)</p>
+                    `;
+                } else {
+                    sonucDiv.innerHTML = '<p class="error">VIN kodu həll edilmədi. Zəhmət olmasa VIN kodunun düzgünlüyünü yoxlayın.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('API Xətası:', error);
+                sonucDiv.innerHTML = '<p class="error">Sorğu zamanı xəta yarandı. İnternet bağlantınızı yoxlayın.</p>';
+            });
         }
         
-        // Səhifə yüklənəndə vinInput fokuslansın
-        window.onload = function() {
-            document.getElementById('vinInput').focus();
-        };
+        // Səhifə yükləndə nümunə VIN-i avtomatik yoxlayaq
+        window.onload = sorgula;
     </script>
 
 </body>
