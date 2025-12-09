@@ -3,120 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FullSong Yükləyici Bot</title>
+    <title>VIN Kodla Avtomobil Şəkilləri</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f6f9; }
-        .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; width: 90%; text-align: center; }
-        h1 { color: #0088cc; margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { background-color: #0088cc; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; }
-        button:hover { background-color: #0077b3; }
-        #auth-status { margin-top: 15px; font-weight: bold; }
-        #download-form { display: none; margin-top: 20px; }
+        /* Əsas Üslublar */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: #ffffff;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            max-width: 550px;
+            width: 90%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2a5298;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        /* Giriş Qrupu */
+        .input-group {
+            margin-bottom: 30px;
+        }
+        
+        #vinInput {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+            text-transform: uppercase;
+        }
+
+        #vinInput:focus {
+            border-color: #2a5298;
+            outline: none;
+            box-shadow: 0 0 8px rgba(42, 82, 152, 0.5);
+        }
+
+        /* Düymələr */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-direction: column; /* Şaquli düymələr */
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 18px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 700;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        button i {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .btn-bidfax {
+            background-color: #e67e22; /* Tünd Narıncı */
+        }
+
+        .btn-bidcars {
+            background-color: #3498db; /* Göy */
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-bidfax:hover { background-color: #d35400; }
+        .btn-bidcars:hover { background-color: #2980b9; }
+
+        .note {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        /* Mobil Adaptasiya */
+        @media (max-width: 480px) {
+             .container {
+                padding: 20px;
+             }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🎵 FullSong Bot Yükləyici</h1>
+        <h1>📸 Avtomobil Şəkillərini Tap</h1>
+        <p class="subtitle">VIN (Şassi Nömrəsi) ilə hərrac saytlarında axtarış et.</p>
         
-        <script async src="https://telegram.org/js/telegram-widget.js?22" 
-                data-telegram-login="fullsongbot" 
-                data-size="large" 
-                data-auth-url="javascript:onTelegramAuth(user)" 
-                data-request-access="write"></script>
-
-        <div id="auth-status">Zəhmət olmasa, Telegram ilə daxil olun.</div>
-
-        <div id="download-form">
-            <p id="welcome-message">Xoş gəlmisiniz!</p>
-            <input type="text" id="query-input" placeholder="Mahnı adı və ya YouTube linki daxil edin" required>
-            <button onclick="sendDownloadRequest()">Yükləməni Başlat</button>
-            <div id="status-message" style="margin-top: 15px; color: green;"></div>
+        <div class="input-group">
+            <input type="text" id="vinInput" maxlength="17" placeholder="17 rəqəmli VIN Kodunu daxil edin" value="1GKS25N70RU197288">
         </div>
+        
+        <div class="button-group">
+            <button class="btn-bidfax" onclick="yonlendir('bidfax')">
+                <i class="fas fa-image"></i> Bidfax.info Şəkillərini Gör
+            </button>
+            <button class="btn-bidcars" onclick="yonlendir('bidcars')">
+                <i class="fas fa-car"></i> Bid.cars Şəkillərini Gör
+            </button>
+        </div>
+        
+        <p class="note">Məlumatlar birbaşa axtarış nəticəsinə yönləndirilərək göstərilir. Bütün arxiv şəkilləri sayt tərəfindən ödənişli ola bilər.</p>
     </div>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     
     <script>
-        const RENDER_API_URL = "https://fullsongnodejs.onrender.com"; 
-        let userId = null; 
+        // Hərrac Saytlarına Yönləndirmə Funksiyası
+        function yonlendir(site) {
+            const vin = document.getElementById('vinInput').value.trim().toUpperCase();
+            
+            if (vin.length !== 17 || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+                alert("Xəta: Zəhmət olmasa, düzgün, 17 rəqəmli VIN kodu daxil edin.");
+                return;
+            }
+
+            let url;
+            if (site === 'bidcars') {
+                // Bid.cars saytına VIN ilə yönləndirmə
+                url = `https://bid.cars/?s=${vin}`; 
+            } else if (site === 'bidfax') {
+                // Bidfax.info saytına VIN ilə yönləndirmə
+                url = `https://bidfax.info/?vin=${vin}`;
+            }
+
+            if (url) {
+                // Yeni pəncərədə açırıq
+                window.open(url, '_blank');
+            }
+        }
         
-        function onTelegramAuth(user) {
-            userId = user.id;
-            const firstName = user.first_name || "İstifadəçi";
-            
-            document.getElementById('auth-status').style.display = 'none';
-            document.getElementById('download-form').style.display = 'block';
-            document.getElementById('welcome-message').innerText = `Xoş gəlmisiniz, ${firstName}! Musiqi sifariş edin.`;
-            console.log("İstifadəçi ID-si:", userId);
-        }
-
-        function checkAutoLogin() {
-            // METOD 1: TELEGRAM WEBACTUAL APP SDK İLƏ YOXLAMA
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-                const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-                onTelegramAuth({ id: tgUser.id, first_name: tgUser.first_name });
-                window.Telegram.WebApp.ready();
-                return true;
-            }
-
-            // METOD 2: URL PARAMETRLƏRİ İLƏ YOXLAMA
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('id') && urlParams.has('hash')) {
-                const user = { id: urlParams.get('id'), first_name: urlParams.get('first_name') };
-                onTelegramAuth(user);
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return true;
-            }
-            return false;
-        }
-
-        function sendDownloadRequest() {
-            const query = document.getElementById('query-input').value.trim();
-            const statusDiv = document.getElementById('status-message');
-
-            if (!userId) {
-                statusDiv.style.color = 'red';
-                statusDiv.innerText = 'Xahiş edirik, əvvəlcə Telegram ilə daxil olun.';
-                return;
-            }
-
-            if (!query) {
-                statusDiv.style.color = 'red';
-                statusDiv.innerText = 'Zəhmət olmasa, mahnı adı və ya link daxil edin.';
-                return;
-            }
-
-            statusDiv.style.color = 'orange';
-            statusDiv.innerText = 'Sifariş qəbul edildi. Bot qısa zamanda sizə Telegram-da cavab göndərəcək...';
-            
-            const apiEndpoint = `${RENDER_API_URL}/process-request`;
-            
-            fetch(apiEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: userId, query: query })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    statusDiv.style.color = 'green';
-                    statusDiv.innerText = 'Sifariş uğurla göndərildi! Telegramınızı yoxlayın.';
-                } else {
-                    statusDiv.style.color = 'red';
-                    statusDiv.innerText = `Sifariş xətası: ${data.message || 'Bilinməyən xəta'}`;
-                }
-            })
-            .catch(error => {
-                console.error('API Error:', error);
-                // KRİTİK DİAQNOSTİKA MESAJI
-                statusDiv.style.color = 'red';
-                statusDiv.innerText = `Serverlə əlaqə qurularkən kritik xəta: ${error.message || 'Render Yatıb/URL Səhvdir'}. Zəhmət olmasa URL-ni brauzerdə yoxlayın.`;
-            });
-        }
-
-        checkAutoLogin();
+        // Səhifə yüklənəndə vinInput fokuslansın
+        window.onload = function() {
+            document.getElementById('vinInput').focus();
+        };
     </script>
 
 </body>
