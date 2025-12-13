@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TG.MARKET | Elan Platforması</title>
     
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        /* [Önceki profesyonel, mobil uyumlu, Azerbaycanca CSS kodu buraya gelecek] */
         :root {
             --primary-color: #0088CC; 
             --secondary-color: #f7f7f7;
@@ -61,9 +62,7 @@
             <h1 class="logo">TG.MARKET</h1>
             <nav class="nav-links">
                 <div id="telegram-login-container">
-                    <button style="background-color: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold;">
-                        <i class="fab fa-telegram-plane"></i> Daxil Ol
-                    </button>
+                    <span style="font-weight: bold; color: #999;">Giriş gözlənilir...</span>
                 </div>
             </nav>
         </div>
@@ -104,7 +103,7 @@
 
     </main>
     
-    <button class="add-post-btn" onclick="alert('Elan əlavə etmək üçün əvvəlcə Telegram ilə daxil olmalısınız.')" title="Yeni Elan Əlavə Et">
+    <button class="add-post-btn" onclick="alert('Zəhmət olmasa, əvvəlcə Telegram ilə daxil olun.')" title="Yeni Elan Əlavə Et" id="add-post-btn">
         <i class="fas fa-plus"></i>
     </button>
 
@@ -115,16 +114,17 @@
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         
-        // 2. TƏNZİMLƏMƏLƏR (Render.com API adresi)
-        // Bu, sizin Render.com servisinizin API uç nöqtəsidir.
-        const RENDER_API_URL = 'https://saskioyunu.onrender.com/api/posts'; 
-
+        // 1. TƏNZİMLƏMƏLƏR
+        const RENDER_API_URL = 'https://saskioyunu.onrender.com'; // Ana Render adresi
+        const BOT_USERNAME = 'SizinBotunuzunKullaniciAdi'; // BotFather'dan aldığınız @kullaniciadi
+        
         const postsContainer = document.getElementById('posts-container');
         const loadingMessage = document.getElementById('loading-message');
+        const addPostBtn = document.getElementById('add-post-btn');
 
         AOS.init({ duration: 800, once: true });
 
-        // Elan Kartını yaradan funksiya
+        // Elan Kartını yaradan funksiya (Önceki Cevaptan)
         function createPostCard(post) {
             const categoryClass = post.category || 'başqa';
             const card = document.createElement('div');
@@ -149,13 +149,81 @@
             postsContainer.appendChild(card);
         }
 
-        // 3. Verilərin Render Serveri vasitəsilə Çəkilməsi
+        // ----------------------------------------------------
+        // TELEGRAM GİRİŞ VƏ HESAB AÇMA MƏNTİQİ
+        // ----------------------------------------------------
+        function updateLoginStatus(isLoggedIn, name) {
+            const loginContainer = document.getElementById('telegram-login-container');
+            if (isLoggedIn) {
+                loginContainer.innerHTML = `<span style="font-weight: bold; color: var(--primary-color);">Xoş gəlmisiniz, ${name}!</span>`;
+                
+                // Giriş başarılıysa ilan ekleme butonunu aktifleştir
+                addPostBtn.onclick = function() {
+                    alert('Elan əlavə etmə funksiyası aktivdir. (Bu hissə daha sonra yeni bir forma səhifəsinə yönləndirilməlidir)'); 
+                };
+            } else {
+                loginContainer.innerHTML = `<span style="font-weight: bold; color: #999;">Giriş uğursuz oldu.</span>`;
+                addPostBtn.onclick = function() {
+                    alert('Zəhmət olmasa, əvvəlcə Telegram ilə daxil olun.');
+                };
+            }
+        }
+        
+        // 2. Render API'ye ID'yi Gönderen Fonksiyon (Hesap Açma)
+        async function registerUserOnBackend(initData) {
+            try {
+                const response = await fetch(`${RENDER_API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ initData: initData }), // Tüm initData'yı gönderiyoruz
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateLoginStatus(true, result.name);
+                } else {
+                    updateLoginStatus(false, '');
+                }
+            } catch (error) {
+                console.error("Login API hatası:", error);
+                updateLoginStatus(false, '');
+            }
+        }
+
+        // 3. WebApp'i Başlatma ve ID Çekme
+        function initTelegramWebApp() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const webApp = window.Telegram.WebApp;
+                webApp.ready();
+                
+                // Telegram WebApp, tüm doğrulama verilerini initData'da şifreli olarak tutar.
+                const initData = webApp.initData;
+
+                if (initData) {
+                    // Veriyi Render API'ye gönderiyoruz (Render, hash'i bot token ile doğrulayacak)
+                    registerUserOnBackend(initData); 
+                } else {
+                    // Kullanıcı menü butonu yerine direkt URL ile girmişse (giriş yapılmamış sayılır)
+                    updateLoginStatus(false, 'Anonim');
+                }
+            } else {
+                // Eğer Telegram WebApp ortamında değilse (normal tarayıcı)
+                updateLoginStatus(false, 'Anonim');
+            }
+        }
+        
+        // 4. Verilərin Render Serveri vasitəsilə Çəkilməsi (Önceki Cevaptan)
         async function fetchPostsFromTelegram() {
             loadingMessage.style.display = 'block';
             postsContainer.innerHTML = ''; 
 
             try {
-                const response = await fetch(RENDER_API_URL);
+                const response = await fetch(`${RENDER_API_URL}/api/posts`);
+                // ... (Geri kalan fetch ve filtreleme kodu aynı)
+                
                 if (!response.ok) {
                     throw new Error(`HTTP xətası! Status: ${response.status}`);
                 }
@@ -163,7 +231,7 @@
                 const posts = await response.json();
                 
                 if (posts.length === 0) {
-                    postsContainer.innerHTML = `<p style="text-align:center; padding: 20px;">Hal-hazırda aktiv elan yoxdur. Zəhmət olmasa Telegram kanalına elan əlavə edin.</p>`;
+                    postsContainer.innerHTML = `<p style="text-align:center; padding: 20px;">Hal-hazırda aktiv elan yoxdur.</p>`;
                 } else {
                     posts.forEach(createPostCard);
                 }
@@ -177,7 +245,8 @@
             }
         }
         
-        // 4. Axtarış və Filtrasiya Məntiqi (Frontend) - (Əvvəlki cavabdakı eyni filter funksiyası)
+        // 5. Axtarış və Filtrasiya Məntiqi (Frontend) - (Önceki Cevaptan)
+        // ... (AOS, filters ve applyFilters fonksiyonları burada devam eder) ...
         const searchInput = document.getElementById('search-input');
         const categoryFilter = document.getElementById('category-filter');
         const priceMinInput = document.getElementById('price-min');
@@ -223,7 +292,8 @@
             AOS.refresh();
         }
 
-        // Səhifə yüklənəndə elanları çək
+        // Səhifə yüklənəndə həm giriş yoxlanılsın, həm də elanlar çəkilsin
+        initTelegramWebApp();
         fetchPostsFromTelegram();
     </script>
 </body>
