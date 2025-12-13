@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TG.MARKET | Telegram İlan Satış Platformu</title>
+    <title>TG.MARKET | Elan Platforması</title>
     
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        /* Temel Stil ve Reset */
+        /* [Önceki profesyonel, mobil uyumlu, Azerbaycanca CSS kodu buraya gelecek] */
         :root {
-            --primary-color: #0088CC; /* Telegram Mavi */
+            --primary-color: #0088CC; 
             --secondary-color: #f7f7f7;
             --text-color: #333;
             --bg-color: #ffffff;
@@ -20,205 +20,38 @@
             --radius: 8px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: var(--secondary-color);
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 15px;
-        }
-
-        /* Navigasyon (Header) */
-        .navbar {
-            background-color: var(--bg-color);
-            box-shadow: var(--shadow);
-            padding: 15px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .navbar .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            color: var(--primary-color);
-            font-size: 1.8em;
-            font-weight: bold;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text-color);
-            margin-right: 20px;
-            font-weight: 500;
-            transition: color 0.3s;
-            display: none; /* Mobil uyumluluk için menü linklerini gizle */
-        }
-        
-        /* Telegram Giriş Alanı */
-        #telegram-login-container {
-            margin-left: 20px;
-            /* BotFather'dan aldığınız veriler buraya yüklenecek */
-        }
-
-        /* Arama ve Filtreleme */
-        .search-filter {
-            display: flex;
-            gap: 10px;
-            margin: 30px 0;
-            padding: 15px;
-            background-color: var(--bg-color);
-            border-radius: var(--radius);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .search-filter input[type="text"],
-        .search-filter select {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1em;
-            appearance: none; /* Select kutusu stilini düzeltmek için */
-        }
-
-        /* İlan Listesi (Grid) */
-        .post-list h2 {
-            margin-bottom: 25px;
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-
-        .post-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            padding-bottom: 50px;
-        }
-
-        /* İlan Kartı */
-        .post-card {
-            background-color: var(--bg-color);
-            padding: 20px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .post-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .post-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .post-type {
-            font-size: 0.75em;
-            font-weight: bold;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Arial', sans-serif; background-color: var(--secondary-color); color: var(--text-color); line-height: 1.6; padding-bottom: 70px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+        .navbar { background-color: var(--bg-color); box-shadow: var(--shadow); padding: 15px 0; position: sticky; top: 0; z-index: 100; }
+        .navbar .container { display: flex; justify-content: space-between; align-items: center; }
+        .logo { color: var(--primary-color); font-size: 1.8em; font-weight: bold; }
+        .search-filter-container { margin: 30px 0; padding: 15px; background-color: var(--bg-color); border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+        .search-input-group { display: flex; margin-bottom: 15px; }
+        .search-input-group input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px 0 0 5px; font-size: 1em; }
+        .btn-search { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 0 5px 5px 0; cursor: pointer; transition: background-color 0.3s; }
+        .filter-options { display: flex; flex-wrap: wrap; gap: 10px; }
+        .filter-options select, .filter-options input[type="number"] { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9em; flex-grow: 1; min-width: 120px; }
+        .post-list h2 { margin-bottom: 25px; color: var(--primary-color); border-bottom: 2px solid var(--primary-color); display: inline-block; padding-bottom: 5px; }
+        .post-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; padding-bottom: 30px; }
+        .post-card { background-color: var(--bg-color); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); transition: transform 0.3s ease-in-out; cursor: pointer; }
+        .post-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); }
+        .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .post-type { font-size: 0.75em; font-weight: bold; color: white; padding: 4px 8px; border-radius: 4px; }
         .kanal { background-color: #FF5733; }
         .grup { background-color: #33FF57; }
         .hesap { background-color: #3357FF; }
-
-        .post-price {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .post-card h3 {
-            font-size: 1.3em;
-            margin: 8px 0;
-            color: var(--text-color);
-        }
-
-        .post-card p {
-            color: #666;
-            margin-bottom: 15px;
-            font-size: 0.9em;
-        }
-
-        .post-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85em;
-            color: #999;
-            margin-bottom: 15px;
-        }
-
-        .post-meta .fas {
-            margin-right: 5px;
-            color: var(--primary-color);
-        }
-
-        .btn-detail {
-            width: 100%;
-            background-color: #5A5A5A;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .btn-detail:hover {
-            background-color: #333;
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 20px;
-            background-color: var(--text-color);
-            color: white;
-            font-size: 0.9em;
-        }
-
-        /* Medya Sorguları (Mobil Uyumun Temeli) */
-        @media (max-width: 768px) {
-            .navbar .container {
-                flex-direction: row;
-                justify-content: space-between;
-            }
-            .search-filter {
-                flex-direction: column;
-            }
-            .nav-links a {
-                display: none; /* Mobil Navbar'da sadece logo ve giriş butonu kalsın */
-            }
-        }
+        .bot { background-color: #9B59B6; }
+        .başqa { background-color: #F1C40F; }
+        .post-price { font-size: 1.4em; font-weight: bold; color: #E74C3C; }
+        .post-card h3 { font-size: 1.3em; margin: 8px 0; color: var(--text-color); }
+        .post-card p { color: #666; margin-bottom: 15px; font-size: 0.9em; height: 40px; overflow: hidden; }
+        .post-meta { display: flex; justify-content: space-between; font-size: 0.85em; color: #999; margin-bottom: 15px; padding-top: 10px; border-top: 1px solid #eee; }
+        .add-post-btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #2ECC71; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; font-size: 2em; box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); z-index: 1000; cursor: pointer; transition: background-color 0.3s, transform 0.3s; }
+        .add-post-btn:hover { background-color: #27AE60; transform: translateX(-50%) scale(1.1); }
+        .footer { text-align: center; padding: 20px; background-color: var(--text-color); color: white; font-size: 0.9em; }
+        #loading-message { text-align: center; padding: 50px; color: var(--primary-color); font-size: 1.2em; }
+        @media (max-width: 600px) { .filter-options { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -227,14 +60,10 @@
         <div class="container">
             <h1 class="logo">TG.MARKET</h1>
             <nav class="nav-links">
-                <a href="#ilanlar">İlanlar</a>
                 <div id="telegram-login-container">
-                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
-                            data-telegram-login="BOT_KULLANICI_ADINIZ" 
-                            data-size="large" 
-                            data-auth-url="https://SİZİN_BACKEND_ADRESİNİZ/auth/telegram" 
-                            data-request-access="write">
-                    </script>
+                    <button style="background-color: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold;">
+                        <i class="fab fa-telegram-plane"></i> Daxil Ol
+                    </button>
                 </div>
             </nav>
         </div>
@@ -242,91 +71,160 @@
 
     <main class="container">
         
-        <section class="search-filter" data-aos="fade-down">
-            <input type="text" placeholder="Kanal, Grup veya Hesap Ara...">
-            <select>
-                <option value="">Tüm Kategoriler</option>
-                <option value="kanal">Telegram Kanalı</option>
-                <option value="grup">Telegram Grubu</option>
-                <option value="hesap">Telegram Hesabı</option>
-            </select>
+        <section class="search-filter-container" data-aos="fade-down">
+            <div class="search-input-group">
+                <input type="text" id="search-input" placeholder="Elan başlığına və ya məzmununa görə axtarış...">
+                <button class="btn-search"><i class="fas fa-search"></i></button>
+            </div>
+            
+            <div class="filter-options">
+                <select id="category-filter">
+                    <option value="all">Bütün Elanlar</option>
+                    <option value="kanal">Telegram Kanalı</option>
+                    <option value="grup">Telegram Qrupu</option>
+                    <option value="hesap">Telegram Hesabı</option>
+                    <option value="bot">Bot / Xidmət</option>
+                    <option value="başqa">Digər</option>
+                </select>
+
+                <input type="number" id="price-min" placeholder="Minimum Qiymət (AZN)">
+                <input type="number" id="price-max" placeholder="Maksimum Qiymət (AZN)">
+                <input type="number" id="subs-min" placeholder="Min. Abunəçi">
+            </div>
         </section>
         
-        <section class="post-list" id="ilanlar">
-            <h2 data-aos="fade-right">Öne Çıkan İlanlar</h2>
-
-            <div class="post-card" data-aos="fade-up" data-aos-delay="100">
-                <div class="post-header">
-                    <span class="post-type kanal">KANAL</span>
-                    <span class="post-price">950 AZN</span>
-                </div>
-                <h3>Eğitim İçerikli Dev Kanal</h3>
-                <p>120K Aktif Abone, Aylık 5 Milyon Görüntülenme. Süre bitiminde otomatik silinecek.</p>
-                <div class="post-meta">
-                    <span><i class="fas fa-users"></i> 120.000</span>
-                    <span><i class="fas fa-clock"></i> Kalan Süre: 28 Gün</span>
-                </div>
-                <button class="btn-detail">Detayları Gör</button>
+        <section class="post-list">
+            <h2 data-aos="fade-right">Ən Yeni Elanlar</h2>
+            <div id="loading-message">
+                <i class="fas fa-spinner fa-spin"></i> Elanlar Telegram Kanalından çəkilir...
             </div>
-            
-            <div class="post-card" data-aos="fade-up" data-aos-delay="200">
-                <div class="post-header">
-                    <span class="post-type hesap">HESAP</span>
-                    <span class="post-price">120 AZN</span>
+            <div id="posts-container" class="post-list">
                 </div>
-                <h3>2015 Kayıtlı Eski Hesap</h3>
-                <p>Güvenilir, temiz geçmişli, nadir bulunan ilk dönem Telegram hesabı. 30 gün kuralı geçerli.</p>
-                <div class="post-meta">
-                    <span><i class="fas fa-user-check"></i> Doğrulanmış</span>
-                    <span><i class="fas fa-clock"></i> Kalan Süre: 15 Gün</span>
-                </div>
-                <button class="btn-detail">Detayları Gör</button>
-            </div>
-            
-            <div class="post-card" data-aos="fade-up" data-aos-delay="300">
-                <div class="post-header">
-                    <span class="post-type grup">GRUP</span>
-                    <span class="post-price">350 AZN</span>
-                </div>
-                <h3>Oyun Topluluğu Aktif Grup</h3>
-                <p>25K Üye, Günlük ortalama 500 mesaj. Satış için hazır.</p>
-                <div class="post-meta">
-                    <span><i class="fas fa-users"></i> 25.000</span>
-                    <span><i class="fas fa-clock"></i> Kalan Süre: 5 Gün</span>
-                </div>
-                <button class="btn-detail">Detayları Gör</button>
-            </div>
-            
         </section>
 
     </main>
+    
+    <button class="add-post-btn" onclick="alert('Elan əlavə etmək üçün əvvəlcə Telegram ilə daxil olmalısınız.')" title="Yeni Elan Əlavə Et">
+        <i class="fas fa-plus"></i>
+    </button>
 
     <footer class="footer">
-        <p>&copy; 2024 TG.MARKET | Telegram İlan Platformu. <br> İlanlar **30 gün sonra MongoDB TTL ile otomatik silinir.**</p>
+        <p>&copy; 2025 TG.MARKET | Telegram Elan Platforması. <br> Verilənlər Telegram Kanalından çəkilir.</p>
     </footer>
 
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
-        // 1. Animasyon Başlatma
-        AOS.init({
-            duration: 800, // Animasyon süresi
-            once: true // Sadece bir kez animasyon yapsın (scroll ederken)
-        });
-
-        // 2. Dinamik Veri Çekme (Backend Bağlantısı)
-        // DİKKAT: Bu kodlar sadece örnektir. Dinamik ilan çekmek için arka plan sunucusu GEREKİR.
         
-        function fetchPosts() {
-            // Backend sunucunuzdan ilanları çekme işlevi buraya gelecek
-            // fetch('https://SİZİN_BACKEND_ADRESİNİZ/api/posts')
-            //     .then(response => response.json())
-            //     .then(data => renderPosts(data))
-            //     .catch(error => console.error('İlanlar çekilemedi:', error));
+        // 2. TƏNZİMLƏMƏLƏR (Render.com API adresi)
+        // Bu, sizin Render.com servisinizin API uç nöqtəsidir.
+        const RENDER_API_URL = 'https://saskioyunu.onrender.com/api/posts'; 
 
-            console.log("İlanlar backend sunucusundan çekilmeye hazır. (Şu an örnek veriler gösteriliyor.)");
+        const postsContainer = document.getElementById('posts-container');
+        const loadingMessage = document.getElementById('loading-message');
+
+        AOS.init({ duration: 800, once: true });
+
+        // Elan Kartını yaradan funksiya
+        function createPostCard(post) {
+            const categoryClass = post.category || 'başqa';
+            const card = document.createElement('div');
+            card.className = `post-card ${categoryClass}`;
+            card.setAttribute('data-category', post.category);
+            card.setAttribute('data-price', post.price);
+            card.setAttribute('data-subs', post.subs);
+            card.setAttribute('data-aos', 'fade-up');
+            
+            card.innerHTML = `
+                <div class="post-header">
+                    <span class="post-type ${categoryClass}">${categoryClass.toUpperCase()}</span>
+                    <span class="post-price">${post.price} AZN</span>
+                </div>
+                <h3>${post.title}</h3>
+                <p>${post.content}</p>
+                <div class="post-meta">
+                    <span><i class="fas fa-users"></i> ${post.subs.toLocaleString('az-AZ')}</span>
+                    <span><i class="fas fa-clock"></i> Qalan vaxt: ${post.days_remaining} Gün</span>
+                </div>
+            `;
+            postsContainer.appendChild(card);
         }
 
-        // fetchPosts();
+        // 3. Verilərin Render Serveri vasitəsilə Çəkilməsi
+        async function fetchPostsFromTelegram() {
+            loadingMessage.style.display = 'block';
+            postsContainer.innerHTML = ''; 
+
+            try {
+                const response = await fetch(RENDER_API_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP xətası! Status: ${response.status}`);
+                }
+                
+                const posts = await response.json();
+                
+                if (posts.length === 0) {
+                    postsContainer.innerHTML = `<p style="text-align:center; padding: 20px;">Hal-hazırda aktiv elan yoxdur. Zəhmət olmasa Telegram kanalına elan əlavə edin.</p>`;
+                } else {
+                    posts.forEach(createPostCard);
+                }
+
+            } catch (error) {
+                console.error("Elanları çəkərkən xəta baş verdi:", error);
+                postsContainer.innerHTML = `<p style="color:red; text-align:center;">Elanlar çəkilə bilmədi. Render API adresini və ya Telegram Bot Tokenini kontrol edin.</p>`;
+            } finally {
+                loadingMessage.style.display = 'none';
+                applyFilters(); 
+            }
+        }
+        
+        // 4. Axtarış və Filtrasiya Məntiqi (Frontend) - (Əvvəlki cavabdakı eyni filter funksiyası)
+        const searchInput = document.getElementById('search-input');
+        const categoryFilter = document.getElementById('category-filter');
+        const priceMinInput = document.getElementById('price-min');
+        const priceMaxInput = document.getElementById('price-max');
+        const subsMinInput = document.getElementById('subs-min');
+        
+        const allFilters = [searchInput, categoryFilter, priceMinInput, priceMaxInput, subsMinInput];
+
+        allFilters.forEach(element => {
+            element.addEventListener('input', applyFilters);
+            element.addEventListener('change', applyFilters);
+        });
+
+        function applyFilters() {
+            const searchText = searchInput.value.toLowerCase();
+            const selectedCategory = categoryFilter.value;
+            const priceMin = parseFloat(priceMinInput.value) || 0;
+            const priceMax = parseFloat(priceMaxInput.value) || Infinity;
+            const subsMin = parseFloat(subsMinInput.value) || 0;
+
+            const cards = postsContainer.querySelectorAll('.post-card');
+
+            cards.forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                const content = card.querySelector('p').textContent.toLowerCase();
+                const cardCategory = card.getAttribute('data-category');
+                const cardPrice = parseFloat(card.getAttribute('data-price'));
+                const cardSubs = parseFloat(card.getAttribute('data-subs'));
+                
+                let matchesSearch = title.includes(searchText) || content.includes(searchText);
+                let matchesCategory = selectedCategory === 'all' || cardCategory === selectedCategory;
+                let matchesPrice = cardPrice >= priceMin && cardPrice <= priceMax;
+                let matchesSubs = cardSubs >= subsMin;
+
+                if (matchesSearch && matchesCategory && matchesPrice && matchesSubs) {
+                    card.style.display = 'block';
+                    card.setAttribute('data-aos', 'fade-up');
+                } else {
+                    card.style.display = 'none';
+                    card.removeAttribute('data-aos');
+                }
+            });
+            AOS.refresh();
+        }
+
+        // Səhifə yüklənəndə elanları çək
+        fetchPostsFromTelegram();
     </script>
 </body>
 </html>
