@@ -3,20 +3,24 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const crypto = require('crypto'); // Telegram doğrulama için
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Bot Tokeni Çevre Değişkeninden çekilir
-const BOT_TOKEN = process.env.BOT_TOKEN; 
-const CHANNEL_ID = '@hidepmed'; // Depolama kanalınız
+// Middleware'lar
+app.use(express.json()); // JSON formatında gelen body'leri parse etmek için
+
+// Bot Tokeni Çevre Değişkeninden çekilir (Render'da tanımlanmalıdır!)
+const BOT_TOKEN = process.env.BOT_TOKEN; // 5731759386:AAEJVgFaBgXIAD6FynuiAVp5emtH_yU_R2s
+const CHANNEL_ID = '@hidepmed'; 
 
 if (!BOT_TOKEN) {
     console.error("HATA: BOT_TOKEN çevre değişkeni tanımlanmadı!");
     process.exit(1);
 }
 
-// Güvenli CORS ayarı (Frontend'iniz için izinler)
+// Güvenli CORS ayarı 
 const allowedOrigins = [
     'https://saskioyunu.onrender.com', // Kendini de ekleyelim
     'http://localhost:8080', 
@@ -34,7 +38,57 @@ app.use(cors({
 }));
 
 
-// [GET] /api/posts: Telegramdan Elanları Çekme Uç Noktası
+// ----------------------------------------------------
+// TELEGRAM GİRİŞ DOĞRULAMA (HESAP AÇMA)
+// ----------------------------------------------------
+// Yardımcı Fonksiyon: Telegram InitData'yı Doğrular
+function validateInitData(initData) {
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    params.delete('hash');
+    params.sort();
+
+    const dataCheckString = Array.from(params.entries())
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+
+    // Bot Token (API Key) ile SHA256 HMAC oluştur
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+    
+    // Veri kontrol stringi ile HMAC-SHA256 oluştur ve karşılaştır
+    const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+    return hmac === hash;
+}
+
+app.post('/api/login', async (req, res) => {
+    const { initData } = req.body;
+    
+    if (!initData) {
+        return res.status(400).json({ success: false, message: 'InitData eksik.' });
+    }
+
+    if (!validateInitData(initData)) {
+        console.warn("Doğrulama Hatası: Hash eşleşmedi.");
+        return res.status(401).json({ success: false, message: 'Doğrulama uğursuz oldu.' });
+    }
+
+    // Doğrulama başarılı! Kullanıcının bilgilerini çıkar.
+    const userParams = new URLSearchParams(initData).get('user');
+    const user = JSON.parse(userParams);
+
+    // Başarıyla giriş yapıldı (Hesap açma işlemi burada tamamlanmış olur)
+    res.status(200).json({ 
+        success: true, 
+        message: 'Giriş uğurludur.', 
+        userId: user.id,
+        name: user.first_name 
+    });
+});
+
+// ----------------------------------------------------
+// [GET] /api/posts: ELANLARI ÇEKME UÇ NOKTASI (Önceki Cevaptan)
+// ----------------------------------------------------
 app.get('/api/posts', async (req, res) => {
     const telegramApiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatHistory?chat_id=${CHANNEL_ID}&limit=100`;
 
