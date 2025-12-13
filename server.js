@@ -1,140 +1,94 @@
+// server.js (Render.com üzərində deploy ediləcək)
+
 const express = require('express');
-const ytdl = require('ytdl-core');
-const cors = require('cors');
-const { HttpsProxyAgent } = require('https-proxy-agent'); 
 const axios = require('axios');
-const yts = require('youtube-search-without-api-key');
-const FormData = require('form-data'); // Yükləmə üçün vacibdir
+const cors = require('cors');
 
 const app = express();
-// Render-də işləmək üçün vacibdir: PORT-u Environment Variable-dan götürür
-const PORT = process.env.PORT || 3000; 
+const port = process.env.PORT || 3000;
 
-// --- KONFİQURASİYA DƏYİŞƏNLƏRİ ---
-// Bot Token (sizə məxsusdur)
-const BOT_TOKEN = "2138035413:AAGYaGtgvQ4thyJKW2TXLS5n3wyZ6vVx3I8"; 
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
-// Render Environment Variable-dan oxunur.
-const PROXY_URL = process.env.PROXY_URL; 
+// Bot Tokeni Çevre Değişkeninden çekilir
+const BOT_TOKEN = process.env.BOT_TOKEN; 
+const CHANNEL_ID = '@hidepmed'; // Depolama kanalınız
 
-let proxyAgent = null;
-
-if (PROXY_URL) {
-    try {
-        proxyAgent = new HttpsProxyAgent(PROXY_URL);
-        console.log(`[PROXY] Proxy aktivdir: ${PROXY_URL.substring(0, 15)}...`);
-    } catch (e) {
-        console.error("[PROXY ERROR] Proxy URL formatı səhvdir:", e.message);
-    }
-}
-// ------------------------------------
-
-// CORS və JSON-u tətbiqin başlanğıcında istifadə edirik
-app.use(cors());
-app.use(express.json());
-
-// Serverin işlək olduğunu yoxlamaq üçün əsas endpoint
-app.get('/', (req, res) => {
-    res.status(200).send('FullSong API aktivdir. Yükləmə endpoint-i: /process-request');
-});
-
-// Yükləməni birbaşa Telegram-a göndərən funksiya
-async function sendAudioToTelegram(chatId, title, audioBuffer) {
-    const url = `${TELEGRAM_API_URL}/sendAudio`;
-
-    try {
-        const formData = new FormData();
-        formData.append('chat_id', chatId);
-        // Buffer-i Node.js mühitində göndəririk
-        formData.append('audio', audioBuffer, { filename: `${title}.mp3`, contentType: 'audio/mpeg' }); 
-        formData.append('caption', `✅ Uğurla yükləndi: ${title}`);
-
-        await axios.post(url, formData, {
-            headers: formData.getHeaders(),
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-            timeout: 720000 
-        });
-        console.log(`[TELEGRAM] Audio ${chatId}-ə uğurla çatdırıldı.`);
-        return true;
-    } catch (error) {
-        console.error("[TELEGRAM ERROR] Audio göndərilmədi:", error.response?.data?.description || error.message);
-        throw new Error("Telegram-a göndərilmə uğursuz oldu.");
-    }
+if (!BOT_TOKEN) {
+    console.error("HATA: BOT_TOKEN çevre değişkeni tanımlanmadı!");
+    process.exit(1);
 }
 
-// --- Əsas Yükləmə və Axtarış Endpoint-i ---
-app.post('/process-request', async (req, res) => {
-    const { chat_id, query } = req.body;
-    let videoUrl = query;
-    let videoTitle = query;
+// Güvenli CORS ayarı (Frontend'iniz için izinler)
+const allowedOrigins = [
+    'https://saskioyunu.onrender.com', // Kendini de ekleyelim
+    'http://localhost:8080', 
+    // BURAYA GITHUB PAGES ADRESİNİZİ EKLEYİN: 'https://YOUR_GITHUB_USERNAME.github.io'
+]; 
 
-    if (!chat_id || !query) {
-        return res.status(400).json({ status: 'error', message: 'Chat ID və ya sorğu çatışmır.' });
-    }
-
-    try {
-        // 1. Axtarış və ya URL yoxlanılması
-        if (!ytdl.validateURL(query)) {
-            console.log(`[SEARCH] Mahnı axtarılır: ${query}`);
-            const results = await yts.search(query);
-            if (results && results.length > 0) {
-                videoUrl = results[0].url; // İlk nəticəni seçirik
-                videoTitle = results[0].title;
-            } else {
-                return res.status(404).json({ status: 'error', message: 'Mahnı tapılmadı.' });
-            }
+app.use(cors({
+    origin: (origin, callback) => {
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
         } else {
-             const info = await ytdl.getInfo(videoUrl);
-             videoTitle = info.videoDetails.title;
+            callback(new Error('Bu domaine izin verilmedi.'));
         }
-        
-        // 2. Yükləməni başlatmaq
-        console.log(`[YTDL] Yüklənmə başladı: ${videoUrl}`);
-        
-        const audioStream = ytdl(videoUrl, {
-            filter: 'audioonly',
-            quality: 'highestaudio',
-            requestOptions: {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Referer': 'https://www.youtube.com/'
-                },
-                agent: proxyAgent // Proxy istifadə etmək
-            }
-        });
+    }
+}));
 
-        const chunks = [];
-        audioStream.on('data', chunk => chunks.push(chunk));
-        
-        // Yükləmə zamanı xəta olarsa (IP bloklanması)
-        audioStream.on('error', (err) => {
-            console.error('[YTDL CRITICAL ERROR] IP Bloklanması ehtimalı:', err.message);
-            if (!res.headersSent) {
-                res.status(503).json({ status: 'error', message: 'Yükləmə zamanı YouTube əlaqəni kəsdi (IP xətası). Proxy-i yoxlayın.' });
-            }
-        });
 
-        // 3. Yükləmə tamamlandıqdan sonra Telegram-a göndərmək
-        audioStream.on('end', async () => {
-            const audioBuffer = Buffer.concat(chunks);
-            
-            await sendAudioToTelegram(chat_id, videoTitle, audioBuffer);
-            
-            if (!res.headersSent) {
-                res.json({ status: 'success', message: 'Musiqi uğurla bota göndərildi.' });
-            }
-        });
+// [GET] /api/posts: Telegramdan Elanları Çekme Uç Noktası
+app.get('/api/posts', async (req, res) => {
+    const telegramApiUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatHistory?chat_id=${CHANNEL_ID}&limit=100`;
+
+    try {
+        const response = await axios.get(telegramApiUrl);
+        const messages = response.data.result || [];
+
+        const filteredPosts = messages
+            .filter(msg => msg.text)
+            .map(msg => {
+                const date = msg.date * 1000; 
+                const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                const expirationTime = date + thirtyDaysInMs;
+                const isExpired = Date.now() > expirationTime;
+                
+                const parsedData = parsePostData(msg.text, msg.date); 
+
+                return {
+                    ...parsedData,
+                    message_id: msg.message_id,
+                    is_expired: isExpired,
+                };
+            })
+            .filter(post => !post.is_expired); 
+
+        res.json(filteredPosts);
 
     } catch (error) {
-        console.error("[GLOBAL CATCH ERROR]", error.message);
-        if (!res.headersSent) {
-            res.status(500).json({ status: 'error', message: error.message.includes('Telegram') ? error.message : `Daxili server xətası: ${error.message}` });
-        }
+        console.error("Telegram API hatası:", error.message);
+        res.status(500).json({ error: 'Telegramdan veri çekilemedi. Kanal adını veya Bot Tokenini kontrol edin.' });
     }
 });
 
-app.listen(PORT, () => {
-    // Portun düzgün dinlənildiyi təsdiqlənir
-    console.log(`Node.js API Server ${PORT}-də aktivdir.`);
+// [YARDIMCI FONKSİYON] Mesaj Mətndən Veriləri Çıxarır
+function parsePostData(text, date) {
+    const lines = text.split('\n');
+    const data = {
+        title: lines[0].trim(),
+        content: lines.slice(1).join(' ').trim().substring(0, 100) + '...',
+        category: 'başqa',
+        price: 0,
+        subs: 0,
+        days_remaining: Math.max(0, 30 - ((Date.now() / 1000 - date) / (60 * 60 * 24))).toFixed(0) 
+    };
+    
+    lines.forEach(line => {
+        if (line.includes('#Kateqoriya:')) data.category = line.split(':')[1].trim().toLowerCase();
+        if (line.includes('#Qiymət:')) data.price = parseFloat(line.split(':')[1].replace('AZN', '').trim()) || 0;
+        if (line.includes('#Abunəçi:')) data.subs = parseInt(line.split(':')[1].trim().replace(/\D/g, '')) || 0;
+    });
+
+    return data;
+}
+
+app.listen(port, () => {
+    console.log(`Render Serveri ${port} portunda çalışır.`);
 });
