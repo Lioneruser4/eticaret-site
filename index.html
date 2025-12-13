@@ -1,368 +1,332 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avtomobil Axtarışı</title>
+    <title>TG.MARKET | Telegram İlan Satış Platformu</title>
+    
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
     <style>
+        /* Temel Stil ve Reset */
+        :root {
+            --primary-color: #0088CC; /* Telegram Mavi */
+            --secondary-color: #f7f7f7;
+            --text-color: #333;
+            --bg-color: #ffffff;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f0f2f5;
-        }
-        .search-container {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #1a73e8;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        input[type="text"] {
-            flex: 1;
-            padding: 12px 15px;
-            border: 2px solid #dfe1e5;
-            border-radius: 24px;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.3s;
-        }
-        input[type="text"]:focus {
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 2px #e8f0fe;
-        }
-        button {
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 24px;
-            padding: 0 24px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #1765cc;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            display: none;
-        }
-        .spinner {
-            border: 4px solid rgba(0,0,0,0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #1a73e8;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .error {
-            color: #d93025;
-            background: #fce8e6;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-        }
-        .result {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: none;
-        }
-        .car-image-container {
-            width: 100%;
-            height: 300px;
-            overflow: hidden;
-            position: relative;
-        }
-        .car-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
-        .car-image:hover {
-            transform: scale(1.02);
-        }
-        .car-info {
-            padding: 20px;
-        }
-        .car-title {
-            font-size: 24px;
-            margin: 0 0 10px;
-            color: #202124;
-        }
-        .car-details {
-            color: #5f6368;
+            font-family: 'Arial', sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
             line-height: 1.6;
         }
-        .no-image {
-            background: #f1f3f4;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* Navigasyon (Header) */
+        .navbar {
+            background-color: var(--bg-color);
+            box-shadow: var(--shadow);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: var(--primary-color);
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .nav-links {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: #5f6368;
-            font-size: 16px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            margin-right: 20px;
+            font-weight: 500;
+            transition: color 0.3s;
+            display: none; /* Mobil uyumluluk için menü linklerini gizle */
+        }
+        
+        /* Telegram Giriş Alanı */
+        #telegram-login-container {
+            margin-left: 20px;
+            /* BotFather'dan aldığınız veriler buraya yüklenecek */
+        }
+
+        /* Arama ve Filtreleme */
+        .search-filter {
+            display: flex;
+            gap: 10px;
+            margin: 30px 0;
+            padding: 15px;
+            background-color: var(--bg-color);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-filter input[type="text"],
+        .search-filter select {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            appearance: none; /* Select kutusu stilini düzeltmek için */
+        }
+
+        /* İlan Listesi (Grid) */
+        .post-list h2 {
+            margin-bottom: 25px;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        .post-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            padding-bottom: 50px;
+        }
+
+        /* İlan Kartı */
+        .post-card {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .post-type {
+            font-size: 0.75em;
+            font-weight: bold;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .kanal { background-color: #FF5733; }
+        .grup { background-color: #33FF57; }
+        .hesap { background-color: #3357FF; }
+
+        .post-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .post-card h3 {
+            font-size: 1.3em;
+            margin: 8px 0;
+            color: var(--text-color);
+        }
+
+        .post-card p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .post-meta .fas {
+            margin-right: 5px;
+            color: var(--primary-color);
+        }
+
+        .btn-detail {
+            width: 100%;
+            background-color: #5A5A5A;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-detail:hover {
+            background-color: #333;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--text-color);
+            color: white;
+            font-size: 0.9em;
+        }
+
+        /* Medya Sorguları (Mobil Uyumun Temeli) */
+        @media (max-width: 768px) {
+            .navbar .container {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .search-filter {
+                flex-direction: column;
+            }
+            .nav-links a {
+                display: none; /* Mobil Navbar'da sadece logo ve giriş butonu kalsın */
+            }
         }
     </style>
 </head>
 <body>
-    <div class="search-container">
-        <h1>🚗 Avtomobil Axtarışı</h1>
-        <div class="search-box">
-            <input type="text" id="carInput" placeholder="Məsələn: Mercedes E200 2022" autocomplete="off">
-            <button onclick="searchCar()">Axtar</button>
-        </div>
-        <div id="error" class="error"></div>
-    </div>
 
-    <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p>Axtarılır...</p>
-    </div>
-
-    <div id="result" class="result">
-        <div class="car-image-container" id="imageContainer">
-            <img id="carImage" class="car-image" src="" alt="Avtomobil şəkli" onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg width=%22100%25%22 height=%22100%25%22 viewBox=%220 0 800 400%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23f1f3f4%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-family=%22Arial%22 font-size=%2218%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%225f6368%22%3EŞəkil tapılmadı%3C/text%3E%3C/svg%3E';">
+    <header class="navbar">
+        <div class="container">
+            <h1 class="logo">TG.MARKET</h1>
+            <nav class="nav-links">
+                <a href="#ilanlar">İlanlar</a>
+                <div id="telegram-login-container">
+                    <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                            data-telegram-login="BOT_KULLANICI_ADINIZ" 
+                            data-size="large" 
+                            data-auth-url="https://SİZİN_BACKEND_ADRESİNİZ/auth/telegram" 
+                            data-request-access="write">
+                    </script>
+                </div>
+            </nav>
         </div>
-        <div class="car-info">
-            <h2 id="carTitle" class="car-title"></h2>
-            <div id="carDetails" class="car-details">
-                <p>Axtarış nəticələri burada göstəriləcək...</p>
+    </header>
+
+    <main class="container">
+        
+        <section class="search-filter" data-aos="fade-down">
+            <input type="text" placeholder="Kanal, Grup veya Hesap Ara...">
+            <select>
+                <option value="">Tüm Kategoriler</option>
+                <option value="kanal">Telegram Kanalı</option>
+                <option value="grup">Telegram Grubu</option>
+                <option value="hesap">Telegram Hesabı</option>
+            </select>
+        </section>
+        
+        <section class="post-list" id="ilanlar">
+            <h2 data-aos="fade-right">Öne Çıkan İlanlar</h2>
+
+            <div class="post-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="post-header">
+                    <span class="post-type kanal">KANAL</span>
+                    <span class="post-price">950 AZN</span>
+                </div>
+                <h3>Eğitim İçerikli Dev Kanal</h3>
+                <p>120K Aktif Abone, Aylık 5 Milyon Görüntülenme. Süre bitiminde otomatik silinecek.</p>
+                <div class="post-meta">
+                    <span><i class="fas fa-users"></i> 120.000</span>
+                    <span><i class="fas fa-clock"></i> Kalan Süre: 28 Gün</span>
+                </div>
+                <button class="btn-detail">Detayları Gör</button>
             </div>
-        </div>
-    </div>
+            
+            <div class="post-card" data-aos="fade-up" data-aos-delay="200">
+                <div class="post-header">
+                    <span class="post-type hesap">HESAP</span>
+                    <span class="post-price">120 AZN</span>
+                </div>
+                <h3>2015 Kayıtlı Eski Hesap</h3>
+                <p>Güvenilir, temiz geçmişli, nadir bulunan ilk dönem Telegram hesabı. 30 gün kuralı geçerli.</p>
+                <div class="post-meta">
+                    <span><i class="fas fa-user-check"></i> Doğrulanmış</span>
+                    <span><i class="fas fa-clock"></i> Kalan Süre: 15 Gün</span>
+                </div>
+                <button class="btn-detail">Detayları Gör</button>
+            </div>
+            
+            <div class="post-card" data-aos="fade-up" data-aos-delay="300">
+                <div class="post-header">
+                    <span class="post-type grup">GRUP</span>
+                    <span class="post-price">350 AZN</span>
+                </div>
+                <h3>Oyun Topluluğu Aktif Grup</h3>
+                <p>25K Üye, Günlük ortalama 500 mesaj. Satış için hazır.</p>
+                <div class="post-meta">
+                    <span><i class="fas fa-users"></i> 25.000</span>
+                    <span><i class="fas fa-clock"></i> Kalan Süre: 5 Gün</span>
+                </div>
+                <button class="btn-detail">Detayları Gör</button>
+            </div>
+            
+        </section>
 
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2024 TG.MARKET | Telegram İlan Platformu. <br> İlanlar **30 gün sonra MongoDB TTL ile otomatik silinir.**</p>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
-        // Önbellek için basit bir nesne
-        const imageCache = {};
-
-        async function searchCar() {
-            const query = document.getElementById('carInput').value.trim();
-            const resultDiv = document.getElementById('result');
-            const loadingDiv = document.getElementById('loading');
-            const errorDiv = document.getElementById('error');
-            const carTitle = document.getElementById('carTitle');
-            const carImage = document.getElementById('carImage');
-            const carDetails = document.getElementById('carDetails');
-            
-            // Temizlik
-            errorDiv.style.display = 'none';
-            resultDiv.style.display = 'none';
-            loadingDiv.style.display = 'flex';
-            loadingDiv.style.flexDirection = 'column';
-            loadingDiv.style.alignItems = 'center';
-            loadingDiv.style.justifyContent = 'center';
-            
-            // Doğrulama
-            if (!query) {
-                showError('Zəhmət olmasa bir axtarış sorğusu daxil edin.');
-                loadingDiv.style.display = 'none';
-                return;
-            }
-            
-            try {
-                // Önbellekte sonuç var mı kontrol et
-                if (imageCache[query]) {
-                    displayCarInfo(imageCache[query]);
-                    return;
-                }
-                
-                // Aracın marka ve modelini çıkar
-                const carInfo = extractCarInfo(query);
-                const searchQuery = `${carInfo.make} ${carInfo.model} ${carInfo.year || ''} avtomobil`.trim();
-                
-                // Google Görseller arama URL'si (doğrudan erişim için)
-                // Not: Bu yöntem uzun süreli çözüm değildir, Google'ın politikalarına göre değişebilir
-                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&tbm=isch`;
-                
-                // Proxy üzerinden istek atıyoruz (örnek bir CORS proxy'si)
-                // Gerçek uygulamada kendi proxy sunucunuzu kullanmalısınız
-                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(searchUrl);
-                
-                const response = await fetch(proxyUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Axtarış zamanı xəta baş verdi');
-                }
-                
-                const html = await response.text();
-                
-                // HTML'den ilk resim URL'sini çıkar
-                const imageUrl = extractFirstImageUrl(html);
-                
-                if (!imageUrl) {
-                    throw new Error('Uyğun şəkil tapılmadı');
-                }
-                
-                // Sonuçları önbelleğe al
-                const result = {
-                    title: searchQuery,
-                    imageUrl: imageUrl,
-                    details: carInfo
-                };
-                
-                imageCache[query] = result;
-                
-                // Sonuçları göster
-                displayCarInfo(result);
-                
-            } catch (error) {
-                console.error('Xəta:', error);
-                
-                // Hata durumunda örnek veri göster
-                const sampleData = getSampleCarData(query);
-                displayCarInfo(sampleData);
-                
-                // Hata mesajını göster
-                showError('Axtarış zamanı xəta baş verdi. Demo məlumatlar göstərilir.');
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-        
-        function extractCarInfo(query) {
-            // Basit bir regex ile marka, model ve yılı ayıklama
-            const regex = /([a-zA-ZğüşıöçƏĞÜŞIÖÇ]+)\s*([a-zA-Z0-9ğüşıöçƏĞÜŞIÖÇ\s\-]+?)(?:\s*(19|20)\d{2})?$/i;
-            const match = query.match(regex);
-            
-            if (!match) {
-                const parts = query.split(' ');
-                return {
-                    make: parts[0] || 'Bilinməyən',
-                    model: parts.slice(1).join(' ') || 'Bilinməyən',
-                    year: null
-                };
-            }
-            
-            return {
-                make: match[1]?.trim() || 'Bilinməyən',
-                model: match[2]?.trim() || 'Bilinməyən',
-                year: match[3]?.trim() || null
-            };
-        }
-        
-        function extractFirstImageUrl(html) {
-            // HTML'den ilk resim URL'sini çıkarmak için basit bir regex
-            const regex = /<img[^>]+src="([^">]+)"/i;
-            const match = html.match(regex);
-            return match ? match[1] : null;
-        }
-        
-        function displayCarInfo(data) {
-            const resultDiv = document.getElementById('result');
-            const carTitle = document.getElementById('carTitle');
-            const carImage = document.getElementById('carImage');
-            const carDetails = document.getElementById('carDetails');
-            
-            // Başlığı ayarla
-            carTitle.textContent = data.title || 'Avtomobil məlumatı';
-            
-            // Resmi ayarla
-            if (data.imageUrl) {
-                carImage.src = data.imageUrl;
-                carImage.style.display = 'block';
-                carImage.alt = data.title || 'Avtomobil şəkli';
-            } else {
-                carImage.style.display = 'none';
-            }
-            
-            // Detayları ayarla
-            if (data.details) {
-                const details = data.details;
-                carDetails.innerHTML = `
-                    <p><strong>Marka:</strong> ${details.make}</p>
-                    <p><strong>Model:</strong> ${details.model}</p>
-                    ${details.year ? `<p><strong>İl:</strong> ${details.year}</p>` : ''}
-                    <p class="disclaimer">Qeyd: Bu məlumatlar avtomatik yığılıb. Dəqiq məlumat üçün rəsmi mənbələrə müraciət edin.</p>
-                `;
-            }
-            
-            // Sonuçları göster
-            resultDiv.style.display = 'block';
-            resultDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function getSampleCarData(query) {
-            const makes = ['Toyota', 'Honda', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Hyundai', 'Kia', 'Volkswagen', 'Nissan'];
-            const models = ['Camry', 'Civic', '3 Series', 'C-Class', 'A4', 'Focus', 'Elantra', 'Optima', 'Golf', 'Altima'];
-            const years = [2018, 2019, 2020, 2021, 2022, 2023];
-            
-            const randomMake = makes[Math.floor(Math.random() * makes.length)];
-            const randomModel = models[Math.floor(Math.random() * models.length)];
-            const randomYear = years[Math.floor(Math.random() * years.length)];
-            
-            // Eğer kullanıcının girdiği sorguda yıl varsa onu kullan
-            const yearMatch = query.match(/(19|20)\d{2}/);
-            const year = yearMatch ? yearMatch[0] : randomYear;
-            
-            // Rastgele bir renk seç
-            const colors = ['Ağ', 'Qara', 'Gümüş', 'Boz', 'Mavi', 'Qırmızı'];
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            
-            // Rastgele bir resim URL'si oluştur (placeholder servisi kullanarak)
-            const placeholderUrl = `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(randomMake + ' ' + randomModel + ' ' + year)}`;
-            
-            return {
-                title: `${year} ${randomMake} ${randomModel}`,
-                imageUrl: placeholderUrl,
-                details: {
-                    make: randomMake,
-                    model: randomModel,
-                    year: year,
-                    color: randomColor,
-                    engine: `${(1.6 + Math.random() * 2.5).toFixed(1)}L ${['Benzin', 'Dizel', 'Hibrit'][Math.floor(Math.random() * 3)]}`,
-                    transmission: Math.random() > 0.3 ? 'Avtomatik' : 'Mexaniki',
-                    mileage: `${Math.floor(1000 + Math.random() * 150000)} km`
-                }
-            };
-        }
-        
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-        
-        // Enter tuşu ile arama yapma
-        document.getElementById('carInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchCar();
-            }
+        // 1. Animasyon Başlatma
+        AOS.init({
+            duration: 800, // Animasyon süresi
+            once: true // Sadece bir kez animasyon yapsın (scroll ederken)
         });
+
+        // 2. Dinamik Veri Çekme (Backend Bağlantısı)
+        // DİKKAT: Bu kodlar sadece örnektir. Dinamik ilan çekmek için arka plan sunucusu GEREKİR.
         
-        // Sayfa yüklendiğinde örnek bir arama yap
-        window.onload = function() {
-            // Rastgele bir marka ve model seç
-            const makes = ['Toyota Camry', 'Honda Civic', 'BMW 3 Series', 'Mercedes C-Class', 'Audi A4'];
-            const randomCar = makes[Math.floor(Math.random() * makes.length)];
-            document.getElementById('carInput').value = `${randomCar} ${2018 + Math.floor(Math.random() * 6)}`;
-        };
+        function fetchPosts() {
+            // Backend sunucunuzdan ilanları çekme işlevi buraya gelecek
+            // fetch('https://SİZİN_BACKEND_ADRESİNİZ/api/posts')
+            //     .then(response => response.json())
+            //     .then(data => renderPosts(data))
+            //     .catch(error => console.error('İlanlar çekilemedi:', error));
+
+            console.log("İlanlar backend sunucusundan çekilmeye hazır. (Şu an örnek veriler gösteriliyor.)");
+        }
+
+        // fetchPosts();
     </script>
 </body>
 </html>
