@@ -160,6 +160,7 @@ function connectSocket() {
     });
 
     socket.on('game_start', (data) => {
+        console.log("Sunucudan başla emri geldi!");
         isGameActive = true;
     });
 
@@ -208,12 +209,15 @@ function createRoom() {
 function prepareGame(data) {
     fadeOverlay.classList.add('visible');
     setTimeout(() => {
-        // Switch from background scene to game scene
+        // Arka plan yıldızlarını temizle ve labirenti kur
         initGameWorld(data);
-        showScreen('none'); // Hide all screens
+
+        // Tüm menü ekranlarını gizle
+        Object.values(screens).forEach(s => s.classList.remove('active'));
+
         hud.style.display = 'block';
         fadeOverlay.classList.remove('visible');
-    }, 500);
+    }, 1000);
 }
 
 function initGameWorld(initData) {
