@@ -168,6 +168,22 @@
             animation: pulseBtn 2s infinite;
         }
 
+        #click-prompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 50px;
+            z-index: 1000;
+            display: none;
+            cursor: pointer;
+            border: 2px solid var(--primary);
+            font-family: var(--header-font);
+            animation: pulseBtn 1s infinite;
+        }
+
         @keyframes pulseBtn {
             0% {
                 box-shadow: 0 0 10px rgba(112, 0, 255, 0.4);
@@ -328,6 +344,7 @@
 <body>
     <div id="bg-canvas"></div>
     <div class="fade-overlay" id="fade-overlay"></div>
+    <div id="click-prompt">CLICK TO START</div>
 
     <div class="user-widget" id="user-widget">
         <img src="" alt="👤" class="user-avatar" id="avatar-img">
