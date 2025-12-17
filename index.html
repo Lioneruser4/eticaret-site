@@ -2,163 +2,34 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Runner 3D - Pro</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #overlay { position: absolute; top: 20px; width: 100%; text-align: center; color: #0ff; font-size: 32px; font-weight: bold; text-shadow: 0 0 10px #0ff; pointer-events: none; }
-        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; padding: 0 20px; box-sizing: border-box; }
-        .btn { width: 80px; height: 80px; background: rgba(0, 255, 255, 0.2); border: 2px solid #0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; backdrop-filter: blur(5px); -webkit-tap-highlight-color: transparent; }
-        .btn:active { background: rgba(0, 255, 255, 0.5); transform: scale(0.9); }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hide & Seek Online</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div id="overlay">SKOR: 0</div>
-    <div id="controls">
-        <div class="btn" id="leftBtn">SOL</div>
-        <div class="btn" id="jumpBtn">ZIPLA</div>
-        <div class="btn" id="rightBtn">SAĞ</div>
+    <div id="lobby">
+        <div id="user-info">
+            <img id="user-avatar" src="https://via.placeholder.com/80" alt="Avatar">
+            <h2 id="user-name">Yükleniyor...</h2>
+        </div>
+
+        <div class="menu-container">
+            <button id="createRoom" class="btn-pro">
+                <i class="icon-plus"></i> ODA KUR
+            </button>
+            <button id="findGame" class="btn-pro">
+                <i class="icon-search"></i> OYUN BUL
+            </button>
+        </div>
     </div>
+
+    <canvas id="gameCanvas" style="display:none;"></canvas>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-
-        // --- MOTOR AYARLARI ---
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 10, 50); // Atmosferik sis
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        // --- IŞIKLANDIRMA (Cyberpunk Hava) ---
-        const ambient = new THREE.AmbientLight(0x404040, 2);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0x00ffff, 2);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
-
-        // --- DÜNYA OLUŞTURMA ---
-        const floorGeo = new THREE.PlaneGeometry(12, 1000);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-
-        // Yol Şeritleri (Neon Çizgiler)
-        for(let i = -1; i <= 1; i++) {
-            const line = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1000), new THREE.MeshBasicMaterial({color: 0x00ffff}));
-            line.rotation.x = -Math.PI / 2;
-            line.position.set(i * 4, 0.01, 0);
-            scene.add(line);
-        }
-
-        // --- OYUNCU ---
-        const player = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
-        body.position.y = 0.6;
-        player.add(body);
-        scene.add(player);
-
-        // --- DEĞİŞKENLER ---
-        let lane = 0; // -1, 0, 1
-        let speed = 0.3;
-        let score = 0;
-        let isJumping = false;
-        let vVelocity = 0;
-
-        // --- KONTROLLER (PC + MOBİL) ---
-        const moveLeft = () => { if(lane > -1) lane--; };
-        const moveRight = () => { if(lane < 1) lane++; };
-        const jump = () => { if(!isJumping) { isJumping = true; vVelocity = 0.2; } };
-
-        // Klavye (PC)
-        window.addEventListener('keydown', (e) => {
-            if(e.key === "ArrowLeft" || e.key === "a") moveLeft();
-            if(e.key === "ArrowRight" || e.key === "d") moveRight();
-            if(e.key === " " || e.key === "w") jump();
-        });
-
-        // Butonlar (Mobil)
-        document.getElementById('leftBtn').addEventListener('pointerdown', moveLeft);
-        document.getElementById('rightBtn').addEventListener('pointerdown', moveRight);
-        document.getElementById('jumpBtn').addEventListener('pointerdown', jump);
-
-        // --- ENGEL SİSTEMİ ---
-        const obstacles = [];
-        function spawnObstacle() {
-            const type = Math.random() > 0.3 ? "block" : "arch"; // Blok veya üstünden geçilecek kemer
-            const geo = type === "block" ? new THREE.BoxGeometry(2, 2, 1) : new THREE.BoxGeometry(4, 0.5, 1);
-            const obs = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 0.5 }));
-            obs.position.x = (Math.floor(Math.random() * 3) - 1) * 4;
-            obs.position.z = player.position.z - 60;
-            obs.position.y = type === "block" ? 1 : 3;
-            scene.add(obs);
-            obstacles.push(obs);
-        }
-        setInterval(spawnObstacle, 800);
-
-        // --- OYUN DÖNGÜSÜ ---
-        function update() {
-            requestAnimationFrame(update);
-
-            // İlerleme ve Hızlanma
-            speed += 0.0001;
-            player.position.z -= speed;
-            score += 1;
-            document.getElementById('overlay').innerText = `SKOR: ${Math.floor(score/10)}`;
-
-            // Şerit Değiştirme (Smooth)
-            player.position.x = THREE.MathUtils.lerp(player.position.x, lane * 4, 0.15);
-
-            // Zıplama Fiziği
-            if(isJumping) {
-                player.position.y += vVelocity;
-                vVelocity -= 0.01; // Yerçekimi
-                if(player.position.y <= 0) {
-                    player.position.y = 0;
-                    isJumping = false;
-                }
-            }
-
-            // Kamera Takibi
-            camera.position.set(player.position.x * 0.5, 5, player.position.z + 10);
-            camera.lookAt(player.position.x, 2, player.position.z - 10);
-
-            // Çarpışma Testi
-            obstacles.forEach((obs, index) => {
-                const distZ = Math.abs(obs.position.z - player.position.z);
-                const distX = Math.abs(obs.position.x - player.position.x);
-                const distY = Math.abs(obs.position.y - player.position.y);
-
-                if(distZ < 1 && distX < 1.5 && distY < 1.5) {
-                    // YAKALANDIN!
-                    location.reload(); 
-                }
-
-                // Arkada kalan engelleri sil (Performans için)
-                if(obs.position.z > player.position.z + 10) {
-                    scene.remove(obs);
-                    obstacles.splice(index, 1);
-                }
-            });
-
-            renderer.render(scene, camera);
-        }
-
-        update();
-
-        // Pencere Boyutu Değişince Düzenle
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
-    </script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script type="module" src="game.js"></script>
 </body>
 </html>
