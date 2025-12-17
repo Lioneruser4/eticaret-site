@@ -4,20 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hide & Seek 3D | Ultimate Chase</title>
-    <meta name="description"
-        content="Professional 3D Hide and Seek Game with Telegram Integration. Join the ultimate chase!">
+    <title>Hide & Seek 3D | Professional Arena</title>
 
-    <!-- Fonts -->
+    <!-- Fonts & Icons -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Exo+2:wght@700;900&display=swap"
         rel="stylesheet">
-    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Telegram Web App SDK -->
+
+    <!-- Scripts -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <style>
         :root {
@@ -25,8 +23,8 @@
             --secondary: #7000ff;
             --accent: #ff007a;
             --bg: #050510;
-            --card-bg: rgba(15, 15, 30, 0.8);
-            --glass: rgba(255, 255, 255, 0.1);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-heavy: rgba(15, 15, 30, 0.95);
             --header-font: 'Exo 2', sans-serif;
             --main-font: 'Outfit', sans-serif;
         }
@@ -44,10 +42,8 @@
             color: #fff;
             overflow: hidden;
             height: 100vh;
-            width: 100vw;
         }
 
-        /* Ambient Background Background */
         #bg-canvas {
             position: fixed;
             top: 0;
@@ -55,10 +51,9 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at center, #101030 0%, #050510 100%);
         }
 
-        /* Screens Management */
+        /* Professional UI Screens */
         .screen {
             position: absolute;
             top: 0;
@@ -70,29 +65,29 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
         }
 
         .screen.active {
             display: flex;
-            animation: fadeIn 0.8s ease-out;
+            animation: slideUp 0.5s ease-out;
         }
 
-        @keyframes fadeIn {
+        @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(20px) scale(0.95);
+                transform: translateY(30px);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
         }
 
         h1 {
             font-family: var(--header-font);
-            font-size: 3.5rem;
+            font-size: 3rem;
             text-transform: uppercase;
             letter-spacing: 4px;
             margin-bottom: 2rem;
@@ -102,133 +97,154 @@
             background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.5));
-            animation: titleGlow 3s ease-in-out infinite alternate;
         }
 
-        @keyframes titleGlow {
-            from {
-                filter: drop-shadow(0 0 5px rgba(0, 242, 255, 0.3));
-            }
-
-            to {
-                filter: drop-shadow(0 0 15px rgba(0, 242, 255, 0.8));
-            }
-        }
-
-        /* Buttons */
-        .btn-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        /* Lobby Menu Card */
+        .menu-card {
+            background: var(--glass-heavy);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 25px;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
         }
 
         .action-btn {
-            position: relative;
             background: var(--glass);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 30px;
-            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 18px;
+            border-radius: 15px;
             color: #fff;
-            font-size: 1.25rem;
-            font-weight: 700;
             cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: 0.3s;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+            border-color: var(--primary);
+            transform: translateY(-5px);
         }
 
         .action-btn i {
             font-size: 1.5rem;
-            transition: transform 0.3s ease;
+            color: var(--primary);
         }
 
-        .action-btn:hover {
-            border-color: var(--primary);
-            background: rgba(0, 242, 255, 0.1);
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 242, 255, 0.2);
-        }
-
-        .action-btn:hover i {
-            transform: translateX(5px) scale(1.2);
+        .action-btn.wide {
+            grid-column: span 2;
+            flex-direction: row;
+            justify-content: center;
         }
 
         .action-btn.primary {
             background: linear-gradient(45deg, var(--secondary), var(--primary));
             border: none;
-            box-shadow: 0 0 20px rgba(112, 0, 255, 0.4);
-            animation: pulseBtn 2s infinite;
         }
 
-        #click-prompt {
+        /* Modal Styles */
+        .modal {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            padding: 20px 40px;
-            border-radius: 50px;
-            z-index: 1000;
             display: none;
-            cursor: pointer;
-            border: 2px solid var(--primary);
-            font-family: var(--header-font);
-            animation: pulseBtn 1s infinite;
-        }
-
-        @keyframes pulseBtn {
-            0% {
-                box-shadow: 0 0 10px rgba(112, 0, 255, 0.4);
-            }
-
-            50% {
-                box-shadow: 0 0 25px rgba(0, 242, 255, 0.6);
-            }
-
-            100% {
-                box-shadow: 0 0 10px rgba(112, 0, 255, 0.4);
-            }
-        }
-
-        /* Profile Section */
-        .user-widget {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            display: flex;
             align-items: center;
-            gap: 12px;
-            background: var(--glass);
-            padding: 8px 15px;
-            border-radius: 50px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: center;
             z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #333;
+        .modal-content {
+            background: var(--glass-heavy);
             border: 2px solid var(--primary);
-            object-fit: cover;
+            padding: 40px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .user-name {
-            font-weight: 600;
-            font-size: 0.9rem;
+        input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+            font-family: var(--main-font);
+            outline: none;
         }
 
-        /* HUD */
+        input:focus {
+            border-color: var(--primary);
+            background: rgba(0, 242, 255, 0.05);
+        }
+
+        /* Room List */
+        .room-list-container {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .room-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .room-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .room-info h4 {
+            color: var(--primary);
+            margin-bottom: 2px;
+        }
+
+        .room-info span {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .join-mini-btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        /* HUD & Game Over */
         #hud {
             position: fixed;
             top: 0;
@@ -237,185 +253,190 @@
             height: 100%;
             pointer-events: none;
             display: none;
-            z-index: 10;
+            z-index: 50;
         }
 
         .hud-top {
             position: absolute;
             top: 20px;
-            width: 100%;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            justify-content: center;
-            gap: 50px;
+            gap: 20px;
         }
 
         .hud-stat {
-            background: var(--glass);
-            padding: 10px 20px;
+            background: var(--glass-heavy);
+            padding: 12px 25px;
             border-radius: 15px;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--primary);
             font-family: var(--header-font);
-            font-size: 1.5rem;
-            color: var(--primary);
-            text-shadow: 0 0 10px var(--primary);
+            font-size: 1.2rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            min-width: 120px;
+            text-align: center;
         }
 
-        /* Controls Tip */
-        .controls-tip {
+        #click-prompt {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--glass);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
-            display: flex;
-            gap: 20px;
-            pointer-events: none;
-        }
-
-        /* Mobile Controls */
-        .joystick-container {
-            position: fixed;
-            bottom: 40px;
-            left: 40px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            display: none;
-            /* Only show on touch */
-            pointer-events: auto;
-            z-index: 20;
-        }
-
-        .joystick-knob {
-            position: absolute;
             top: 50%;
             left: 50%;
-            width: 50px;
-            height: 50px;
-            background: var(--primary);
-            border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px var(--primary);
-        }
-
-        /* Transitions */
-        .fade-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
+            background: var(--glass-heavy);
+            border: 2px solid var(--primary);
+            padding: 20px 40px;
+            border-radius: 50px;
             z-index: 1000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s ease;
+            display: none;
+            cursor: pointer;
+            font-family: var(--header-font);
+            animation: pulse 1s infinite;
         }
 
-        .fade-overlay.visible {
-            opacity: 1;
-        }
+        @keyframes pulse {
 
-        /* Matchmaking Animation */
-        .match-loader {
-            width: 80px;
-            height: 80px;
-            border: 4px solid var(--glass);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
             }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+        }
+
+        .user-widget {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass-heavy);
+            padding: 8px 18px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            object-fit: cover;
         }
     </style>
 </head>
 
 <body>
     <div id="bg-canvas"></div>
-    <div class="fade-overlay" id="fade-overlay"></div>
-    <div id="click-prompt">CLICK TO START</div>
 
-    <div class="user-widget" id="user-widget">
+    <div class="user-widget">
         <img src="" alt="👤" class="user-avatar" id="avatar-img">
-        <span class="user-name" id="username-text">Guest Player</span>
+        <span class="user-name" id="username-text">Checking Identity...</span>
     </div>
 
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
-        <h1>HIDE & SEEK <br><span style="font-size: 1.5rem; color: var(--secondary)">MULTIPLAYER 3D</span></h1>
+        <h1>ARENA <span style="color: var(--accent)">3D</span></h1>
 
-        <div class="btn-container">
-            <button class="action-btn primary" id="btn-find-game">
-                <span>Find Game</span>
-                <i class="fas fa-search-location"></i>
-            </button>
-            <button class="action-btn" id="btn-create-room">
-                <span>Create Room</span>
-                <i class="fas fa-plus-circle"></i>
-            </button>
-            <button class="action-btn" id="btn-leaderboard">
-                <span>Leaderboard</span>
-                <i class="fas fa-trophy"></i>
-            </button>
+        <div class="menu-card">
+            <div class="btn-grid">
+                <button class="action-btn primary wide" id="btn-matchmaking">
+                    <i class="fas fa-play"></i> Quick Match
+                </button>
+                <button class="action-btn" id="btn-create-modal">
+                    <i class="fas fa-plus"></i> Create Room
+                </button>
+                <button class="action-btn" id="btn-rooms-modal">
+                    <i class="fas fa-th-list"></i> Browse Rooms
+                </button>
+                <button class="action-btn wide" id="btn-leaderboard">
+                    <i class="fas fa-trophy"></i> Global Ranking
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- MATCHMAKING -->
+    <!-- ROOM LIST MODAL -->
+    <div id="modal-rooms" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>ACTIVE ROOMS</h2>
+                <button onclick="closeModals()"
+                    style="background: none; border: none; color: #fff; font-size: 1.5rem;"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="search-room" placeholder="Search room by name...">
+            <div class="room-list-container" id="room-list">
+                <!-- Injected via JS -->
+                <p style="text-align: center; color: #666;">No rooms active. Create one!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE ROOM MODAL -->
+    <div id="modal-create" class="modal">
+        <div class="modal-content">
+            <h2>CREATE ROOM</h2>
+            <input type="text" id="input-room-name" placeholder="Room Name">
+            <input type="password" id="input-room-pass" placeholder="Password (Optional)">
+            <button class="action-btn primary" id="btn-confirm-create">START ROOM</button>
+            <button onclick="closeModals()" style="background: none; border: none; color: #888;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- PASSWORD MODAL -->
+    <div id="modal-pass" class="modal">
+        <div class="modal-content">
+            <h2>SECURE ROOM</h2>
+            <p id="pass-room-name"></p>
+            <input type="password" id="input-join-pass" placeholder="Enter Password">
+            <button class="action-btn primary" id="btn-confirm-join">JOIN</button>
+            <button onclick="closeModals()" style="background: none; border: none; color: #888;">Back</button>
+        </div>
+    </div>
+
+    <!-- MATCHMAKING/LOADING -->
     <div id="screen-matchmaking" class="screen">
-        <div class="match-loader"></div>
-        <h2 style="font-family: var(--header-font); margin-bottom: 20px;">LOOKING FOR PLAYERS</h2>
-        <p id="match-status">Connecting to server...</p>
-        <button class="action-btn" style="margin-top: 40px; padding: 15px 30px;" id="btn-cancel-match">
-            <span>Cancel</span>
-        </button>
+        <div
+            style="width: 60px; height: 60px; border: 4px solid var(--glass); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
+        </div>
+        <h2 style="margin-top: 20px;">ENTERING ARENA...</h2>
+        <p id="match-status" style="color: var(--primary); margin-top: 10px;">Connecting to grid...</p>
+        <button class="action-btn" style="margin-top: 30px; padding: 12px 30px;"
+            onclick="stopMatchmaking()">Cancel</button>
     </div>
 
     <!-- GAME OVER -->
     <div id="screen-gameover" class="screen">
-        <h1 id="winner-text">GAME OVER</h1>
-        <div id="game-results" style="text-align: center; margin-bottom: 30px;">
-            <p id="result-message" style="font-size: 1.5rem; margin-bottom: 10px;"></p>
-            <p id="stats-text" style="color: var(--primary);"></p>
-        </div>
-        <button class="action-btn primary" onclick="location.reload()">
-            <span>Return to Lobby</span>
-        </button>
+        <h1 id="winner-text" style="font-size: 4rem;">TEAM WINS</h1>
+        <p id="result-message" style="font-size: 1.2rem; color: var(--primary);"></p>
+        <button class="action-btn primary" style="margin-top: 40px; padding: 15px 40px;"
+            onclick="location.reload()">Return to Lobby</button>
     </div>
 
-    <!-- HUD -->
+    <div id="click-prompt">CLICK TO JOIN GRID</div>
+
     <div id="hud">
         <div class="hud-top">
             <div class="hud-stat" id="hud-timer">05:00</div>
-            <div class="hud-stat" id="hud-role" style="color: var(--accent); border-color: var(--accent);">SEEKER</div>
-        </div>
-
-        <div class="controls-tip">
-            <span>WASD: Move</span>
-            <span>SPACE: Jump</span>
-            <span>MOUSE: Look</span>
-        </div>
-
-        <!-- Touch Controls -->
-        <div id="touch-controls" class="joystick-container">
-            <div class="joystick-knob"></div>
+            <div class="hud-stat" id="hud-role">WAITING</div>
         </div>
     </div>
 
-    <!-- Socket.io -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- Game JS -->
     <script src="game.js"></script>
+    <script>
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+        document.getElementById('btn-create-modal').onclick = () => document.getElementById('modal-create').style.display = 'flex';
+        document.getElementById('btn-rooms-modal').onclick = () => {
+            document.getElementById('modal-rooms').style.display = 'flex';
+            requestRooms();
+        };
+    </script>
 </body>
 
 </html>
