@@ -1,448 +1,191 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hide & Seek 3D | Professional Arena</title>
-
-    <!-- Fonts & Icons -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Exo+2:wght@700;900&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Scripts -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>3D Strike: Mobile TDM</title>
     <style>
-        :root {
-            --primary: #00f2ff;
-            --secondary: #7000ff;
-            --accent: #ff007a;
-            --bg: #050510;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-heavy: rgba(15, 15, 30, 0.95);
-            --header-font: 'Exo 2', sans-serif;
-            --main-font: 'Outfit', sans-serif;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: var(--main-font);
-            background-color: var(--bg);
-            color: #fff;
-            overflow: hidden;
-            height: 100vh;
-        }
-
-        #bg-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-
-        /* Professional UI Screens */
-        .screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 5;
-        }
-
-        .screen.active {
-            display: flex;
-            animation: slideUp 0.5s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        h1 {
-            font-family: var(--header-font);
-            font-size: 3rem;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            margin-bottom: 2rem;
-            text-align: center;
-            background: linear-gradient(to bottom, #fff, var(--primary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.5));
-        }
-
-        /* Lobby Menu Card */
-        .menu-card {
-            background: var(--glass-heavy);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 25px;
-            width: 100%;
-            max-width: 500px;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .action-btn {
-            background: var(--glass);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 18px;
-            border-radius: 15px;
-            color: #fff;
-            cursor: pointer;
-            transition: 0.3s;
-            font-weight: 700;
-            text-transform: uppercase;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .action-btn:hover {
-            background: rgba(0, 242, 255, 0.1);
-            border-color: var(--primary);
-            transform: translateY(-5px);
-        }
-
-        .action-btn i {
-            font-size: 1.5rem;
-            color: var(--primary);
-        }
-
-        .action-btn.wide {
-            grid-column: span 2;
-            flex-direction: row;
-            justify-content: center;
-        }
-
-        .action-btn.primary {
-            background: linear-gradient(45deg, var(--secondary), var(--primary));
-            border: none;
-        }
-
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        .modal-content {
-            background: var(--glass-heavy);
-            border: 2px solid var(--primary);
-            padding: 40px;
-            border-radius: 30px;
-            width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            color: #fff;
-            font-family: var(--main-font);
-            outline: none;
-        }
-
-        input:focus {
-            border-color: var(--primary);
-            background: rgba(0, 242, 255, 0.05);
-        }
-
-        /* Room List */
-        .room-list-container {
-            width: 100%;
-            max-height: 300px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .room-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .room-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: var(--primary);
-        }
-
-        .room-info h4 {
-            color: var(--primary);
-            margin-bottom: 2px;
-        }
-
-        .room-info span {
-            font-size: 0.8rem;
-            color: #888;
-        }
-
-        .join-mini-btn {
-            background: var(--primary);
-            color: #000;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 8px;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        /* HUD & Game Over */
-        #hud {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: none;
-            z-index: 50;
-        }
-
-        .hud-top {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-        }
-
-        .hud-stat {
-            background: var(--glass-heavy);
-            padding: 12px 25px;
-            border-radius: 15px;
-            border: 1px solid var(--primary);
-            font-family: var(--header-font);
-            font-size: 1.2rem;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            min-width: 120px;
-            text-align: center;
-        }
-
-        #click-prompt {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: var(--glass-heavy);
-            border: 2px solid var(--primary);
-            padding: 20px 40px;
-            border-radius: 50px;
-            z-index: 1000;
-            display: none;
-            cursor: pointer;
-            font-family: var(--header-font);
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            50% {
-                transform: translate(-50%, -50%) scale(1.05);
-            }
-        }
-
-        .user-widget {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--glass-heavy);
-            padding: 8px 18px;
-            border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 100;
-        }
-
-        .user-avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            border: 2px solid var(--primary);
-            object-fit: cover;
-        }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; touch-action: none; }
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* HUD (Göstergeler) */
+        .hud-info { position: absolute; top: 20px; left: 20px; color: #fff; font-size: 18px; text-shadow: 2px 2px 5px #000; }
+        .ammo-box { position: absolute; bottom: 20px; right: 20px; color: #ffeb3b; font-size: 30px; font-weight: bold; }
+        
+        /* Mobil Kontroller */
+        .joystick { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; }
+        .fire-btn { position: absolute; bottom: 50px; right: 150px; width: 100px; height: 100px; background: rgba(255,0,0,0.4); border: 4px solid #f00; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; pointer-events: auto; }
+        .reload-btn { position: absolute; bottom: 160px; right: 60px; width: 70px; height: 70px; background: rgba(0,0,255,0.4); border: 2px solid #00f; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; pointer-events: auto; }
+        
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid rgba(0,255,0,0.5); transform: translate(-50%, -50%); border-radius: 50%; }
+        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f00; font-size: 40px; display: none; }
     </style>
 </head>
-
 <body>
-    <div id="bg-canvas"></div>
 
-    <div class="user-widget">
-        <img src="" alt="👤" class="user-avatar" id="avatar-img">
-        <span class="user-name" id="username-text">Checking Identity...</span>
+    <div id="ui">
+        <div class="hud-info" id="stats">CAN: 100 | SKOR: 0</div>
+        <div id="crosshair"></div>
+        <div id="msg">YENİDEN DOĞULUYOR...</div>
+        <div class="ammo-box" id="ammo">30 / ∞</div>
+
+        <div id="joy" class="joystick"></div>
+        <div id="btn-fire" class="fire-btn">ATEŞ</div>
+        <div id="btn-reload" class="reload-btn">R (Yükle)</div>
     </div>
 
-    <!-- MAIN MENU -->
-    <div id="screen-menu" class="screen active">
-        <h1>ARENA <span style="color: var(--accent)">3D</span></h1>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
 
-        <div class="menu-card">
-            <div class="btn-grid">
-                <button class="action-btn primary wide" id="btn-matchmaking">
-                    <i class="fas fa-play"></i> Quick Match
-                </button>
-                <button class="action-btn" id="btn-create-modal">
-                    <i class="fas fa-plus"></i> Create Room
-                </button>
-                <button class="action-btn" id="btn-rooms-modal">
-                    <i class="fas fa-th-list"></i> Browse Rooms
-                </button>
-                <button class="action-btn wide" id="btn-leaderboard">
-                    <i class="fas fa-trophy"></i> Global Ranking
-                </button>
-            </div>
-        </div>
-    </div>
+    <script type="module">
+        import * as THREE from 'three';
 
-    <!-- ROOM LIST MODAL -->
-    <div id="modal-rooms" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>ACTIVE ROOMS</h2>
-                <button onclick="closeModals()"
-                    style="background: none; border: none; color: #fff; font-size: 1.5rem;"><i
-                        class="fas fa-times"></i></button>
-            </div>
-            <input type="text" id="search-room" placeholder="Search room by name...">
-            <div class="room-list-container" id="room-list">
-                <!-- Injected via JS -->
-                <p style="text-align: center; color: #666;">No rooms active. Create one!</p>
-            </div>
-        </div>
-    </div>
+        // --- AYARLAR ---
+        let health = 100, score = 0, ammo = 30, isReloading = false;
+        const enemies = [];
+        const boxes = [];
+        
+        // --- SAHNE KURULUMU ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+        scene.fog = new THREE.Fog(0x222222, 10, 50);
 
-    <!-- CREATE ROOM MODAL -->
-    <div id="modal-create" class="modal">
-        <div class="modal-content">
-            <h2>CREATE ROOM</h2>
-            <input type="text" id="input-room-name" placeholder="Room Name">
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <label style="font-size: 0.8rem; color: #888;">MAX PLAYERS (2-10):</label>
-                <input type="number" id="input-room-max" value="10" min="2" max="10">
-            </div>
-            <input type="password" id="input-room-pass" placeholder="Password (Optional)">
-            <button class="action-btn primary" id="btn-confirm-create">START ARENA</button>
-            <button onclick="closeModals()" style="background: none; border: none; color: #888;">Cancel</button>
-        </div>
-    </div>
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-    <!-- PASSWORD MODAL -->
-    <div id="modal-pass" class="modal">
-        <div class="modal-content">
-            <h2>SECURE ROOM</h2>
-            <p id="pass-room-name"></p>
-            <input type="password" id="input-join-pass" placeholder="Enter Password">
-            <button class="action-btn primary" id="btn-confirm-join">JOIN</button>
-            <button onclick="closeModals()" style="background: none; border: none; color: #888;">Back</button>
-        </div>
-    </div>
+        // --- HARİTA (TDM ALANI) ---
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x333333}));
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
-    <!-- MATCHMAKING/LOADING -->
-    <div id="screen-matchmaking" class="screen">
-        <div
-            style="width: 60px; height: 60px; border: 4px solid var(--glass); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
-        </div>
-        <h2 style="margin-top: 20px;">ENTERING ARENA...</h2>
-        <p id="match-status" style="color: var(--primary); margin-top: 10px;">Connecting to grid...</p>
-        <button class="action-btn" style="margin-top: 30px; padding: 12px 30px;"
-            onclick="stopMatchmaking()">Cancel</button>
-    </div>
-
-    <!-- GAME OVER -->
-    <div id="screen-gameover" class="screen">
-        <h1 id="winner-text" style="font-size: 4rem;">TEAM WINS</h1>
-        <p id="result-message" style="font-size: 1.2rem; color: var(--primary);"></p>
-        <button class="action-btn primary" style="margin-top: 40px; padding: 15px 40px;"
-            onclick="location.reload()">Return to Lobby</button>
-    </div>
-
-    <div id="click-prompt">CLICK TO JOIN GRID</div>
-
-    <div id="hud">
-        <div class="hud-top">
-            <div class="hud-stat" id="hud-round">ROUND 1</div>
-            <div class="hud-stat" id="hud-timer">03:00</div>
-            <div class="hud-stat" id="hud-score">S:0 H:0</div>
-            <div class="hud-stat" id="hud-role">WAITING</div>
-        </div>
-    </div>
-
-    <script src="game.js"></script>
-    <script>
-        function closeModals() {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        // Kutu Nesneleri (Siperler)
+        function createBox(x, z) {
+            const box = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({color: 0x555555}));
+            box.position.set(x, 1, z);
+            scene.add(box);
+            boxes.push(box);
         }
-        document.getElementById('btn-create-modal').onclick = () => document.getElementById('modal-create').style.display = 'flex';
-        document.getElementById('btn-rooms-modal').onclick = () => {
-            document.getElementById('modal-rooms').style.display = 'flex';
-            requestRooms();
+        for(let i=0; i<20; i++) createBox(Math.random()*40-20, Math.random()*40-20);
+
+        // --- OYUNCU (AJAN) ---
+        const player = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 4, 8), new THREE.MeshStandardMaterial({color: 0x0000ff}));
+        body.position.y = 1;
+        player.add(body);
+        scene.add(player);
+
+        // --- DÜŞMAN NPC ---
+        function spawnEnemy() {
+            const enemy = new THREE.Group();
+            const eBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 4, 8), new THREE.MeshStandardMaterial({color: 0xff0000}));
+            eBody.position.y = 1;
+            enemy.add(eBody);
+            enemy.position.set(Math.random()*40-20, 0, Math.random()*40-20);
+            enemy.userData = { health: 3 }; // 3 mermide ölür
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+        for(let i=0; i<5; i++) spawnEnemy();
+
+        // --- SİLAH SİSTEMİ (ATEŞ ETME) ---
+        function fire() {
+            if (ammo <= 0 || isReloading) { reload(); return; }
+            ammo--;
+            updateHUD();
+
+            // Mermi Görseli (Işın)
+            const raycaster = new THREE.Raycaster();
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            raycaster.set(player.position, direction);
+
+            const intersects = raycaster.intersectObjects(enemies, true);
+            if (intersects.length > 0) {
+                const target = intersects[0].object.parent;
+                target.userData.health--;
+                if(target.userData.health <= 0) {
+                    score += 10;
+                    target.position.set(Math.random()*40-20, 0, Math.random()*40-20); // Respawn
+                    target.userData.health = 3;
+                }
+            }
+        }
+
+        function reload() {
+            if(isReloading) return;
+            isReloading = true;
+            document.getElementById('ammo').innerText = "YÜKLENİYOR...";
+            setTimeout(() => {
+                ammo = 30;
+                isReloading = false;
+                updateHUD();
+            }, 2000);
+        }
+
+        function updateHUD() {
+            document.getElementById('stats').innerText = `CAN: ${health} | SKOR: ${score}`;
+            document.getElementById('ammo').innerText = `${ammo} / ∞`;
+        }
+
+        // --- KONTROLLER ---
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        
+        // Klavye
+        window.onkeydown = (e) => {
+            if(e.key == 'w') moveForward = true;
+            if(e.key == 's') moveBackward = true;
+            if(e.key == 'a') moveLeft = true;
+            if(e.key == 'd') moveRight = true;
+            if(e.key == 'r') reload();
         };
+        window.onkeyup = (e) => {
+            if(e.key == 'w') moveForward = false;
+            if(e.key == 's') moveBackward = false;
+            if(e.key == 'a') moveLeft = false;
+            if(e.key == 'd') moveRight = false;
+        };
+
+        // Mobil Dokunmatik
+        document.getElementById('btn-fire').addEventListener('pointerdown', fire);
+        document.getElementById('btn-reload').addEventListener('pointerdown', reload);
+
+        // Kamera ve Fare Kontrolü (Mobil ve PC için bakış)
+        let yaw = 0, pitch = 0;
+        window.addEventListener('mousemove', (e) => {
+            if(document.pointerLockElement) {
+                yaw -= e.movementX * 0.002;
+                pitch -= e.movementY * 0.002;
+                pitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, pitch));
+            }
+        });
+        renderer.domElement.onclick = () => renderer.domElement.requestPointerLock();
+
+        // --- OYUN DÖNGÜSÜ ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Hareket
+            const speed = 0.15;
+            if (moveForward) player.translateZ(-speed);
+            if (moveBackward) player.translateZ(speed);
+            if (moveLeft) player.translateX(-speed);
+            if (moveRight) player.translateX(speed);
+
+            player.rotation.y = yaw;
+
+            // Kamera Takibi (PUBG Style TPS)
+            const camOffset = new THREE.Vector3(0, 2, 5).applyQuaternion(player.quaternion);
+            camera.position.lerp(player.position.clone().add(camOffset), 0.1);
+            camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+
+            updateHUD();
+            renderer.render(scene, camera);
+        }
+
+        animate();
     </script>
 </body>
-
 </html>
