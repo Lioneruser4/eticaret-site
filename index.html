@@ -38,6 +38,7 @@
             color: #fff;
             overflow: hidden;
             height: 100vh;
+            touch-action: none;
         }
 
         #bg-canvas {
@@ -77,6 +78,12 @@
 
             to {
                 opacity: 1;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
             }
         }
 
@@ -340,16 +347,13 @@
     </div>
 
     <!-- MOBILE OVERLAY -->
-    <div id="mobile-controls">
+    <div id="mobile-controls" oncontextmenu="return false;">
         <div class="joystick-zone" id="joystick"></div>
         <div class="fire-btn" id="fire-btn"><i class="fas fa-crosshairs" style="font-size: 2.5rem;"></i></div>
         <div class="reload-btn" id="reload-btn"><i class="fas fa-sync-alt"></i></div>
     </div>
 
     <script src="game.js"></script>
-    <script>
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </script>
 </body>
 
 </html>
