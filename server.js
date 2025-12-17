@@ -26,12 +26,17 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 const app = express();
+const cors = require('cors');
+app.use(cors());
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    allowEIO3: true // Eski versiyonlarla uyumluluk için
 });
 
 // Serve static files
@@ -54,7 +59,10 @@ io.on('connection', async (socket) => {
     const userName = socket.handshake.query.name || 'Guest';
     const userPhoto = socket.handshake.query.photo || '';
 
-    console.log(`Player connected: ${userName} (${userId})`);
+    if (!userId) {
+        console.log("Bağlantı reddedildi: ID bulunamadı.");
+        return;
+    }
 
     // Account Creation / Update
     if (!userId.startsWith('guest_')) {
