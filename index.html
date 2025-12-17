@@ -381,8 +381,12 @@
         <div class="modal-content">
             <h2>CREATE ROOM</h2>
             <input type="text" id="input-room-name" placeholder="Room Name">
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <label style="font-size: 0.8rem; color: #888;">MAX PLAYERS (2-10):</label>
+                <input type="number" id="input-room-max" value="10" min="2" max="10">
+            </div>
             <input type="password" id="input-room-pass" placeholder="Password (Optional)">
-            <button class="action-btn primary" id="btn-confirm-create">START ROOM</button>
+            <button class="action-btn primary" id="btn-confirm-create">START ARENA</button>
             <button onclick="closeModals()" style="background: none; border: none; color: #888;">Cancel</button>
         </div>
     </div>
@@ -421,7 +425,9 @@
 
     <div id="hud">
         <div class="hud-top">
-            <div class="hud-stat" id="hud-timer">05:00</div>
+            <div class="hud-stat" id="hud-round">ROUND 1</div>
+            <div class="hud-stat" id="hud-timer">03:00</div>
+            <div class="hud-stat" id="hud-score">S:0 H:0</div>
             <div class="hud-stat" id="hud-role">WAITING</div>
         </div>
     </div>
