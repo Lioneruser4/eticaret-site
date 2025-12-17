@@ -1,300 +1,98 @@
 <!DOCTYPE html>
-<html lang="az">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TG.MARKET | Elan Platforması</title>
-    
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Mobile Ready AI Game</title>
     <style>
-        :root {
-            --primary-color: #0088CC; 
-            --secondary-color: #f7f7f7;
-            --text-color: #333;
-            --bg-color: #ffffff;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            --radius: 8px;
+        body { margin: 0; overflow: hidden; touch-action: none; }
+        #controls {
+            position: absolute; bottom: 20px; left: 20px;
+            display: grid; grid-template-columns: repeat(3, 50px); gap: 5px;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Arial', sans-serif; background-color: var(--secondary-color); color: var(--text-color); line-height: 1.6; padding-bottom: 70px; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
-        .navbar { background-color: var(--bg-color); box-shadow: var(--shadow); padding: 15px 0; position: sticky; top: 0; z-index: 100; }
-        .navbar .container { display: flex; justify-content: space-between; align-items: center; }
-        .logo { color: var(--primary-color); font-size: 1.8em; font-weight: bold; }
-        .search-filter-container { margin: 30px 0; padding: 15px; background-color: var(--bg-color); border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
-        .search-input-group { display: flex; margin-bottom: 15px; }
-        .search-input-group input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px 0 0 5px; font-size: 1em; }
-        .btn-search { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 0 5px 5px 0; cursor: pointer; transition: background-color 0.3s; }
-        .filter-options { display: flex; flex-wrap: wrap; gap: 10px; }
-        .filter-options select, .filter-options input[type="number"] { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9em; flex-grow: 1; min-width: 120px; }
-        .post-list h2 { margin-bottom: 25px; color: var(--primary-color); border-bottom: 2px solid var(--primary-color); display: inline-block; padding-bottom: 5px; }
-        .post-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; padding-bottom: 30px; }
-        .post-card { background-color: var(--bg-color); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); transition: transform 0.3s ease-in-out; cursor: pointer; }
-        .post-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); }
-        .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .post-type { font-size: 0.75em; font-weight: bold; color: white; padding: 4px 8px; border-radius: 4px; }
-        .kanal { background-color: #FF5733; }
-        .grup { background-color: #33FF57; }
-        .hesap { background-color: #3357FF; }
-        .bot { background-color: #9B59B6; }
-        .başqa { background-color: #F1C40F; }
-        .post-price { font-size: 1.4em; font-weight: bold; color: #E74C3C; }
-        .post-card h3 { font-size: 1.3em; margin: 8px 0; color: var(--text-color); }
-        .post-card p { color: #666; margin-bottom: 15px; font-size: 0.9em; height: 40px; overflow: hidden; }
-        .post-meta { display: flex; justify-content: space-between; font-size: 0.85em; color: #999; margin-bottom: 15px; padding-top: 10px; border-top: 1px solid #eee; }
-        .add-post-btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #2ECC71; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; font-size: 2em; box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); z-index: 1000; cursor: pointer; transition: background-color 0.3s, transform 0.3s; }
-        .add-post-btn:hover { background-color: #27AE60; transform: translateX(-50%) scale(1.1); }
-        .footer { text-align: center; padding: 20px; background-color: var(--text-color); color: white; font-size: 0.9em; }
-        #loading-message { text-align: center; padding: 50px; color: var(--primary-color); font-size: 1.2em; }
-        @media (max-width: 600px) { .filter-options { flex-direction: column; } }
+        .btn {
+            width: 50px; height: 50px; background: rgba(255,255,255,0.5);
+            border: 2px solid white; display: flex; align-items: center;
+            justify-content: center; user-select: none; font-weight: bold;
+        }
+        #btn-up { grid-column: 2; }
     </style>
 </head>
 <body>
+    <div id="controls">
+        <div id="btn-up" class="btn">W</div>
+        <div id="btn-left" class="btn">A</div>
+        <div id="btn-down" class="btn">S</div>
+        <div id="btn-right" class="btn">D</div>
+    </div>
 
-    <header class="navbar">
-        <div class="container">
-            <h1 class="logo">TG.MARKET</h1>
-            <nav class="nav-links">
-                <div id="telegram-login-container">
-                    <span style="font-weight: bold; color: #999;">Giriş gözlənilir...</span>
-                </div>
-            </nav>
-        </div>
-    </header>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
 
-    <main class="container">
-        
-        <section class="search-filter-container" data-aos="fade-down">
-            <div class="search-input-group">
-                <input type="text" id="search-input" placeholder="Elan başlığına və ya məzmununa görə axtarış...">
-                <button class="btn-search"><i class="fas fa-search"></i></button>
-            </div>
-            
-            <div class="filter-options">
-                <select id="category-filter">
-                    <option value="all">Bütün Elanlar</option>
-                    <option value="kanal">Telegram Kanalı</option>
-                    <option value="grup">Telegram Qrupu</option>
-                    <option value="hesap">Telegram Hesabı</option>
-                    <option value="bot">Bot / Xidmət</option>
-                    <option value="başqa">Digər</option>
-                </select>
+    <script type="module">
+        import * as THREE from 'three';
 
-                <input type="number" id="price-min" placeholder="Minimum Qiymət (AZN)">
-                <input type="number" id="price-max" placeholder="Maksimum Qiymət (AZN)">
-                <input type="number" id="subs-min" placeholder="Min. Abunəçi">
-            </div>
-        </section>
-        
-        <section class="post-list">
-            <h2 data-aos="fade-right">Ən Yeni Elanlar</h2>
-            <div id="loading-message">
-                <i class="fas fa-spinner fa-spin"></i> Elanlar Telegram Kanalından çəkilir...
-            </div>
-            <div id="posts-container" class="post-list">
-                </div>
-        </section>
+        // SAHNE VE KAMERA
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Gökyüzü mavisi
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-    </main>
-    
-    <button class="add-post-btn" onclick="alert('Zəhmət olmasa, əvvəlcə Telegram ilə daxil olun.')" title="Yeni Elan Əlavə Et" id="add-post-btn">
-        <i class="fas fa-plus"></i>
-    </button>
+        // ZEMİN (Grid yardımıyla 3D hissi artar)
+        const grid = new THREE.GridHelper(100, 100);
+        scene.add(grid);
 
-    <footer class="footer">
-        <p>&copy; 2025 TG.MARKET | Telegram Elan Platforması. <br> Verilənlər Telegram Kanalından çəkilir.</p>
-    </footer>
+        // OYUNCU VE NPC
+        const player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+        scene.add(player);
 
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        
-        // 1. TƏNZİMLƏMƏLƏR
-        const RENDER_API_URL = 'https://saskioyunu.onrender.com'; // Ana Render adresi
-        const BOT_USERNAME = 'SizinBotunuzunKullaniciAdi'; // BotFather'dan aldığınız @kullaniciadi
-        
-        const postsContainer = document.getElementById('posts-container');
-        const loadingMessage = document.getElementById('loading-message');
-        const addPostBtn = document.getElementById('add-post-btn');
+        const npc = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+        npc.position.set(10, 0, -10);
+        scene.add(npc);
 
-        AOS.init({ duration: 800, once: true });
+        // IŞIK
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
 
-        // Elan Kartını yaradan funksiya (Önceki Cevaptan)
-        function createPostCard(post) {
-            const categoryClass = post.category || 'başqa';
-            const card = document.createElement('div');
-            card.className = `post-card ${categoryClass}`;
-            card.setAttribute('data-category', post.category);
-            card.setAttribute('data-price', post.price);
-            card.setAttribute('data-subs', post.subs);
-            card.setAttribute('data-aos', 'fade-up');
-            
-            card.innerHTML = `
-                <div class="post-header">
-                    <span class="post-type ${categoryClass}">${categoryClass.toUpperCase()}</span>
-                    <span class="post-price">${post.price} AZN</span>
-                </div>
-                <h3>${post.title}</h3>
-                <p>${post.content}</p>
-                <div class="post-meta">
-                    <span><i class="fas fa-users"></i> ${post.subs.toLocaleString('az-AZ')}</span>
-                    <span><i class="fas fa-clock"></i> Qalan vaxt: ${post.days_remaining} Gün</span>
-                </div>
-            `;
-            postsContainer.appendChild(card);
+        // KONTROL DURUMLARI
+        const move = { forward: false, backward: false, left: false, right: false };
+
+        // Butonlara basılma olayları
+        const setupBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.onpointerdown = () => move[key] = true;
+            el.onpointerup = () => move[key] = false;
+        };
+        setupBtn('btn-up', 'forward'); setupBtn('btn-down', 'backward');
+        setupBtn('btn-left', 'left'); setupBtn('btn-right', 'right');
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Hareket Mantığı
+            if (move.forward) player.position.z -= 0.1;
+            if (move.backward) player.position.z += 0.1;
+            if (move.left) player.position.x -= 0.1;
+            if (move.right) player.position.x += 0.1;
+
+            // YAPAY ZEKA: NPC Oyuncuyu kovalar
+            const npcSpeed = 0.04;
+            if (npc.position.x < player.position.x) npc.position.x += npcSpeed;
+            if (npc.position.x > player.position.x) npc.position.x -= npcSpeed;
+            if (npc.position.z < player.position.z) npc.position.z += npcSpeed;
+            if (npc.position.z > player.position.z) npc.position.z -= npcSpeed;
+
+            // KAMERA TAKİBİ
+            camera.position.set(player.position.x, player.position.y + 5, player.position.z + 10);
+            camera.lookAt(player.position);
+
+            renderer.render(scene, camera);
         }
-
-        // ----------------------------------------------------
-        // TELEGRAM GİRİŞ VƏ HESAB AÇMA MƏNTİQİ
-        // ----------------------------------------------------
-        function updateLoginStatus(isLoggedIn, name) {
-            const loginContainer = document.getElementById('telegram-login-container');
-            if (isLoggedIn) {
-                loginContainer.innerHTML = `<span style="font-weight: bold; color: var(--primary-color);">Xoş gəlmisiniz, ${name}!</span>`;
-                
-                // Giriş başarılıysa ilan ekleme butonunu aktifleştir
-                addPostBtn.onclick = function() {
-                    alert('Elan əlavə etmə funksiyası aktivdir. (Bu hissə daha sonra yeni bir forma səhifəsinə yönləndirilməlidir)'); 
-                };
-            } else {
-                loginContainer.innerHTML = `<span style="font-weight: bold; color: #999;">Giriş uğursuz oldu.</span>`;
-                addPostBtn.onclick = function() {
-                    alert('Zəhmət olmasa, əvvəlcə Telegram ilə daxil olun.');
-                };
-            }
-        }
-        
-        // 2. Render API'ye ID'yi Gönderen Fonksiyon (Hesap Açma)
-        async function registerUserOnBackend(initData) {
-            try {
-                const response = await fetch(`${RENDER_API_URL}/api/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ initData: initData }), // Tüm initData'yı gönderiyoruz
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateLoginStatus(true, result.name);
-                } else {
-                    updateLoginStatus(false, '');
-                }
-            } catch (error) {
-                console.error("Login API hatası:", error);
-                updateLoginStatus(false, '');
-            }
-        }
-
-        // 3. WebApp'i Başlatma ve ID Çekme
-        function initTelegramWebApp() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const webApp = window.Telegram.WebApp;
-                webApp.ready();
-                
-                // Telegram WebApp, tüm doğrulama verilerini initData'da şifreli olarak tutar.
-                const initData = webApp.initData;
-
-                if (initData) {
-                    // Veriyi Render API'ye gönderiyoruz (Render, hash'i bot token ile doğrulayacak)
-                    registerUserOnBackend(initData); 
-                } else {
-                    // Kullanıcı menü butonu yerine direkt URL ile girmişse (giriş yapılmamış sayılır)
-                    updateLoginStatus(false, 'Anonim');
-                }
-            } else {
-                // Eğer Telegram WebApp ortamında değilse (normal tarayıcı)
-                updateLoginStatus(false, 'Anonim');
-            }
-        }
-        
-        // 4. Verilərin Render Serveri vasitəsilə Çəkilməsi (Önceki Cevaptan)
-        async function fetchPostsFromTelegram() {
-            loadingMessage.style.display = 'block';
-            postsContainer.innerHTML = ''; 
-
-            try {
-                const response = await fetch(`${RENDER_API_URL}/api/posts`);
-                // ... (Geri kalan fetch ve filtreleme kodu aynı)
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP xətası! Status: ${response.status}`);
-                }
-                
-                const posts = await response.json();
-                
-                if (posts.length === 0) {
-                    postsContainer.innerHTML = `<p style="text-align:center; padding: 20px;">Hal-hazırda aktiv elan yoxdur.</p>`;
-                } else {
-                    posts.forEach(createPostCard);
-                }
-
-            } catch (error) {
-                console.error("Elanları çəkərkən xəta baş verdi:", error);
-                postsContainer.innerHTML = `<p style="color:red; text-align:center;">Elanlar çəkilə bilmədi. Render API adresini və ya Telegram Bot Tokenini kontrol edin.</p>`;
-            } finally {
-                loadingMessage.style.display = 'none';
-                applyFilters(); 
-            }
-        }
-        
-        // 5. Axtarış və Filtrasiya Məntiqi (Frontend) - (Önceki Cevaptan)
-        // ... (AOS, filters ve applyFilters fonksiyonları burada devam eder) ...
-        const searchInput = document.getElementById('search-input');
-        const categoryFilter = document.getElementById('category-filter');
-        const priceMinInput = document.getElementById('price-min');
-        const priceMaxInput = document.getElementById('price-max');
-        const subsMinInput = document.getElementById('subs-min');
-        
-        const allFilters = [searchInput, categoryFilter, priceMinInput, priceMaxInput, subsMinInput];
-
-        allFilters.forEach(element => {
-            element.addEventListener('input', applyFilters);
-            element.addEventListener('change', applyFilters);
-        });
-
-        function applyFilters() {
-            const searchText = searchInput.value.toLowerCase();
-            const selectedCategory = categoryFilter.value;
-            const priceMin = parseFloat(priceMinInput.value) || 0;
-            const priceMax = parseFloat(priceMaxInput.value) || Infinity;
-            const subsMin = parseFloat(subsMinInput.value) || 0;
-
-            const cards = postsContainer.querySelectorAll('.post-card');
-
-            cards.forEach(card => {
-                const title = card.querySelector('h3').textContent.toLowerCase();
-                const content = card.querySelector('p').textContent.toLowerCase();
-                const cardCategory = card.getAttribute('data-category');
-                const cardPrice = parseFloat(card.getAttribute('data-price'));
-                const cardSubs = parseFloat(card.getAttribute('data-subs'));
-                
-                let matchesSearch = title.includes(searchText) || content.includes(searchText);
-                let matchesCategory = selectedCategory === 'all' || cardCategory === selectedCategory;
-                let matchesPrice = cardPrice >= priceMin && cardPrice <= priceMax;
-                let matchesSubs = cardSubs >= subsMin;
-
-                if (matchesSearch && matchesCategory && matchesPrice && matchesSubs) {
-                    card.style.display = 'block';
-                    card.setAttribute('data-aos', 'fade-up');
-                } else {
-                    card.style.display = 'none';
-                    card.removeAttribute('data-aos');
-                }
-            });
-            AOS.refresh();
-        }
-
-        // Səhifə yüklənəndə həm giriş yoxlanılsın, həm də elanlar çəkilsin
-        initTelegramWebApp();
-        fetchPostsFromTelegram();
+        animate();
     </script>
 </body>
 </html>
