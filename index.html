@@ -1,28 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Mobile Ready AI Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Subway Run - GitHub.io</title>
     <style>
-        body { margin: 0; overflow: hidden; touch-action: none; }
-        #controls {
-            position: absolute; bottom: 20px; left: 20px;
-            display: grid; grid-template-columns: repeat(3, 50px); gap: 5px;
-        }
-        .btn {
-            width: 50px; height: 50px; background: rgba(255,255,255,0.5);
-            border: 2px solid white; display: flex; align-items: center;
-            justify-content: center; user-select: none; font-weight: bold;
-        }
-        #btn-up { grid-column: 2; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 24px; text-shadow: 2px 2px 4px #000; }
+        #controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .btn { width: 70px; height: 70px; background: rgba(0,0,0,0.5); border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 20px; user-select: none; }
     </style>
 </head>
 <body>
+    <div id="ui">Skor: 0</div>
     <div id="controls">
-        <div id="btn-up" class="btn">W</div>
-        <div id="btn-left" class="btn">A</div>
-        <div id="btn-down" class="btn">S</div>
-        <div id="btn-right" class="btn">D</div>
+        <div class="btn" id="leftBtn">SOL</div>
+        <div class="btn" id="rightBtn">SAĞ</div>
     </div>
 
     <script type="importmap">
@@ -32,63 +24,88 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // SAHNE VE KAMERA
+        // --- SAHNE KURULUMU ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Gökyüzü mavisi
+        scene.background = new THREE.Color(0x333333);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // ZEMİN (Grid yardımıyla 3D hissi artar)
-        const grid = new THREE.GridHelper(100, 100);
-        scene.add(grid);
-
-        // OYUNCU VE NPC
-        const player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
-        scene.add(player);
-
-        const npc = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-        npc.position.set(10, 0, -10);
-        scene.add(npc);
-
-        // IŞIK
+        // --- IŞIK ---
         const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(10, 10, 10);
+        light.position.set(0, 10, 5);
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x404040));
 
-        // KONTROL DURUMLARI
-        const move = { forward: false, backward: false, left: false, right: false };
+        // --- YOL VE ŞERİTLER ---
+        const roadGeo = new THREE.PlaneGeometry(10, 1000);
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        scene.add(road);
 
-        // Butonlara basılma olayları
-        const setupBtn = (id, key) => {
-            const el = document.getElementById(id);
-            el.onpointerdown = () => move[key] = true;
-            el.onpointerup = () => move[key] = false;
-        };
-        setupBtn('btn-up', 'forward'); setupBtn('btn-down', 'backward');
-        setupBtn('btn-left', 'left'); setupBtn('btn-right', 'right');
+        // --- OYUNCU ---
+        const player = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.8), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+        player.position.y = 0.5;
+        scene.add(player);
 
+        // --- KOVALAYAN NPC (Yapay Zeka) ---
+        const npc = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.8), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+        npc.position.set(0, 0.5, 3); // Oyuncunun hemen arkasında
+        scene.add(npc);
+
+        // --- DEĞİŞKENLER ---
+        let currentLane = 0; // -1: Sol, 0: Orta, 1: Sağ
+        const laneWidth = 3;
+        let score = 0;
+        let speed = 0.2;
+
+        // --- KONTROLLER ---
+        document.getElementById('leftBtn').onclick = () => { if(currentLane > -1) currentLane--; };
+        document.getElementById('rightBtn').onclick = () => { if(currentLane < 1) currentLane++; };
+
+        // --- ENGEL OLUŞTURMA ---
+        const obstacles = [];
+        function createObstacle() {
+            const obs = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff9900 }));
+            obs.position.x = (Math.floor(Math.random() * 3) - 1) * laneWidth;
+            obs.position.z = player.position.z - 50;
+            obs.position.y = 0.5;
+            scene.add(obs);
+            obstacles.push(obs);
+        }
+        setInterval(createObstacle, 1500); // 1.5 saniyede bir engel
+
+        // --- OYUN DÖNGÜSÜ ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Hareket Mantığı
-            if (move.forward) player.position.z -= 0.1;
-            if (move.backward) player.position.z += 0.1;
-            if (move.left) player.position.x -= 0.1;
-            if (move.right) player.position.x += 0.1;
+            // Oyuncu İleri Gidiyor
+            player.position.z -= speed;
+            score = Math.floor(Math.abs(player.position.z));
+            document.getElementById('ui').innerText = "Skor: " + score;
 
-            // YAPAY ZEKA: NPC Oyuncuyu kovalar
-            const npcSpeed = 0.04;
-            if (npc.position.x < player.position.x) npc.position.x += npcSpeed;
-            if (npc.position.x > player.position.x) npc.position.x -= npcSpeed;
-            if (npc.position.z < player.position.z) npc.position.z += npcSpeed;
-            if (npc.position.z > player.position.z) npc.position.z -= npcSpeed;
+            // Şerit Değiştirme Yumuşatması
+            const targetX = currentLane * laneWidth;
+            player.position.x += (targetX - player.position.x) * 0.1;
 
-            // KAMERA TAKİBİ
-            camera.position.set(player.position.x, player.position.y + 5, player.position.z + 10);
-            camera.lookAt(player.position);
+            // NPC Oyuncuyu Takip Ediyor
+            npc.position.z = player.position.z + 2.5; // Sürekli arkasında
+            npc.position.x += (player.position.x - npc.position.x) * 0.05;
+
+            // Kamera Takibi
+            camera.position.set(0, 4, player.position.z + 7);
+            camera.lookAt(0, 0, player.position.z - 5);
+
+            // Çarpışma Kontrolü
+            obstacles.forEach(obs => {
+                if (Math.abs(obs.position.z - player.position.z) < 0.8 && Math.abs(obs.position.x - player.position.x) < 0.8) {
+                    alert("YAKALANDIN! Skor: " + score);
+                    player.position.z = 0;
+                    currentLane = 0;
+                }
+            });
 
             renderer.render(scene, camera);
         }
