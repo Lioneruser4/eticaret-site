@@ -1,35 +1,404 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hide & Seek Online</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
-    <div id="lobby">
-        <div id="user-info">
-            <img id="user-avatar" src="https://via.placeholder.com/80" alt="Avatar">
-            <h2 id="user-name">Yükleniyor...</h2>
-        </div>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hide & Seek 3D | Ultimate Chase</title>
+    <meta name="description"
+        content="Professional 3D Hide and Seek Game with Telegram Integration. Join the ultimate chase!">
 
-        <div class="menu-container">
-            <button id="createRoom" class="btn-pro">
-                <i class="icon-plus"></i> ODA KUR
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Exo+2:wght@700;900&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --accent: #ff007a;
+            --bg: #050510;
+            --card-bg: rgba(15, 15, 30, 0.8);
+            --glass: rgba(255, 255, 255, 0.1);
+            --header-font: 'Exo 2', sans-serif;
+            --main-font: 'Outfit', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--main-font);
+            background-color: var(--bg);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Ambient Background Background */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at center, #101030 0%, #050510 100%);
+        }
+
+        /* Screens Management */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        h1 {
+            font-family: var(--header-font);
+            font-size: 3.5rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(to bottom, #fff, var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.5));
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from {
+                filter: drop-shadow(0 0 5px rgba(0, 242, 255, 0.3));
+            }
+
+            to {
+                filter: drop-shadow(0 0 15px rgba(0, 242, 255, 0.8));
+            }
+        }
+
+        /* Buttons */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .action-btn {
+            position: relative;
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px 30px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .action-btn i {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary);
+            background: rgba(0, 242, 255, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 242, 255, 0.2);
+        }
+
+        .action-btn:hover i {
+            transform: translateX(5px) scale(1.2);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(45deg, var(--secondary), var(--primary));
+            border: none;
+            box-shadow: 0 0 20px rgba(112, 0, 255, 0.4);
+            animation: pulseBtn 2s infinite;
+        }
+
+        @keyframes pulseBtn {
+            0% {
+                box-shadow: 0 0 10px rgba(112, 0, 255, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(0, 242, 255, 0.6);
+            }
+
+            100% {
+                box-shadow: 0 0 10px rgba(112, 0, 255, 0.4);
+            }
+        }
+
+        /* Profile Section */
+        .user-widget {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass);
+            padding: 8px 15px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #333;
+            border: 2px solid var(--primary);
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        .hud-top {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+        }
+
+        .hud-stat {
+            background: var(--glass);
+            padding: 10px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: var(--header-font);
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+        }
+
+        /* Controls Tip */
+        .controls-tip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            display: flex;
+            gap: 20px;
+            pointer-events: none;
+        }
+
+        /* Mobile Controls */
+        .joystick-container {
+            position: fixed;
+            bottom: 40px;
+            left: 40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: none;
+            /* Only show on touch */
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+        .joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        /* Transitions */
+        .fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .fade-overlay.visible {
+            opacity: 1;
+        }
+
+        /* Matchmaking Animation */
+        .match-loader {
+            width: 80px;
+            height: 80px;
+            border: 4px solid var(--glass);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="bg-canvas"></div>
+    <div class="fade-overlay" id="fade-overlay"></div>
+
+    <div class="user-widget" id="user-widget">
+        <img src="" alt="👤" class="user-avatar" id="avatar-img">
+        <span class="user-name" id="username-text">Guest Player</span>
+    </div>
+
+    <!-- MAIN MENU -->
+    <div id="screen-menu" class="screen active">
+        <h1>HIDE & SEEK <br><span style="font-size: 1.5rem; color: var(--secondary)">MULTIPLAYER 3D</span></h1>
+
+        <div class="btn-container">
+            <button class="action-btn primary" id="btn-find-game">
+                <span>Find Game</span>
+                <i class="fas fa-search-location"></i>
             </button>
-            <button id="findGame" class="btn-pro">
-                <i class="icon-search"></i> OYUN BUL
+            <button class="action-btn" id="btn-create-room">
+                <span>Create Room</span>
+                <i class="fas fa-plus-circle"></i>
+            </button>
+            <button class="action-btn" id="btn-leaderboard">
+                <span>Leaderboard</span>
+                <i class="fas fa-trophy"></i>
             </button>
         </div>
     </div>
 
-    <canvas id="gameCanvas" style="display:none;"></canvas>
+    <!-- MATCHMAKING -->
+    <div id="screen-matchmaking" class="screen">
+        <div class="match-loader"></div>
+        <h2 style="font-family: var(--header-font); margin-bottom: 20px;">LOOKING FOR PLAYERS</h2>
+        <p id="match-status">Connecting to server...</p>
+        <button class="action-btn" style="margin-top: 40px; padding: 15px 30px;" id="btn-cancel-match">
+            <span>Cancel</span>
+        </button>
+    </div>
 
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
+    <!-- GAME OVER -->
+    <div id="screen-gameover" class="screen">
+        <h1 id="winner-text">GAME OVER</h1>
+        <div id="game-results" style="text-align: center; margin-bottom: 30px;">
+            <p id="result-message" style="font-size: 1.5rem; margin-bottom: 10px;"></p>
+            <p id="stats-text" style="color: var(--primary);"></p>
+        </div>
+        <button class="action-btn primary" onclick="location.reload()">
+            <span>Return to Lobby</span>
+        </button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-top">
+            <div class="hud-stat" id="hud-timer">05:00</div>
+            <div class="hud-stat" id="hud-role" style="color: var(--accent); border-color: var(--accent);">SEEKER</div>
+        </div>
+
+        <div class="controls-tip">
+            <span>WASD: Move</span>
+            <span>SPACE: Jump</span>
+            <span>MOUSE: Look</span>
+        </div>
+
+        <!-- Touch Controls -->
+        <div id="touch-controls" class="joystick-container">
+            <div class="joystick-knob"></div>
+        </div>
+    </div>
+
+    <!-- Socket.io -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="module" src="game.js"></script>
+    <!-- Game JS -->
+    <script src="game.js"></script>
 </body>
+
 </html>
