@@ -1,6 +1,5 @@
 /**
- * HIDE & SEEK 3D - SERVER
- * Real-time Multiplayer Server
+ * HIDE & SEEK 3D - ADVANCED SERVER
  */
 
 const express = require('express');
@@ -8,321 +7,188 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
-// MongoDB Setup (Using the URI from previous session context or a placeholder)
 const MONGO_URI = 'mongodb+srv://xaliqmustafayev7313_db_user:R4Cno5z1Enhtr09u@sayt.1oqunne.mongodb.net/?appName=sayt';
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+mongoose.connect(MONGO_URI).then(() => console.log('DB Connected')).catch(err => console.error(err));
 
-const userSchema = new mongoose.Schema({
-    telegramId: String,
-    name: String,
-    photo: String,
-    wins: { type: Number, default: 0 },
-    losses: { type: Number, default: 0 },
-    lastLogin: { type: Date, default: Date.now }
-});
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model('User', new mongoose.Schema({
+    telegramId: String, name: String, photo: String, wins: { type: Number, default: 0 }, losses: { type: Number, default: 0 }
+}));
 
 const app = express();
-const cors = require('cors');
 app.use(cors());
-
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-        credentials: true
-    },
-    allowEIO3: true // Eski versiyonlarla uyumluluk için
-});
+const io = new Server(server, { cors: { origin: "*", credentials: true } });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '/')));
-
-// Game State Storage
 const rooms = {};
 const matchmakingQueue = [];
-const players = {}; // All connected players by socket.id
-
-// Configuration
-const CONFIG = {
-    MAX_PLAYERS_PER_ROOM: 4,
-    GAME_DURATION: 300, // 5 minutes
-    SEEKER_WAIT_TIME: 15, // Seconds seekers must wait at start
-};
+const players = {};
 
 io.on('connection', async (socket) => {
-    const userId = socket.handshake.query.id;
-    const userName = socket.handshake.query.name || 'Guest';
-    const userPhoto = socket.handshake.query.photo || '';
+    const q = socket.handshake.query;
+    if (!q.id) return;
 
-    if (!userId) {
-        console.log("Bağlantı reddedildi: ID bulunamadı.");
-        return;
-    }
-
-    // Account Creation / Update
-    if (!userId.startsWith('guest_')) {
-        try {
-            await User.findOneAndUpdate(
-                { telegramId: userId },
-                { name: userName, photo: userPhoto, lastLogin: new Date() },
-                { upsert: true, new: true }
-            );
-        } catch (e) {
-            console.error('Error saving user:', e);
-        }
-    }
-
-    const playerData = {
-        socketId: socket.id,
-        userId,
-        name: userName,
-        photo: userPhoto,
-        room: null,
-        role: null,
-        x: 0, y: 1.7, z: 0, ry: 0,
-        tagged: false
+    players[socket.id] = {
+        socketId: socket.id, userId: q.id, name: q.name || 'Guest', photo: q.photo || '',
+        room: null, role: null, x: 0, y: 1.7, z: 0, ry: 0, tagged: false, isWalking: false
     };
 
-    players[socket.id] = playerData;
+    if (!q.id.startsWith('guest_')) {
+        await User.findOneAndUpdate({ telegramId: q.id }, { name: q.name, photo: q.photo }, { upsert: true });
+    }
 
-    // --- Matchmaking ---
-    socket.on('join_queue', () => {
-        if (!matchmakingQueue.includes(socket.id)) {
-            matchmakingQueue.push(socket.id);
-            console.log(`Player ${userName} joined queue. Queue size: ${matchmakingQueue.length}`);
-            checkMatchmaking();
-        }
+    // Room Management
+    socket.on('get_rooms', () => {
+        const roomData = Object.values(rooms).filter(r => r.status === 'waiting').map(r => ({
+            id: r.id, name: r.name, players: r.players.length, hasPass: !!r.pass
+        }));
+        socket.emit('room_list', roomData);
     });
 
-    socket.on('leave_queue', () => {
-        const index = matchmakingQueue.indexOf(socket.id);
-        if (index > -1) matchmakingQueue.splice(index, 1);
+    socket.on('create_room', (data) => {
+        const roomId = 'room_' + Math.random().toString(36).substr(2, 6);
+        rooms[roomId] = {
+            id: roomId, name: data.name || 'ArenaX', pass: data.pass || '',
+            players: [], status: 'waiting', timer: 300, mazeSeed: Math.floor(Math.random() * 99999)
+        };
+        joinRoom(socket, roomId, data.pass);
     });
 
-    // --- Manual Room Creation ---
-    socket.on('create_room', () => {
-        const roomId = 'room_' + Math.random().toString(36).substr(2, 9);
-        joinRoom(socket, roomId);
+    socket.on('join_room', (data) => {
+        joinRoom(socket, data.id, data.pass);
     });
 
-    // --- Game Actions ---
+    socket.on('join_matchmaking', () => {
+        if (!matchmakingQueue.includes(socket.id)) matchmakingQueue.push(socket.id);
+        checkMatchmaking();
+    });
+
     socket.on('player_move', (data) => {
         const p = players[socket.id];
         if (p && p.room) {
-            p.x = data.x;
-            p.y = data.y;
-            p.z = data.z;
-            p.ry = data.ry;
-
-            // Broadcast to others in room
-            socket.to(p.room).emit('player_update', getRoomPlayers(p.room));
-
-            // Check for tagging if Seeker
-            if (p.role === 'SEEKER') {
-                checkCollisions(socket, p);
-            }
+            p.x = data.x; p.y = data.y; p.z = data.z; p.ry = data.ry; p.isWalking = data.isWalking;
+            socket.to(p.room).emit('room_update', getRoomPlayers(p.room));
+            if (p.role === 'SEEKER' && rooms[p.room]?.status === 'playing') checkCollisions(socket, p);
         }
     });
 
     socket.on('disconnect', () => {
-        console.log(`Player disconnected: ${userName}`);
         const p = players[socket.id];
-        if (p && p.room) {
-            leaveRoom(socket, p.room);
-        }
+        if (p?.room) leaveRoom(socket, p.room);
         delete players[socket.id];
-        const index = matchmakingQueue.indexOf(socket.id);
-        if (index > -1) matchmakingQueue.splice(index, 1);
+        const idx = matchmakingQueue.indexOf(socket.id);
+        if (idx > -1) matchmakingQueue.splice(idx, 1);
     });
 });
 
-function checkMatchmaking() {
-    if (matchmakingQueue.length >= 2) {
-        const roomId = 'match_' + Date.now();
-        const playersToJoin = matchmakingQueue.splice(0, CONFIG.MAX_PLAYERS_PER_ROOM);
+function joinRoom(socket, roomId, pass) {
+    const room = rooms[roomId];
+    if (!room) return socket.emit('error_msg', 'Room not found');
+    if (room.pass && room.pass !== pass) return socket.emit('error_msg', 'Wrong password');
+    if (room.players.length >= 8) return socket.emit('error_msg', 'Room full');
 
-        playersToJoin.forEach(socketId => {
-            const socket = io.sockets.sockets.get(socketId);
-            if (socket) joinRoom(socket, roomId);
-        });
-    }
-}
-
-function joinRoom(socket, roomId) {
     const p = players[socket.id];
+    if (p.room) leaveRoom(socket, p.room);
+
     p.room = roomId;
     socket.join(roomId);
+    room.players.push(socket.id);
 
-    if (!rooms[roomId]) {
-        rooms[roomId] = {
-            id: roomId,
-            players: [],
-            status: 'waiting',
-            timer: CONFIG.GAME_DURATION,
-            mazeSeed: Math.floor(Math.random() * 100000)
-        };
-    }
-
-    rooms[roomId].players.push(socket.id);
-    console.log(`Player ${p.name} joined room ${roomId}`);
-
-    // If room full or start triggered
-    if (rooms[roomId].players.length >= 2 && rooms[roomId].status === 'waiting') {
-        initGame(roomId);
+    if (room.players.length >= 2 && room.status === 'waiting') {
+        setTimeout(() => startLevel(roomId), 2000);
     }
 }
 
-function initGame(roomId) {
+function checkMatchmaking() {
+    if (matchmakingQueue.length >= 2) {
+        const id = 'mm_' + Date.now();
+        rooms[id] = { id, name: 'Quick Arena', pass: '', players: [], status: 'waiting', timer: 300, mazeSeed: 42 };
+        matchmakingQueue.splice(0, 4).forEach(sid => {
+            const s = io.sockets.sockets.get(sid);
+            if (s) joinRoom(s, id, '');
+        });
+    }
+}
+
+function startLevel(roomId) {
     const room = rooms[roomId];
+    if (!room || room.status !== 'waiting') return;
     room.status = 'playing';
 
-    // Assign Roles: 1 Seeker, others Hiders
-    const seekerIndex = Math.floor(Math.random() * room.players.length);
-
-    room.players.forEach((sid, index) => {
+    const sIdx = Math.floor(Math.random() * room.players.length);
+    room.players.forEach((sid, i) => {
         const p = players[sid];
-        p.role = (index === seekerIndex) ? 'SEEKER' : 'HIDER';
+        p.role = (i === sIdx) ? 'SEEKER' : 'HIDER';
         p.tagged = false;
-
-        // Starting Positions
-        if (p.role === 'SEEKER') {
-            p.x = 15; p.z = 15; // Red Base
-        } else {
-            p.x = -15; p.z = -15; // Blue Base
-        }
-
-        io.to(sid).emit('match_found', {
-            roomId: roomId,
-            role: p.role,
-            mazeSeed: room.mazeSeed,
-            players: getRoomPlayers(roomId)
-        });
+        p.x = (p.role === 'SEEKER') ? 15 : -15;
+        p.z = (p.role === 'SEEKER') ? 15 : -15;
+        io.to(sid).emit('room_start', { role: p.role, seed: room.mazeSeed });
     });
 
-    // Küçük bir gecikme ile oyunu başlat (Siyah ekran kalmaması için)
-    setTimeout(() => {
-        io.to(roomId).emit('game_start', { status: 'start' });
-    }, 1000);
-
-    // Start Timer
-    const interval = setInterval(() => {
-        if (!rooms[roomId]) {
-            clearInterval(interval);
-            return;
-        }
-
+    const timer = setInterval(() => {
+        if (!rooms[roomId]) return clearInterval(timer);
         room.timer--;
-        io.to(roomId).emit('timer_update', room.timer);
-
+        io.to(roomId).emit('tick', room.timer);
         if (room.timer <= 0) {
-            endGame(roomId, 'HIDERS', 'Time is up! Hiders win.');
-            clearInterval(interval);
+            endGame(roomId, 'HIDERS', 'Time ran out! Hiders win.');
+            clearInterval(timer);
         }
     }, 1000);
 }
 
 function checkCollisions(seekerSocket, seeker) {
     const room = rooms[seeker.room];
-    if (!room) return;
-
     room.players.forEach(sid => {
         const target = players[sid];
         if (target.role === 'HIDER' && !target.tagged) {
-            const dist = Math.sqrt(
-                Math.pow(seeker.x - target.x, 2) +
-                Math.pow(seeker.z - target.z, 2)
-            );
-
-            if (dist < 1.5) { // Tag distance
+            const dist = Math.sqrt((seeker.x - target.x) ** 2 + (seeker.z - target.z) ** 2);
+            if (dist < 1.4) {
                 target.tagged = true;
-                io.to(seeker.room).emit('player_tagged', { id: target.userId, name: target.name });
-                checkWinCondition(seeker.room);
+                io.to(seeker.room).emit('tagged', { id: target.userId, name: target.name });
+                checkWins(seeker.room);
             }
         }
     });
 }
 
-function checkWinCondition(roomId) {
-    const room = rooms[roomId];
-    const hiders = room.players.map(sid => players[sid]).filter(p => p.role === 'HIDER');
-    const allTagged = hiders.every(p => p.tagged);
-
-    if (allTagged) {
-        endGame(roomId, 'SEEKERS', 'All hiders have been caught!');
-    }
+function checkWins(roomId) {
+    const r = rooms[roomId];
+    const hiders = r.players.map(s => players[s]).filter(p => p.role === 'HIDER');
+    if (hiders.every(h => h.tagged)) endGame(roomId, 'SEEKERS', 'All hiders caught!');
 }
 
-async function endGame(roomId, winner, message) {
-    io.to(roomId).emit('game_over', { winner, message });
-
-    // Update Stats in DB
-    const room = rooms[roomId];
-    if (room) {
-        for (const sid of room.players) {
+async function endGame(roomId, winner, msg) {
+    io.to(roomId).emit('game_over', { winner, msg });
+    const r = rooms[roomId];
+    if (r) {
+        for (const sid of r.players) {
             const p = players[sid];
             if (p && !p.userId.startsWith('guest_')) {
-                const isWinner = p.role === (winner === 'SEEKERS' ? 'SEEKER' : 'HIDER');
-                try {
-                    await User.findOneAndUpdate(
-                        { telegramId: p.userId },
-                        { $inc: { [isWinner ? 'wins' : 'losses']: 1 } }
-                    );
-                } catch (e) {
-                    console.error('Error updating stats:', e);
-                }
+                const won = (p.role === 'SEEKER' && winner === 'SEEKERS') || (p.role === 'HIDER' && winner === 'HIDERS');
+                await User.findOneAndUpdate({ telegramId: p.userId }, { $inc: { [won ? 'wins' : 'losses']: 1 } });
             }
+            if (p) p.room = null;
         }
-
-        // Cleanup room
-        room.players.forEach(sid => {
-            if (players[sid]) players[sid].room = null;
-        });
         delete rooms[roomId];
     }
 }
 
 function leaveRoom(socket, roomId) {
-    const room = rooms[roomId];
-    if (room) {
-        room.players = room.players.filter(id => id !== socket.id);
-        if (room.players.length === 0) {
-            delete rooms[roomId];
-        } else {
-            // If seeker leaves, hiders win
-            const p = players[socket.id];
-            if (p && p.role === 'SEEKER') {
-                endGame(roomId, 'HIDERS', 'The seeker left the game!');
-            }
-        }
+    const r = rooms[roomId];
+    if (r) {
+        r.players = r.players.filter(id => id !== socket.id);
+        if (r.players.length === 0) delete rooms[roomId];
     }
 }
 
-function getRoomPlayers(roomId) {
-    const room = rooms[roomId];
+function getRoomPlayers(rid) {
     const data = {};
-    if (room) {
-        room.players.forEach(sid => {
-            const p = players[sid];
-            if (p) {
-                data[p.userId] = {
-                    name: p.name,
-                    role: p.role,
-                    x: p.x, y: p.y, z: p.z, ry: p.ry,
-                    photo: p.photo,
-                    tagged: p.tagged
-                };
-            }
-        });
-    }
+    rooms[rid]?.players.forEach(sid => {
+        const p = players[sid];
+        if (p) data[p.userId] = { n: p.name, x: p.x, y: p.y, z: p.z, ry: p.ry, r: p.role, t: p.tagged, w: p.isWalking };
+    });
     return data;
 }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Hide & Seek Server running on port ${PORT}`);
-});
+server.listen(process.env.PORT || 3000, () => console.log('Server Ready'));
