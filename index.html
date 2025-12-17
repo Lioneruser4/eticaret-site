@@ -1,129 +1,602 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saski Strike 3D - Multi</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; touch-action: none; font-family: sans-serif; }
-        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; border: 2px solid #0f0; transform: translate(-50%, -50%); border-radius: 50%; }
-        
-        /* Mobil Kontroller */
-        #joystick { position: absolute; bottom: 50px; left: 50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; }
-        .action-btn { position: absolute; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; pointer-events: auto; border: 2px solid #fff; }
-        #fire-btn { bottom: 60px; right: 140px; background: rgba(255,0,0,0.5); }
-        #reload-btn { bottom: 150px; right: 60px; background: rgba(0,0,255,0.5); width: 60px; height: 60px; }
-        
-        #stats { position: absolute; top: 10px; left: 10px; color: #0f0; font-size: 14px; background: rgba(0,0,0,0.5); padding: 5px; }
-        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; }
-    </style>
-</head>
-<body>
-    <div id="loader">SUNUCUYA BAĞLANILIYOR...</div>
-    <div id="ui" style="display:none;">
-        <div id="stats">CAN: 100 | ŞARJÖR: 30/∞ | SKOR: 0</div>
-        <div id="crosshair"></div>
-        <div id="joystick"></div>
-        <div id="fire-btn" class="action-btn">ATEŞ</div>
-        <div id="reload-btn" class="action-btn">R</div>
-    </div>
+    <title>Domino Elite | Pro League</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <!-- Fonts & Icons -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Exo+2:wght@700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-    <script>
-        // --- SUNUCU BAĞLANTISI ---
-        const socket = io("https://saskioyunu.onrender.com");
-        let myId, players = {}, isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-        // --- SAHNE KURULUMU ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x222222);
-        scene.fog = new THREE.Fog(0x222222, 10, 50);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // IŞIKLAR (Görüntü netliği için)
-        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
-        scene.add(light);
-
-        // ZEMİN VE SİPERLER
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x333333}));
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-
-        function addCrate(x, z) {
-            const box = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({color: 0x555555}));
-            box.position.set(x, 1, z);
-            scene.add(box);
-        }
-        for(let i=0; i<15; i++) addCrate(Math.random()*40-20, Math.random()*40-20);
-
-        // OYUNCU MODELİ FONKSİYONU
-        function createModel(color) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({color}));
-            body.position.y = 1;
-            group.add(body);
-            return group;
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --panel: #151921;
+            --primary: #ff4655;
+            --secondary: #00f2ff;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.03);
+            --gold: #ffb800;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
         }
 
-        const player = createModel(0x00ff00); // Kendi karakterimiz
-        scene.add(player);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        // --- KONTROLLER (PC & MOBİL) ---
-        let keys = {}, yaw = 0, pitch = 0;
-        window.onkeydown = (e) => keys[e.key.toLowerCase()] = true;
-        window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
 
-        // PC Fare Bakışı
-        document.body.onclick = () => { if(!isMobile) renderer.domElement.requestPointerLock(); };
-        window.onmousemove = (e) => {
-            if (document.pointerLockElement) {
-                yaw -= e.movementX * 0.003;
-                pitch -= e.movementY * 0.003;
-                pitch = Math.max(-1.5, Math.min(1.5, pitch));
+        /* Background Animation */
+        #bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #1a1f2b 0%, #0b0e14 100%);
+            opacity: 0.8;
+        }
+
+        /* Profile Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--panel);
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+        }
+
+        .level-badge {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        /* Faceit-style Level Colors */
+        .lvl-1 {
+            background: #fee101;
+            color: #000;
+            box-shadow: 0 0 10px #fee10155;
+        }
+
+        .lvl-4 {
+            background: #00f2ff;
+            color: #000;
+            animation: glow-blue 2s infinite;
+        }
+
+        .lvl-7 {
+            background: linear-gradient(45deg, #ff4655, #ff00ff);
+            animation: glow-premium 1s infinite alternate;
+        }
+
+        @keyframes glow-blue {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px #00f2ff;
             }
-        };
 
-        // --- OYUN DÖNGÜSÜ ---
-        function update() {
-            requestAnimationFrame(update);
-            
-            const speed = 0.15;
-            if(keys['w']) player.translateZ(-speed);
-            if(keys['s']) player.translateZ(speed);
-            if(keys['a']) player.translateX(-speed);
-            if(keys['d']) player.translateX(speed);
-
-            player.rotation.y = yaw;
-            
-            // Kamera Takibi
-            camera.position.lerp(new THREE.Vector3(player.position.x, player.position.y + 2.5, player.position.z + 5), 0.1);
-            camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
-
-            // Sunucuya veri gönder
-            socket.emit('move', { pos: player.position, rot: player.rotation.y });
-
-            renderer.render(scene, camera);
+            50% {
+                box-shadow: 0 0 20px #00f2ff;
+            }
         }
 
-        socket.on('connect', () => {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('ui').style.display = 'block';
-            update();
-        });
+        @keyframes glow-premium {
+            from {
+                box-shadow: 0 0 5px #ff4655;
+            }
 
-        // Pencere Boyutu
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
-    </script>
+            to {
+                box-shadow: 0 0 25px #ff00ff;
+            }
+        }
+
+        /* Lobby Content */
+        .screen {
+            height: 100vh;
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: 0.5s ease;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .lobby-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-main {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            background: rgba(255, 70, 85, 0.05);
+        }
+
+        .btn-main i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .btn-main.ranked {
+            background: linear-gradient(90deg, #ff4655 0%, #151921 100%);
+            border: none;
+        }
+
+        .btn-main.ranked i {
+            color: #fff;
+        }
+
+        .room-join-bar {
+            display: flex;
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .room-join-bar input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 20px;
+            flex: 1;
+            font-family: inherit;
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        .btn-join-sq {
+            background: var(--primary);
+            border: none;
+            color: #fff;
+            width: 80px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* Matchmaking Overlay */
+        #mm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 14, 20, 0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mm-circle {
+            width: 120px;
+            height: 120px;
+            border: 4px solid var(--glass);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Board */
+        #game-board {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #1a1f2b 0%, #0b0e14 100%);
+        }
+
+        .tiles-container {
+            position: relative;
+            min-width: 1000px;
+            min-height: 1000px;
+        }
+
+        .stone {
+            width: 50px;
+            height: 100px;
+            background: #eee;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #222;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            position: absolute;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .stone .p {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            padding: 5px;
+            gap: 2px;
+            align-items: center;
+            justify-items: center;
+        }
+
+        .stone .dot {
+            width: 6px;
+            height: 6px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        .stone .line {
+            height: 2px;
+            background: #222;
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        .stone.horizontal {
+            width: 100px;
+            height: 50px;
+            flex-direction: row;
+        }
+
+        .stone.horizontal .p {
+            grid-template-rows: repeat(3, 1fr);
+        }
+
+        .stone.horizontal .line {
+            width: 2px;
+            height: 80%;
+            margin: auto 0;
+        }
+
+        /* Player Hand */
+        .hand {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .hand .stone {
+            position: relative;
+            transform: scale(0.85);
+            top: 0;
+            left: 0;
+            margin-right: -10px;
+        }
+
+        .hand .stone:hover {
+            transform: scale(1) translateY(-20px);
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .hand .stone.selected {
+            border-color: var(--secondary);
+            box-shadow: 0 0 20px var(--secondary);
+        }
+
+        /* Glow Effects */
+        .turn-active {
+            animation: turn-glow 1.5s infinite alternate;
+        }
+
+        @keyframes turn-glow {
+            from {
+                box-shadow: inset 0 0 20px transparent;
+            }
+
+            to {
+                box-shadow: inset 0 0 40px var(--primary);
+            }
+        }
+
+        .hint-spot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px dashed var(--secondary);
+            border-radius: 10px;
+            animation: pulse-hint 1s infinite;
+            pointer-events: auto;
+        }
+
+        @keyframes pulse-hint {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        }
+
+        /* Leaderboard */
+        #leaderboard-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 14, 20, 0.98);
+            z-index: 300;
+            display: none;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .lb-title {
+            text-align: center;
+            font-family: 'Exo 2';
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            color: var(--primary);
+        }
+
+        .lb-list {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .lb-item {
+            background: var(--panel);
+            padding: 15px 25px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .lb-item.top-1 {
+            border: 2px solid var(--gold);
+            background: linear-gradient(90deg, #5c4300 0%, #151921 100%);
+        }
+
+        .lb-item.top-2 {
+            border: 2px solid var(--silver);
+        }
+
+        .lb-item.top-3 {
+            border: 2px solid var(--bronze);
+        }
+
+        .lb-rank {
+            font-size: 1.5rem;
+            font-weight: 800;
+            min-width: 40px;
+        }
+
+        .lb-name {
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .lb-points {
+            font-family: 'Orbitron';
+            color: var(--secondary);
+            font-weight: 800;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel);
+            border: 1px solid var(--secondary);
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="bg-pattern"></div>
+    <div id="toast">Connecting...</div>
+
+    <!-- PROFILE AREA -->
+    <div class="header">
+        <div class="user-info">
+            <img src="" id="user-avatar" class="user-avatar" alt="👤">
+            <div style="display: flex; flex-direction: column;">
+                <span id="user-name" style="font-weight: 800; font-size: 1.1rem;">Loading...</span>
+                <span id="user-elo" style="font-size: 0.8rem; color: var(--secondary); font-weight: 700;">ELO: 0</span>
+            </div>
+            <div id="user-level-icon" class="level-badge lvl-1">1</div>
+        </div>
+        <button onclick="toggleLeaderboard()"
+            style="background: var(--panel); border: none; color: #fff; width: 50px; height: 50px; border-radius: 50%; cursor: pointer;">
+            <i class="fas fa-trophy"></i>
+        </button>
+    </div>
+
+    <!-- MAIN MENU -->
+    <div id="screen-lobby" class="screen active">
+        <h1 style="font-family: 'Exo 2'; font-size: 3.5rem; margin-bottom: 40px; letter-spacing: 5px;">DOMINO<span
+                style="color: var(--primary)">PRO</span></h1>
+
+        <div class="lobby-menu">
+            <button class="btn-main ranked" id="btn-ranked">
+                <i class="fas fa-bolt"></i>
+                <div style="text-align: left;">
+                    <div style="font-weight: 800; font-size: 1.3rem;">Dereceli Maç</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">Faceit Ligine Katıl</div>
+                </div>
+            </button>
+
+            <button class="btn-main" id="btn-friend">
+                <i class="fas fa-user-friends"></i>
+                <div style="text-align: left;">
+                    <div style="font-weight: 800; font-size: 1.3rem;">Arkadaşla Oyna</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">Özel Oda Kur</div>
+                </div>
+            </button>
+
+            <div class="room-join-bar">
+                <input type="text" id="join-code" placeholder="Oda Kodu (4 Hane)">
+                <button class="btn-join-sq" id="btn-join-code"><i class="fas fa-arrow-right"></i></button>
+            </div>
+
+            <p style="text-align: center; font-size: 0.8rem; color: #888; margin-top: 20px;">
+                <i class="fas fa-info-circle"></i> Sadece dereceli maçlarda ELO kazanılır.
+            </p>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="screen">
+        <div id="game-board">
+            <div id="tiles-layer" class="tiles-container"></div>
+            <div id="hint-layer"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+        </div>
+
+        <div id="opp-info"
+            style="position: fixed; top: 100px; right: 20px; background: var(--panel); padding: 10px 20px; border-radius: 15px; border-right: 4px solid var(--primary); display: none;">
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #888;">Rakip Sırada</div>
+            <div id="opp-name" style="font-weight: 800;">Rakip Bekleniyor...</div>
+        </div>
+
+        <div id="my-hand" class="hand"></div>
+    </div>
+
+    <!-- MATCHMAKING OVERLAY -->
+    <div id="mm-overlay">
+        <div class="mm-circle"></div>
+        <h2 style="margin-top: 30px; font-family: 'Exo 2';">Eşleşme Aranıyor...</h2>
+        <p style="color: #888;">Liginize uygun rakipler taranıyor.</p>
+        <button id="btn-cancel-mm"
+            style="margin-top: 40px; background: transparent; border: 1px solid #ff4655; color: #ff4655; padding: 10px 30px; border-radius: 50px; cursor: pointer;">İptal
+            Et</button>
+    </div>
+
+    <!-- CUSTOM ROOM OVERLAY -->
+    <div id="friend-overlay"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 250; display: none; align-items: center; justify-content: center; flex-direction: column;">
+        <h2 style="font-family: 'Exo 2'; margin-bottom: 10px;">ODA OLUŞTURULDU</h2>
+        <div id="room-id-display" style="font-size: 4rem; font-weight: 900; color: var(--primary); margin: 20px 0;">0000
+        </div>
+        <button id="btn-copy-code"
+            style="background: var(--glass); border: 1px solid #fff; color: #fff; padding: 10px 20px; border-radius: 10px; cursor: pointer;">
+            <i class="fas fa-copy"></i> Kodu Kopyala
+        </button>
+        <p style="margin-top: 30px; color: #888;">Arkadaşın kodu yazınca oyun otomatik başlar.</p>
+        <button onclick="location.reload()"
+            style="margin-top: 50px; color: #ff4655; background: none; border: none; cursor: pointer;">Vazgeç</button>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboard-modal">
+        <button onclick="toggleLeaderboard()"
+            style="position: fixed; top: 30px; right: 30px; background: var(--primary); border: none; color: #fff; width: 50px; height: 50px; border-radius: 50%; cursor: pointer;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h1 class="lb-title">TOP 10 ARENA</h1>
+        <div class="lb-list" id="lb-content">
+            <!-- Dynamic Content -->
+        </div>
+        <div id="lb-my-rank" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+            <!-- My rank if not in top 10 -->
+        </div>
+    </div>
+
+    <script src="game.js"></script>
 </body>
+
 </html>
