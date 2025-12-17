@@ -204,6 +204,11 @@ function initGame(roomId) {
         });
     });
 
+    // Küçük bir gecikme ile oyunu başlat (Siyah ekran kalmaması için)
+    setTimeout(() => {
+        io.to(roomId).emit('game_start', { status: 'start' });
+    }, 1000);
+
     // Start Timer
     const interval = setInterval(() => {
         if (!rooms[roomId]) {
