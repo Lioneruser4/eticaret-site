@@ -5,11 +5,14 @@
 
 // --- Configuration ---
 const CONFIG = {
-    SERVER_URL: 'https://saskioyunu.onrender.com', // Render link provided by user
+    // Otomatik Sunucu Seçimi (Eğer yerelde çalışıyorsan localhost'a bağlanır)
+    SERVER_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000'
+        : 'https://saskioyunu.onrender.com',
     MAZE_SIZE: 30,
     PLAYER_SPEED: 0.15,
     LOOK_SENSITIVITY: 0.002,
-    DEFAULT_TIMER: 300 // 5 minutes
+    DEFAULT_TIMER: 300
 };
 
 // --- Variables ---
@@ -116,8 +119,12 @@ function initThreeBackground() {
 function connectSocket() {
     if (socket) return;
 
+    console.log("Sunucuya bağlanılıyor:", CONFIG.SERVER_URL);
+    document.getElementById('match-status').innerText = 'Sunucuya bağlanılıyor...';
+
     socket = io(CONFIG.SERVER_URL, {
-        transports: ['websocket'],
+        reconnectionAttempts: 5,
+        timeout: 10000,
         query: {
             id: currentUser.id,
             name: currentUser.name,
@@ -126,8 +133,13 @@ function connectSocket() {
     });
 
     socket.on('connect', () => {
-        console.log('Connected to server');
-        document.getElementById('match-status').innerText = 'Searching for opponents...';
+        console.log('Sunucuya bağlandı!');
+        document.getElementById('match-status').innerText = 'Sıraya girildi, rakipler aranıyor...';
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Bağlantı Hatası:', error);
+        document.getElementById('match-status').innerText = 'Bağlantı Hatası! Sunucu kapalı olabilir.';
     });
 
     socket.on('match_found', (data) => {
