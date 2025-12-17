@@ -1,359 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Standoff 3D | Ultra Strike</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saski Strike 3D - Multi</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; font-family: sans-serif; }
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; border: 2px solid #0f0; transform: translate(-50%, -50%); border-radius: 50%; }
+        
+        /* Mobil Kontroller */
+        #joystick { position: absolute; bottom: 50px; left: 50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; }
+        .action-btn { position: absolute; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; pointer-events: auto; border: 2px solid #fff; }
+        #fire-btn { bottom: 60px; right: 140px; background: rgba(255,0,0,0.5); }
+        #reload-btn { bottom: 150px; right: 60px; background: rgba(0,0,255,0.5); width: 60px; height: 60px; }
+        
+        #stats { position: absolute; top: 10px; left: 10px; color: #0f0; font-size: 14px; background: rgba(0,0,0,0.5); padding: 5px; }
+        #loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="loader">SUNUCUYA BAĞLANILIYOR...</div>
+    <div id="ui" style="display:none;">
+        <div id="stats">CAN: 100 | ŞARJÖR: 30/∞ | SKOR: 0</div>
+        <div id="crosshair"></div>
+        <div id="joystick"></div>
+        <div id="fire-btn" class="action-btn">ATEŞ</div>
+        <div id="reload-btn" class="action-btn">R</div>
+    </div>
 
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Outfit:wght@400;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Scripts -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-    <style>
-        :root {
-            --primary: #00f2ff;
-            --accent: #ff0055;
-            --bg: #050510;
-            --glass: rgba(0, 0, 0, 0.7);
+    <script>
+        // --- SUNUCU BAĞLANTISI ---
+        const socket = io("https://saskioyunu.onrender.com");
+        let myId, players = {}, isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+        // --- SAHNE KURULUMU ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+        scene.fog = new THREE.Fog(0x222222, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // IŞIKLAR (Görüntü netliği için)
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
+        scene.add(light);
+
+        // ZEMİN VE SİPERLER
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({color: 0x333333}));
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        function addCrate(x, z) {
+            const box = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({color: 0x555555}));
+            box.position.set(x, 1, z);
+            scene.add(box);
+        }
+        for(let i=0; i<15; i++) addCrate(Math.random()*40-20, Math.random()*40-20);
+
+        // OYUNCU MODELİ FONKSİYONU
+        function createModel(color) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({color}));
+            body.position.y = 1;
+            group.add(body);
+            return group;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        const player = createModel(0x00ff00); // Kendi karakterimiz
+        scene.add(player);
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--bg);
-            color: #fff;
-            overflow: hidden;
-            height: 100vh;
-            touch-action: none;
-        }
+        // --- KONTROLLER (PC & MOBİL) ---
+        let keys = {}, yaw = 0, pitch = 0;
+        window.onkeydown = (e) => keys[e.key.toLowerCase()] = true;
+        window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
 
-        #bg-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-
-        /* Screens */
-        .screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 5;
-            background: radial-gradient(circle, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
-        }
-
-        .screen.active {
-            display: flex;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
+        // PC Fare Bakışı
+        document.body.onclick = () => { if(!isMobile) renderer.domElement.requestPointerLock(); };
+        window.onmousemove = (e) => {
+            if (document.pointerLockElement) {
+                yaw -= e.movementX * 0.003;
+                pitch -= e.movementY * 0.003;
+                pitch = Math.max(-1.5, Math.min(1.5, pitch));
             }
+        };
 
-            to {
-                opacity: 1;
-            }
+        // --- OYUN DÖNGÜSÜ ---
+        function update() {
+            requestAnimationFrame(update);
+            
+            const speed = 0.15;
+            if(keys['w']) player.translateZ(-speed);
+            if(keys['s']) player.translateZ(speed);
+            if(keys['a']) player.translateX(-speed);
+            if(keys['d']) player.translateX(speed);
+
+            player.rotation.y = yaw;
+            
+            // Kamera Takibi
+            camera.position.lerp(new THREE.Vector3(player.position.x, player.position.y + 2.5, player.position.z + 5), 0.1);
+            camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+
+            // Sunucuya veri gönder
+            socket.emit('move', { pos: player.position, rot: player.rotation.y });
+
+            renderer.render(scene, camera);
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+        socket.on('connect', () => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            update();
+        });
 
-        h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 4rem;
-            font-weight: 900;
-            letter-spacing: 5px;
-            margin-bottom: 2rem;
-            color: #fff;
-            text-shadow: 0 0 20px var(--primary);
-        }
-
-        .action-btn {
-            background: linear-gradient(45deg, var(--accent), #ff5500);
-            border: none;
-            padding: 20px 40px;
-            border-radius: 5px;
-            color: #fff;
-            cursor: pointer;
-            font-family: 'Orbitron';
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            box-shadow: 0 5px 15px rgba(255, 0, 85, 0.4);
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
-
-        .action-btn:hover {
-            transform: scale(1.05);
-            filter: brightness(1.2);
-        }
-
-        /* Crosshair */
-        #crosshair {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-        }
-
-        #crosshair::before,
-        #crosshair::after {
-            content: '';
-            position: absolute;
-            background: var(--primary);
-        }
-
-        #crosshair::before {
-            top: 50%;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            transform: translateY(-50%);
-        }
-
-        #crosshair::after {
-            left: 50%;
-            top: 0;
-            height: 100%;
-            width: 2px;
-            transform: translateX(-50%);
-        }
-
-        /* HUD */
-        #hud {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            pointer-events: none;
-            z-index: 50;
-        }
-
-        .hud-bottom-right {
-            position: absolute;
-            bottom: 30px;
-            right: 40px;
-            text-align: right;
-        }
-
-        .ammo-display {
-            font-family: 'Orbitron';
-            font-size: 3rem;
-            color: #fff;
-            text-shadow: 0 0 10px var(--primary);
-        }
-
-        .ammo-label {
-            font-size: 1rem;
-            color: var(--primary);
-            text-transform: uppercase;
-        }
-
-        .health-bar-container {
-            position: absolute;
-            bottom: 30px;
-            left: 40px;
-            width: 250px;
-            height: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-        }
-
-        .health-bar-fill {
-            width: 100%;
-            height: 100%;
-            background: var(--accent);
-            transition: width 0.3s ease;
-        }
-
-        .kill-feed {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-align: right;
-            font-size: 0.9rem;
-            color: var(--primary);
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        /* Mobile Controls */
-        #mobile-controls {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            z-index: 60;
-        }
-
-        .joystick-zone {
-            position: absolute;
-            bottom: 50px;
-            left: 50px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-        }
-
-        .fire-btn {
-            position: absolute;
-            bottom: 80px;
-            right: 80px;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, var(--accent) 0%, #990000 100%);
-            border-radius: 50%;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 30px var(--accent);
-            border: 4px solid #fff;
-        }
-
-        .reload-btn {
-            position: absolute;
-            bottom: 200px;
-            right: 80px;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        /* Landscape Prompt */
-        #landscape-prompt {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        @media screen and (orientation: portrait) {
-            #landscape-prompt {
-                display: flex;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div id="landscape-prompt">
-        <i class="fas fa-mobile-alt" style="font-size: 4rem; transform: rotate(-90deg); margin-bottom: 20px;"></i>
-        <h2>PLEASE ROTATE TO LANDSCAPE</h2>
-        <p>This game is best experienced horizontally</p>
-    </div>
-
-    <div id="bg-canvas"></div>
-
-    <!-- MAIN MENU -->
-    <div id="screen-menu" class="screen active">
-        <h1 style="margin-bottom: 10px;">ULTRA STRIKE</h1>
-        <p style="letter-spacing: 5px; color: var(--primary); margin-bottom: 40px;">BATTLE ARENA 3D</p>
-        <button class="action-btn" id="btn-start">Join Battle</button>
-
-        <div style="margin-top: 40px; display: flex; gap: 20px;">
-            <div id="player-profile"
-                style="display: flex; align-items: center; gap: 10px; background: var(--glass); padding: 10px 20px; border-radius: 50px; border: 1px solid var(--primary);">
-                <img src="" id="user-avatar"
-                    style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff;">
-                <span id="user-name">Agent 007</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- MATCHMAKING -->
-    <div id="screen-loading" class="screen">
-        <div class="loader-circle"
-            style="width: 80px; height: 80px; border: 5px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
-        </div>
-        <h2 style="margin-top: 30px; font-family: 'Orbitron';">INITIALIZING ARENA...</h2>
-        <p id="load-status" style="color: var(--primary);">Connecting to Global Server</p>
-    </div>
-
-    <!-- GAME OVER -->
-    <div id="screen-gameover" class="screen">
-        <h2 id="final-result" style="font-size: 3rem; font-family: 'Orbitron';">VICTORY</h2>
-        <p id="stats" style="margin: 20px 0; font-size: 1.5rem;"></p>
-        <button class="action-btn" onclick="location.reload()">Back to Lobby</button>
-    </div>
-
-    <div id="crosshair"></div>
-
-    <div id="hud">
-        <div class="health-bar-container">
-            <div id="hp-fill" class="health-bar-fill"></div>
-        </div>
-        <div class="hud-bottom-right">
-            <span class="ammo-label">Ammunition</span>
-            <div class="ammo-display"><span id="ammo-count">30</span><span
-                    style="opacity: 0.5; font-size: 1.5rem;">/∞</span></div>
-        </div>
-        <div class="kill-feed" id="kill-feed">Battle Started...</div>
-    </div>
-
-    <!-- MOBILE OVERLAY -->
-    <div id="mobile-controls" oncontextmenu="return false;">
-        <div class="joystick-zone" id="joystick"></div>
-        <div class="fire-btn" id="fire-btn"><i class="fas fa-crosshairs" style="font-size: 2.5rem;"></i></div>
-        <div class="reload-btn" id="reload-btn"><i class="fas fa-sync-alt"></i></div>
-    </div>
-
-    <script src="game.js"></script>
+        // Pencere Boyutu
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
 </body>
-
 </html>
