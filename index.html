@@ -3,184 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#064e3b">
-    <title>3D Pro Soccer Online 1v1</title>
-
+    <title>Elite Soccer 3D Online</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        /* TAM EKRAN VE SAHA TASARIMI */
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background: #064e3b; color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        /* 3D Saha Görünümü */
-        .game-container {
-            perspective: 1200px;
-            width: 100vw; height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(circle, #059669 0%, #064e3b 100%);
-        }
-
-        .soccer-field {
-            width: 80vw; height: 60vh;
-            background: #059669;
-            border: 4px solid white;
-            position: relative;
-            transform: rotateX(45deg); /* Sahayı 3D yatırır */
-            box-shadow: 0 50px 100px rgba(0,0,0,0.5);
-        }
-
-        /* Çizgiler */
-        .mid-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: white; transform: translateX(-50%); }
-        .mid-circle { 
-            position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; 
-            border: 4px solid white; border-radius: 50%; transform: translate(-50%, -50%); 
-        }
-
-        /* Kaleler */
-        .goal { position: absolute; width: 15px; height: 30%; background: white; top: 35%; box-shadow: 0 0 15px white; }
-        .goal-left { left: -5px; }
-        .goal-right { right: -5px; }
-
-        /* 3D Nesnelerin Sahada Dik Durması */
-        .entity {
-            position: absolute;
-            transform: rotateX(-45deg) translateY(-50%); /* Sahaya göre dik durmalarını sağlar */
-            transition: all 0.05s linear;
-        }
-
-        .player {
-            width: 40px; height: 40px; border-radius: 50%;
-            border: 3px solid white; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 12px; box-shadow: 0 10px 10px rgba(0,0,0,0.4);
-        }
-
-        .ball {
-            width: 25px; height: 25px; background: white; border-radius: 50%;
-            background-image: radial-gradient(circle at 30% 30%, #fff, #999);
-            box-shadow: 0 15px 5px rgba(0,0,0,0.2);
-        }
-
-        .ui-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 100;
-        }
+        body { margin: 0; overflow: hidden; background: #001a00; touch-action: none; }
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; font-family: 'Arial Black', sans-serif; }
+        .score-board { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 10px; border: 2px solid #ffd700; display: flex; gap: 20px; color: white; font-size: 24px; }
+        #joystick-container { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 60px; pointer-events: auto; }
+        #joystick-knob { position: absolute; width: 50px; height: 50px; background: #ffd700; border-radius: 25px; left: 35px; top: 35px; }
+        #shoot-btn { position: absolute; bottom: 40px; right: 40px; width: 100px; height: 100px; background: radial-gradient(#ff0000, #990000); border-radius: 50%; pointer-events: auto; border: 4px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-
-        const SoccerGame = () => {
-            const [screen, setScreen] = useState('lobby'); // lobby, searching, game
-            const [score, setScore] = useState({ p1: 0, p2: 0 });
-            const [positions, setPositions] = useState({
-                ball: { x: 50, y: 50 },
-                p1: { x: 20, y: 50 },
-                p2: { x: 80, y: 50 }
-            });
-
-            const ws = useRef(null);
-
-            // Sunucu Bağlantısı (Render adresin)
-            const connect = () => {
-                setScreen('searching');
-                ws.current = new WebSocket("wss://saskioyunu.onrender.com");
-
-                ws.current.onmessage = (e) => {
-                    const data = JSON.parse(e.data);
-                    if (data.type === 'game_start') setScreen('game');
-                    if (data.type === 'sync') {
-                        setPositions(data.positions);
-                        setScore(data.score);
-                    }
-                };
-            };
-
-            // Mobil Hareket Kontrolü (Dokunmatik)
-            const handleTouch = (e) => {
-                if (screen !== 'game') return;
-                const touch = e.touches[0];
-                const xP = (touch.clientX / window.innerWidth) * 100;
-                const yP = (touch.clientY / window.innerHeight) * 100;
-                
-                ws.current.send(JSON.stringify({ type: 'move', x: xP, y: yP }));
-            };
-
-            if (screen === 'lobby') return (
-                <div className="flex flex-col items-center justify-center h-screen bg-green-950">
-                    <h1 className="text-6xl font-black italic mb-2 tracking-tighter">PRO SOCCER</h1>
-                    <p className="text-yellow-500 font-bold tracking-widest mb-10">ONLINE ARENA 1V1</p>
-                    <button onClick={connect} className="bg-white text-green-900 px-12 py-4 rounded-2xl font-black text-2xl shadow-2xl active:scale-90 transition-transform">MAÇ BUL</button>
-                </div>
-            );
-
-            if (screen === 'searching') return (
-                <div className="flex flex-col items-center justify-center h-screen bg-green-950">
-                    <div className="w-20 h-20 border-8 border-yellow-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-                    <p className="text-2xl font-bold animate-pulse">RAKİP ARANIYOR...</p>
-                </div>
-            );
-
-            return (
-                <div className="game-container" onTouchMove={handleTouch}>
-                    {/* SKOR TABELASI */}
-                    <div className="fixed top-10 flex gap-8 bg-black/40 backdrop-blur-md px-10 py-3 rounded-2xl border border-white/20 z-[200] pointer-events-none">
-                        <div className="text-3xl font-black">{score.p1}</div>
-                        <div className="text-xl text-white/40">VS</div>
-                        <div className="text-3xl font-black">{score.p2}</div>
-                    </div>
-
-                    <div className="soccer-field">
-                        <div className="mid-line"></div>
-                        <div className="mid-circle"></div>
-                        <div className="goal goal-left"></div>
-                        <div className="goal goal-right"></div>
-
-                        {/* TOP */}
-                        <div className="entity ball" style={{ left: `${positions.ball.x}%`, top: `${positions.ball.y}%` }}></div>
-
-                        {/* OYUNCULAR */}
-                        <div className="entity player bg-blue-600" style={{ left: `${positions.p1.x}%`, top: `${positions.p1.y}%` }}>Siz</div>
-                        <div className="entity player bg-red-600" style={{ left: `${positions.p2.x}%`, top: `${positions.p2.y}%` }}>Rakip</div>
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<SoccerGame />);
-    </script>
+    <div id="ui-layer">
+        <div class="score-board">
+            <span id="p1-name">EV SAHİBİ</span>
+            <span id="score">0 : 0</span>
+            <span id="p2-name">RAKİP</span>
+        </div>
+        <div id="joystick-container"><div id="joystick-knob"></div></div>
+        <div id="shoot-btn">ŞUT</div>
+    </div>
 
     <script>
+        // --- TELEGRAM FULLSCREEN ---
         const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand(); // Ekranı genişletir
-        
-        // Cihaz destekliyorsa tam ekran yapar
-        if (tg.requestFullscreen) {
-            tg.requestFullscreen();
-        }
-
-        // Sayfa kaymasını engeller
+        tg.ready(); tg.expand();
+        if(tg.requestFullscreen) tg.requestFullscreen();
         tg.disableVerticalSwipes();
 
-        // Telefonu yan çevirme uyarısı (İsteğe bağlı)
-        window.addEventListener("orientationchange", function() {
-            if (window.orientation === 0) {
-                alert("Daha iyi bir deneyim için lütfen telefonu yan çevirin!");
-            }
+        // --- 3D ENGINE ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x001100);
+        scene.fog = new THREE.Fog(0x001100, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // --- SAHA VE ÇİMEN ---
+        const fieldGeo = new THREE.PlaneGeometry(60, 100);
+        const fieldMat = new THREE.MeshPhongMaterial({ color: 0x1a472a });
+        const field = new THREE.Mesh(fieldGeo, fieldMat);
+        field.rotation.x = -Math.PI / 2;
+        field.receiveShadow = true;
+        scene.add(field);
+
+        // Saha Çizgileri (Professional Lines)
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const centerCircle = new THREE.Mesh(new THREE.RingGeometry(9, 9.3, 64), lineMat);
+        centerCircle.rotation.x = -Math.PI / 2; centerCircle.position.y = 0.01;
+        scene.add(centerCircle);
+
+        // Kale Direkleri
+        function createGoal(zPos) {
+            const goalGroup = new THREE.Group();
+            const postGeo = new THREE.CylinderGeometry(0.2, 0.2, 5);
+            const crossGeo = new THREE.CylinderGeometry(0.2, 0.2, 15);
+            
+            const p1 = new THREE.Mesh(postGeo, lineMat); p1.position.set(-7.5, 2.5, 0);
+            const p2 = new THREE.Mesh(postGeo, lineMat); p2.position.set(7.5, 2.5, 0);
+            const cross = new THREE.Mesh(crossGeo, lineMat); cross.rotation.z = Math.PI/2; cross.position.y = 5;
+            
+            goalGroup.add(p1, p2, cross);
+            goalGroup.position.z = zPos;
+            scene.add(goalGroup);
+        }
+        createGoal(-50); createGoal(50);
+
+        // --- TOP (BALL) ---
+        const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
+        const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        const ball = new THREE.Mesh(ballGeo, ballMat);
+        ball.castShadow = true;
+        ball.position.y = 0.8;
+        scene.add(ball);
+
+        // --- AYDINLATMA (Gece Maçı) ---
+        const spot1 = new THREE.SpotLight(0xffffff, 1);
+        spot1.position.set(30, 40, 30); spot1.castShadow = true;
+        scene.add(spot1);
+        scene.add(new THREE.AmbientLight(0x404040, 0.5));
+
+        // --- MULTIPLAYER & LOGIC ---
+        camera.position.set(0, 25, 40);
+        camera.lookAt(0, 0, 0);
+
+        // Joystick Logic
+        const knob = document.getElementById('joystick-knob');
+        let moveDir = { x: 0, z: 0 };
+        
+        document.getElementById('joystick-container').addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const rect = e.target.getBoundingClientRect();
+            let dx = touch.clientX - (rect.left + 60);
+            let dy = touch.clientY - (rect.top + 60);
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if(dist > 50) { dx *= 50/dist; dy *= 50/dist; }
+            knob.style.transform = `translate(${dx}px, ${dy}px)`;
+            moveDir = { x: dx/50, z: dy/50 };
         });
+
+        document.getElementById('joystick-container').addEventListener('touchend', () => {
+            knob.style.transform = `translate(0px, 0px)`;
+            moveDir = { x: 0, z: 0 };
+        });
+
+        // Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            // Topun dönme efekti
+            ball.rotation.x += moveDir.z * 0.1;
+            ball.rotation.z -= moveDir.x * 0.1;
+            
+            // Kamera Topu Takip Etsin
+            camera.position.lerp(new THREE.Vector3(ball.position.x, 20, ball.position.z + 30), 0.1);
+            camera.lookAt(ball.position);
+
+            renderer.render(scene, camera);
+        }
+        animate();
     </script>
 </body>
 </html>
