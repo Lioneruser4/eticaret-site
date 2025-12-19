@@ -3,191 +3,941 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backrooms Pro FPS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Backrooms Arena</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
         
-        /* LOBİ EKRANI */
-        #lobby {
-            position: fixed; inset: 0; background: #1a1a00;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 2000; color: yellow; font-family: sans-serif;
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+            color: white;
         }
-
-        /* OYUN İÇİ BUTONLAR */
-        #ui-layer { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
         
-        /* Sol Joystick Alanı */
-        #joystick-area {
-            position: absolute; bottom: 20px; left: 20px;
-            width: 150px; height: 150px; background: rgba(255,255,255,0.1);
-            border-radius: 50%; pointer-events: auto; border: 2px solid rgba(255,255,0,0.2);
+        #gameContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
-        #joystick-knob {
-            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
-            background: yellow; border-radius: 50%; transform: translate(-50%, -50%);
+        
+        canvas {
+            display: block;
         }
-
-        /* Sağ Saldırı Butonu */
-        #attack-btn {
-            position: absolute; bottom: 40px; right: 40px;
-            width: 100px; height: 100px; background: rgba(255,0,0,0.7);
-            border: 3px solid white; border-radius: 50%; pointer-events: auto;
-            display: none; align-items: center; justify-content: center; color: white; font-weight: bold;
+        
+        /* UI Katmanları */
+        .ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        /* Lobi Ekranı */
+        .lobby-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+        }
+        
+        .lobby-screen.active {
+            display: flex;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            color: #ffd700;
+            text-shadow: 0 0 10px #ffd700;
+            margin-bottom: 2rem;
+            font-weight: bold;
+        }
+        
+        .player-count {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #ccc;
+        }
+        
+        .domino-container {
+            display: flex;
+            gap: 10px;
+            margin: 2rem 0;
+        }
+        
+        .domino-piece {
+            width: 60px;
+            height: 100px;
+            background: linear-gradient(45deg, #222, #444);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .domino-piece.active {
+            background: linear-gradient(45deg, #444, #666);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+            transform: scale(1.1);
+        }
+        
+        .button {
+            pointer-events: auto;
+            background: linear-gradient(45deg, #ff6b00, #ffd700);
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+        }
+        
+        .button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
+        }
+        
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .button.monster {
+            background: linear-gradient(45deg, #ff0000, #ff6b6b);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        
+        /* Oyun İçi UI */
+        .hud {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .role-indicator {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            align-self: center;
+        }
+        
+        .role-indicator.human {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .role-indicator.monster {
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .players-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 200px;
+        }
+        
+        .player-tag {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .player-tag.human {
+            background: rgba(0, 255, 0, 0.1);
+        }
+        
+        .player-tag.monster {
+            background: rgba(255, 0, 0, 0.1);
+        }
+        
+        .player-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        /* Kontroller */
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+        
+        .joystick-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+        
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .joystick-handle {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .action-button {
+            pointer-events: auto;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 0, 0, 0.8);
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .action-button.active {
+            opacity: 1;
+        }
+        
+        .action-button:active {
+            transform: scale(0.95);
+        }
+        
+        /* Bildirimler */
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.5rem;
+            border: 2px solid #ffd700;
+            display: none;
+        }
+        
+        .notification.show {
+            display: block;
+            animation: fadeInOut 3s;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            20%, 80% { opacity: 1; }
+        }
+        
+        /* Yükleniyor */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-size: 2rem;
+            color: #ffd700;
+        }
+        
+        /* Cihaz Yönlendirme Uyarısı */
+        .orientation-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 2000;
+            font-size: 1.5rem;
+        }
+        
+        @media (orientation: portrait) {
+            .orientation-warning {
+                display: flex;
+            }
         }
     </style>
 </head>
 <body>
-
-    <div id="lobby">
-        <h1 class="text-4xl font-black italic">BACKROOMS ONLINE</h1>
-        <p id="matchmaking-text" class="mt-4 text-xl animate-pulse">SUNUCUYA BAĞLANILIYOR...</p>
-        <button id="start-btn" class="hidden mt-6 bg-yellow-500 text-black px-10 py-3 rounded-full font-bold">OYUNA GİR</button>
+    <!-- Yönlendirme Uyarısı -->
+    <div class="orientation-warning">
+        <div>
+            ⚠️ Lütfen cihazınızı yatay konuma getirin<br>
+            <small>Oyun en iyi yatay modda çalışır</small>
+        </div>
     </div>
-
-    <div id="ui-layer">
-        <div id="joystick-area"><div id="joystick-knob"></div></div>
-        <div id="attack-btn">VUR</div>
+    
+    <!-- Yükleniyor Ekranı -->
+    <div class="loading" id="loadingScreen">
+        BACKROOMS ARENA Yükleniyor...
+    </div>
+    
+    <!-- Oyun Konteyneri -->
+    <div id="gameContainer"></div>
+    
+    <!-- UI Katmanları -->
+    <div class="ui-layer">
+        <!-- Lobi Ekranı -->
+        <div class="lobby-screen active" id="lobbyScreen">
+            <div class="logo">BACKROOMS ARENA</div>
+            <div class="player-count" id="playerCount">Oyuncular Bekleniyor: 0/2</div>
+            <div class="domino-container" id="dominoContainer">
+                <div class="domino-piece">1</div>
+                <div class="domino-piece">0</div>
+            </div>
+            <button class="button" id="findMatchButton" onclick="findMatch()">MAÇ ARA</button>
+            <button class="button" id="joinGameButton" onclick="joinGame()" disabled>OYUNA GİR</button>
+        </div>
+        
+        <!-- Oyun İçi HUD -->
+        <div class="hud" id="hud" style="display: none;">
+            <div class="role-indicator human" id="roleIndicator">İNSAN</div>
+            <div class="players-info" id="playersInfo"></div>
+            <div class="controls">
+                <div class="joystick-container" id="joystickContainer">
+                    <div class="joystick-base"></div>
+                    <div class="joystick-handle" id="joystickHandle"></div>
+                </div>
+                <button class="action-button" id="attackButton" onclick="attack()">VUR</button>
+            </div>
+        </div>
+        
+        <!-- Bildirimler -->
+        <div class="notification" id="notification"></div>
     </div>
 
     <script>
-        // --- 1. SAHNE VE FİZİK AYARLARI ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a05);
-        scene.fog = new THREE.Fog(0x1a1a05, 1, 20);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const walls = [];
-        const wallMat = new THREE.MeshPhongMaterial({ color: 0x888844 });
-        
-        // Labirent Oluşturma ve Çarpışma Listesine Ekleme
-        function createWall(x, z) {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 4), wallMat);
-            wall.position.set(x, 3, z);
-            scene.add(wall);
-            walls.push(new THREE.Box3().setFromObject(wall)); // Fizik kutusu
-        }
-
-        // Rastgele Labirent
-        for(let i=-5; i<5; i++) {
-            for(let j=-5; j<5; j++) {
-                if(Math.random() > 0.6) createWall(i*8, j*8);
-            }
-        }
-
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({color: 0x444422}));
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const light = new THREE.PointLight(0xffffff, 0.8, 15);
-        camera.add(light);
-        scene.add(camera);
-
-        // --- 2. MULTIPLAYER (LOBİ) ---
-        const socket = new WebSocket("wss://saskioyunu.onrender.com");
-        let myId = null;
+        // Telegram WebApp başlatma
+        const tg = window.Telegram.WebApp;
+        let ws = null;
+        let playerId = null;
         let players = {};
+        let isMonster = false;
+        let gameStarted = false;
+        let scene, camera, renderer, controls;
+        let playerMesh = null;
+        let playerBox = null;
+        let mazeWalls = [];
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let mouseX = 0, mouseY = 0;
+        let windowHalfX = window.innerWidth / 2;
+        let windowHalfY = window.innerHeight / 2;
+        let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 };
 
-        socket.onopen = () => {
-            document.getElementById('matchmaking-text').innerText = "OYUNCU BEKLENİYOR (1/2)...";
-        };
+        // DOM elementleri
+        const loadingScreen = document.getElementById('loadingScreen');
+        const lobbyScreen = document.getElementById('lobbyScreen');
+        const hud = document.getElementById('hud');
+        const playerCount = document.getElementById('playerCount');
+        const dominoContainer = document.getElementById('dominoContainer');
+        const findMatchButton = document.getElementById('findMatchButton');
+        const joinGameButton = document.getElementById('joinGameButton');
+        const roleIndicator = document.getElementById('roleIndicator');
+        const playersInfo = document.getElementById('playersInfo');
+        const attackButton = document.getElementById('attackButton');
+        const notification = document.getElementById('notification');
+        const joystickHandle = document.getElementById('joystickHandle');
+        const joystickContainer = document.getElementById('joystickContainer');
 
-        socket.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if(data.type === 'sync') {
-                const count = Object.keys(data.players).length;
-                document.getElementById('matchmaking-text').innerText = `OYUNCU BULUNDU (${count}/10)`;
-                if(count >= 2) document.getElementById('start-btn').classList.remove('hidden');
-                syncPlayers(data.players);
-            }
-        };
+        // Sunucu adresi
+        const SERVER_URL = 'wss://saskioyunu.onrender.com';
 
-        document.getElementById('start-btn').onclick = () => {
-            document.getElementById('lobby').style.display = 'none';
-        };
-
-        // --- 3. PUBG TARZI KONTROLLER ---
-        let moveDir = { x: 0, z: 0 };
-        const knob = document.getElementById('joystick-knob');
-        
-        // Sol Joystick Hareket
-        document.getElementById('joystick-area').ontouchmove = (e) => {
-            const touch = e.touches[0];
-            const rect = e.currentTarget.getBoundingClientRect();
-            let dx = touch.clientX - (rect.left + 75);
-            let dy = touch.clientY - (rect.top + 75);
-            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 50);
-            const angle = Math.atan2(dy, dx);
+        // Oyunu başlat
+        function init() {
+            // Telegram WebApp hazır
+            tg.expand();
+            tg.requestFullscreen();
+            tg.enableClosingConfirmation();
             
-            knob.style.left = `calc(50% + ${Math.cos(angle)*dist}px)`;
-            knob.style.top = `calc(50% + ${Math.sin(angle)*dist}px)`;
+            // Rastgele oyuncu ID
+            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
             
-            moveDir.x = Math.cos(angle) * (dist/50);
-            moveDir.z = Math.sin(angle) * (dist/50);
-        };
+            // WebSocket bağlantısı
+            connectWebSocket();
+            
+            // DOM olayları
+            setupEventListeners();
+            
+            // 3D sahneyi başlat
+            init3DScene();
+            
+            // Yükleme ekranını gizle
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 2000);
+            
+            // Oyun döngüsünü başlat
+            animate();
+        }
 
-        document.getElementById('joystick-area').ontouchend = () => {
-            knob.style.left = '50%'; knob.style.top = '50%';
-            moveDir = { x: 0, z: 0 };
-        };
+        function connectWebSocket() {
+            ws = new WebSocket(SERVER_URL);
+            
+            ws.onopen = () => {
+                console.log('Sunucuya bağlandı');
+                sendMessage({ type: 'join', playerId: playerId });
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleServerMessage(data);
+            };
+            
+            ws.onclose = () => {
+                console.log('Sunucu bağlantısı kesildi');
+                showNotification('Sunucu bağlantısı kesildi');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
 
-        // Sağ Ekran Bakış
-        let lastTouchX = 0;
-        document.body.ontouchmove = (e) => {
-            if(e.target.id === 'joystick-area') return;
-            const tx = e.touches[0].clientX;
-            if(lastX) camera.rotation.y -= (tx - lastX) * 0.008;
-            lastX = tx;
-        };
-        document.body.ontouchend = () => lastX = 0;
-
-        // --- 4. FİZİK VE DUVAR ÇARPIŞMASI ---
-        function checkCollision(newPos) {
-            const playerBox = new THREE.Box3().setFromCenterAndSize(
-                newPos, new THREE.Vector3(1, 1, 1)
-            );
-            for(let wallBox of walls) {
-                if(playerBox.intersectsBox(wallBox)) return true;
+        function sendMessage(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(message));
             }
-            return false;
+        }
+
+        function handleServerMessage(data) {
+            switch(data.type) {
+                case 'playerCount':
+                    updatePlayerCount(data.count);
+                    break;
+                case 'gameStart':
+                    startGame(data.players, data.isMonster);
+                    break;
+                case 'playerUpdate':
+                    updatePlayers(data.players);
+                    break;
+                case 'roleChange':
+                    changeRole(data.newRole, data.targetPlayerId);
+                    break;
+                case 'gameOver':
+                    endGame(data.winner);
+                    break;
+            }
+        }
+
+        function updatePlayerCount(count) {
+            playerCount.textContent = `Oyuncular Bekleniyor: ${count}/10`;
+            const dominoPieces = dominoContainer.querySelectorAll('.domino-piece');
+            
+            dominoPieces.forEach((piece, index) => {
+                if (index < count) {
+                    piece.classList.add('active');
+                } else {
+                    piece.classList.remove('active');
+                }
+            });
+            
+            // 2 oyuncu olduğunda "Oyuna Gir" butonunu aktif et
+            joinGameButton.disabled = count < 2;
+        }
+
+        function findMatch() {
+            sendMessage({ type: 'findMatch', playerId: playerId });
+            findMatchButton.disabled = true;
+            findMatchButton.textContent = 'MAÇ ARANIYOR...';
+        }
+
+        function joinGame() {
+            sendMessage({ type: 'startGame' });
+        }
+
+        function startGame(serverPlayers, monsterStatus) {
+            gameStarted = true;
+            lobbyScreen.style.display = 'none';
+            hud.style.display = 'flex';
+            
+            isMonster = monsterStatus;
+            updateRoleUI();
+            
+            players = serverPlayers;
+            updatePlayersUI();
+            
+            // Canavar rolündeyse saldırı butonunu göster
+            if (isMonster) {
+                attackButton.classList.add('active');
+            }
+            
+            showNotification(isMonster ? 'CANAVAR olarak başladın!' : 'İNSAN olarak başladın!');
+            
+            // Haptic feedback (Telegram)
+            if (tg.isVersionAtLeast('6.1')) {
+                tg.HapticFeedback.impactOccurred('heavy');
+            }
+        }
+
+        function updateRoleUI() {
+            if (isMonster) {
+                roleIndicator.textContent = 'CANAVAR';
+                roleIndicator.className = 'role-indicator monster';
+            } else {
+                roleIndicator.textContent = 'İNSAN';
+                roleIndicator.className = 'role-indicator human';
+            }
+        }
+
+        function updatePlayers(serverPlayers) {
+            players = serverPlayers;
+            updatePlayersUI();
+            
+            // 3D oyuncu modellerini güncelle
+            updatePlayerModels();
+        }
+
+        function updatePlayersUI() {
+            playersInfo.innerHTML = '';
+            Object.values(players).forEach(player => {
+                const playerTag = document.createElement('div');
+                playerTag.className = `player-tag ${player.isMonster ? 'monster' : 'human'}`;
+                playerTag.innerHTML = `
+                    <div class="player-color" style="background: ${player.isMonster ? '#ff0000' : '#00ff00'}"></div>
+                    <span>${player.isMonster ? '👹 Canavar' : '👤 İnsan'}</span>
+                `;
+                playersInfo.appendChild(playerTag);
+            });
+        }
+
+        function updatePlayerModels() {
+            // Bu fonksiyon sunucudan gelen diğer oyuncuların pozisyonlarını günceller
+            // Şu anlık temel implementasyon
+        }
+
+        function changeRole(newRole, targetPlayerId) {
+            if (targetPlayerId === playerId) {
+                isMonster = newRole === 'monster';
+                updateRoleUI();
+                
+                if (isMonster) {
+                    attackButton.classList.add('active');
+                    showNotification('CANAVAR oldun!');
+                } else {
+                    attackButton.classList.remove('active');
+                    showNotification('İNSAN oldun!');
+                }
+                
+                // Haptic feedback
+                if (tg.isVersionAtLeast('6.1')) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            }
+        }
+
+        function attack() {
+            if (!isMonster || !gameStarted) return;
+            
+            sendMessage({ type: 'attack', playerId: playerId });
+            
+            // Haptic feedback
+            if (tg.isVersionAtLeast('6.1')) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+
+        function endGame(winner) {
+            showNotification(winner === playerId ? 'KAZANDIN!' : 'KAYBETTİN!');
+            
+            setTimeout(() => {
+                gameStarted = false;
+                hud.style.display = 'none';
+                lobbyScreen.style.display = 'flex';
+                findMatchButton.disabled = false;
+                findMatchButton.textContent = 'MAÇ ARA';
+                attackButton.classList.remove('active');
+            }, 5000);
+        }
+
+        function showNotification(text) {
+            notification.textContent = text;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // 3D Sahne ve Oyun Motoru
+        function init3DScene() {
+            // Sahne
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x000000, 10, 50);
+            
+            // Kamera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+            
+            // Işıklandırma
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            // Titreyen ışıklar (Backrooms atmosferi)
+            for (let i = 0; i < 5; i++) {
+                const pointLight = new THREE.PointLight(0xffd700, 0.5, 20);
+                pointLight.position.set(
+                    Math.random() * 40 - 20,
+                    3,
+                    Math.random() * 40 - 20
+                );
+                scene.add(pointLight);
+                
+                // Titreme efekti
+                (function(light) {
+                    setInterval(() => {
+                        light.intensity = 0.3 + Math.random() * 0.4;
+                    }, 100 + Math.random() * 400);
+                })(pointLight);
+            }
+            
+            // Labirent oluştur
+            createMaze();
+            
+            // Oyuncu modeli
+            const playerGeometry = new THREE.CapsuleGeometry(0.3, 1, 4, 8);
+            const playerMaterial = new THREE.MeshLambertMaterial({ 
+                color: isMonster ? 0xff0000 : 0x00ff00 
+            });
+            playerMesh = new THREE.Mesh(playerGeometry, playerMaterial);
+            playerMesh.castShadow = true;
+            playerMesh.receiveShadow = true;
+            scene.add(playerMesh);
+            
+            // Oyuncu collision box
+            playerBox = new THREE.Box3().setFromObject(playerMesh);
+            
+            // Pencere boyutu değişiklikleri
+            window.addEventListener('resize', onWindowResize);
+            
+            // Dokunmatik kontroller için event listener'lar
+            setupTouchControls();
+        }
+
+        function createMaze() {
+            const wallMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xf0e68c,
+                side: THREE.DoubleSide
+            });
+            
+            const floorMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x8b7355 
+            });
+            
+            // Zemin
+            const floorGeometry = new THREE.PlaneGeometry(100, 100);
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            
+            // Backrooms labirenti (basit versiyon)
+            const mazeSize = 20;
+            const grid = [];
+            
+            // Rastgele labirent oluştur
+            for (let i = 0; i < mazeSize; i++) {
+                grid[i] = [];
+                for (let j = 0; j < mazeSize; j++) {
+                    grid[i][j] = Math.random() > 0.7 ? 1 : 0;
+                }
+            }
+            
+            // Duvarları oluştur
+            for (let i = 0; i < mazeSize; i++) {
+                for (let j = 0; j < mazeSize; j++) {
+                    if (grid[i][j] === 1) {
+                        const wallGeometry = new THREE.BoxGeometry(1, 3, 1);
+                        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                        wall.position.set(i - mazeSize/2, 1.5, j - mazeSize/2);
+                        wall.castShadow = true;
+                        wall.receiveShadow = true;
+                        scene.add(wall);
+                        mazeWalls.push(wall);
+                    }
+                }
+            }
+            
+            // Tavan
+            const ceilingGeometry = new THREE.PlaneGeometry(100, 100);
+            const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
+            ceiling.position.y = 3;
+            ceiling.rotation.x = Math.PI / 2;
+            scene.add(ceiling);
+        }
+
+        function setupTouchControls() {
+            let joystickStart = { x: 0, y: 0 };
+            
+            // Joystick dokunma olayları
+            joystickContainer.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = joystickContainer.getBoundingClientRect();
+                joystickStart = {
+                    x: touch.clientX - rect.left,
+                    y: touch.clientY - rect.top
+                };
+                joystickActive = true;
+            });
+            
+            joystickContainer.addEventListener('touchmove', (e) => {
+                if (!joystickActive) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = joystickContainer.getBoundingClientRect();
+                
+                let deltaX = touch.clientX - rect.left - joystickStart.x;
+                let deltaY = touch.clientY - rect.top - joystickStart.y;
+                
+                // Joystick sınırları
+                const maxDistance = 60;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                if (distance > maxDistance) {
+                    deltaX = (deltaX / distance) * maxDistance;
+                    deltaY = (deltaY / distance) * maxDistance;
+                }
+                
+                // Joystick handle pozisyonu
+                joystickHandle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                
+                // Hareket vektörü
+                joystickVector.x = deltaX / maxDistance;
+                joystickVector.y = -deltaY / maxDistance;
+            });
+            
+            joystickContainer.addEventListener('touchend', (e) => {
+                joystickActive = false;
+                joystickHandle.style.transform = 'translate(-50%, -50%)';
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+            });
+            
+            // Sağ tarafta bakış kontrolü
+            let lastTouch = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    
+                    // Sağ tarafta mı?
+                    if (touch.clientX - rect.left > window.innerWidth / 2) {
+                        lastTouch.x = touch.clientX;
+                        lastTouch.y = touch.clientY;
+                    }
+                }
+            });
+            
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && !joystickActive) {
+                    const touch = e.touches[0];
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    
+                    // Sağ tarafta mı?
+                    if (touch.clientX - rect.left > window.innerWidth / 2) {
+                        const deltaX = touch.clientX - lastTouch.x;
+                        const deltaY = touch.clientY - lastTouch.y;
+                        
+                        mouseX += deltaX * 0.005;
+                        mouseY += deltaY * 0.005;
+                        
+                        lastTouch.x = touch.clientX;
+                        lastTouch.y = touch.clientY;
+                    }
+                }
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
         }
 
         function animate() {
             requestAnimationFrame(animate);
             
-            if(moveDir.x !== 0 || moveDir.z !== 0) {
-                const nextPos = camera.position.clone();
-                nextPos.addScaledVector(new THREE.Vector3(moveDir.x, 0, moveDir.z).applyQuaternion(camera.quaternion), 0.15);
+            if (gameStarted && playerMesh) {
+                // Hareket
+                const speed = isMonster ? 0.15 : 0.1;
+                const moveX = joystickVector.x * speed;
+                const moveZ = joystickVector.y * speed;
                 
-                if(!checkCollision(nextPos)) {
-                    camera.position.copy(nextPos);
+                // Kamerayı mouse/gyro ile döndür
+                camera.rotation.y -= mouseX;
+                camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x - mouseY, -Math.PI/3, Math.PI/3);
+                
+                // Karakter hareketi (kamera yönüne göre)
+                const direction = new THREE.Vector3();
+                camera.getWorldDirection(direction);
+                direction.y = 0;
+                direction.normalize();
+                
+                const right = new THREE.Vector3();
+                right.crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize();
+                
+                const movement = new THREE.Vector3();
+                movement.addScaledVector(direction, moveZ);
+                movement.addScaledVector(right, moveX);
+                
+                // Collision kontrolü
+                const oldPosition = playerMesh.position.clone();
+                playerMesh.position.add(movement);
+                playerBox.setFromObject(playerMesh);
+                
+                let collision = false;
+                for (const wall of mazeWalls) {
+                    const wallBox = new THREE.Box3().setFromObject(wall);
+                    if (playerBox.intersectsBox(wallBox)) {
+                        collision = true;
+                        break;
+                    }
                 }
+                
+                if (collision) {
+                    playerMesh.position.copy(oldPosition);
+                }
+                
+                // Kamerayı karaktere bağla
+                camera.position.copy(playerMesh.position);
+                camera.position.y = 1.7;
+                
+                // Kafa sallanma efekti (head bobbing)
+                if (movement.length() > 0) {
+                    const time = Date.now() * 0.01;
+                    camera.position.y += Math.sin(time * 10) * 0.05;
+                }
+                
+                // Mouse hareketini sıfırla
+                mouseX *= 0.95;
+                mouseY *= 0.95;
+                
+                // Pozisyonu sunucuya gönder
+                sendMessage({
+                    type: 'position',
+                    playerId: playerId,
+                    position: playerMesh.position,
+                    rotation: camera.rotation
+                });
             }
-            camera.position.y = 1.6;
-
-            if(socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'update',
-                    pos: { x: camera.position.x, z: camera.position.z, ry: camera.rotation.y }
-                }));
-            }
+            
             renderer.render(scene, camera);
         }
-        animate();
 
-        // --- 5. TELEGRAM TAM EKRAN ---
-        const tg = window.Telegram.WebApp;
-        tg.ready(); tg.expand();
-        if(tg.requestFullscreen) tg.requestFullscreen();
-        tg.disableVerticalSwipes();
-        tg.setHeaderColor('#1a1a00');
+        function setupEventListeners() {
+            // Klavye kontrolleri (debug için)
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+            
+            // Gyroscope desteği
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (e) => {
+                    if (e.gamma && e.beta) {
+                        mouseX = e.gamma * 0.01;
+                        mouseY = (e.beta - 90) * 0.01;
+                    }
+                });
+            }
+        }
+
+        // Uygulamayı başlat
+        window.onload = init;
     </script>
 </body>
 </html>
