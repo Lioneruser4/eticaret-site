@@ -2,91 +2,131 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backrooms Multiplayer Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>Backrooms Pro Multiplayer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a00; }
-        #joystick-zone { position: fixed; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; z-index: 50; }
-        #attack-btn { position: fixed; bottom: 50px; right: 40px; width: 100px; height: 100px; background: rgba(255,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; z-index: 50; border: 4px solid white; }
-        #lobby { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-col; items: center; justify-content: center; color: yellow; }
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; font-family: sans-serif; }
+        
+        /* SOL JOYSTICK */
+        #joystick-wrapper {
+            position: fixed; bottom: 30px; left: 50px;
+            width: 150px; height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%; border: 2px solid rgba(255,255,0,0.3);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        #joystick-stick {
+            width: 60px; height: 60px; background: yellow;
+            border-radius: 50%; box-shadow: 0 0 15px rgba(255,255,0,0.5);
+        }
+
+        /* SAĞ VUR BUTONU (Sadece Canavarda Gözükür) */
+        #attack-btn {
+            position: fixed; bottom: 50px; right: 60px;
+            width: 110px; height: 110px;
+            background: radial-gradient(#f00, #500);
+            border: 4px solid #fff; border-radius: 50%;
+            color: white; font-weight: bold; font-size: 20px;
+            display: none; align-items: center; justify-content: center;
+            z-index: 100; box-shadow: 0 0 20px rgba(255,0,0,0.6);
+        }
+
+        /* LOBİ VE ARAYÜZ */
+        #lobby {
+            position: fixed; inset: 0; background: #1a1a00;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #ffff00; z-index: 1000; text-align: center;
+        }
+        #ui-top {
+            position: fixed; top: 15px; width: 100%; text-align: center;
+            color: yellow; font-weight: bold; z-index: 50; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
     <div id="lobby">
-        <h1 class="text-4xl font-black mb-4">BACKROOMS ARENA</h1>
-        <p id="status">OYUNCU BEKLENİYOR (Min 2)...</p>
-        <div id="player-count" class="mt-4 text-2xl">1 / 10</div>
+        <h1 style="font-size: 40px; margin-bottom: 10px;">BACKROOMS ARENA</h1>
+        <p id="statusText">RAKİP BEKLENİYOR... (1/2)</p>
+        <p style="font-size: 14px; opacity: 0.7;">Lütfen Telefonu Yan Çevirin</p>
     </div>
 
-    <div id="ui" class="fixed top-4 left-4 text-yellow-500 font-mono z-40 hidden">
-        ROLÜN: <span id="my-role">İNSAN</span>
+    <div id="ui-top">MOD: <span id="roleText">İNSAN</span> | OYUNCULAR: <span id="countText">1</span></div>
+
+    <div id="joystick-wrapper">
+        <div id="joystick-stick"></div>
     </div>
 
-    <div id="joystick-zone"></div>
-    <button id="attack-btn" class="hidden">VUR!</button>
+    <div id="attack-btn">SALDIR!</div>
 
     <script>
-        // --- TELEGRAM & SETUP ---
         const tg = window.Telegram.WebApp;
         tg.ready(); tg.expand();
-        if(tg.requestFullscreen) tg.requestFullscreen();
 
+        // 3D KURULUM
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a1a05);
-        scene.fog = new THREE.Fog(0x1a1a05, 2, 15);
+        scene.fog = new THREE.Fog(0x1a1a05, 1, 25);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- DÜNYA (LABİRENT) ---
-        const wallTex = new THREE.MeshPhongMaterial({ color: 0x999944 });
-        const floorTex = new THREE.MeshPhongMaterial({ color: 0x444422 });
+        // IŞIKLANDIRMA (Sarı patlamayı engellemek için loş ışık)
+        const amb = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(amb);
+        const spot = new THREE.PointLight(0xffffcc, 1, 15);
+        camera.add(spot);
+        scene.add(camera);
 
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), floorTex);
+        // DÜNYA (LABİRENT)
+        const wallMat = new THREE.MeshPhongMaterial({ color: 0x9c9c5e });
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x5e5e3a });
+        
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), floorMat);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // Labirent Duvarları (Daha büyük ve profesyonel)
-        for(let i=0; i<30; i++) {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 6), wallTex);
-            wall.position.set(Math.random()*100-50, 4, Math.random()*100-50);
-            scene.add(wall);
+        // Rastgele Duvarlar
+        for(let i=0; i<40; i++) {
+            const h = 6;
+            const w = new THREE.Mesh(new THREE.BoxGeometry(4, h, 4), wallMat);
+            w.position.set(Math.floor(Math.random()*20-10)*8, h/2, Math.floor(Math.random()*20-10)*8);
+            scene.add(w);
         }
 
-        const light = new THREE.PointLight(0xffffff, 1, 15);
-        camera.add(light);
-        scene.add(camera);
-        scene.add(new THREE.AmbientLight(0x222222));
-
-        // --- MULTIPLAYER ---
+        // MULTIPLAYER MANTIĞI
         const socket = new WebSocket("wss://saskioyunu.onrender.com");
         let players = {};
-        let myId = null;
+        let myRole = "human";
 
-        socket.onmessage = (e) => {
-            const data = JSON.parse(e.data);
+        socket.onmessage = (msg) => {
+            const data = JSON.parse(msg.data);
             if(data.type === 'sync') {
-                document.getElementById('player-count').innerText = `${data.playerCount} / 10`;
-                if(data.playerCount >= 2) {
-                    document.getElementById('lobby').classList.add('hidden');
-                    document.getElementById('attack-btn').classList.remove('hidden');
-                    document.getElementById('ui').classList.remove('hidden');
-                }
                 updatePlayers(data.players);
+                document.getElementById('countText').innerText = Object.keys(data.players).length;
+                
+                if(Object.keys(data.players).length >= 2) {
+                    document.getElementById('lobby').style.display = 'none';
+                }
             }
         };
 
         function updatePlayers(serverPlayers) {
             Object.keys(serverPlayers).forEach(id => {
+                // Kendi rolümüzü kontrol edelim
+                if(serverPlayers[id].isMe) {
+                    myRole = serverPlayers[id].role;
+                    document.getElementById('roleText').innerText = myRole.toUpperCase();
+                    document.getElementById('attack-btn').style.display = (myRole === 'monster') ? 'flex' : 'none';
+                }
+                
                 if(!players[id]) {
                     const geo = new THREE.BoxGeometry(1, 2, 1);
-                    const mat = new THREE.MeshBasicMaterial({ color: serverPlayers[id].role === 'monster' ? 0xff0000 : 0x00ff00 });
+                    const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                     players[id] = new THREE.Mesh(geo, mat);
                     scene.add(players[id]);
                 }
@@ -95,31 +135,51 @@
             });
         }
 
-        // --- MOBİL KONTROLLER (DOKUNMATİK ÇEVİRME) ---
-        let moveForward = 0;
-        let lastTouchX = 0;
-
-        document.addEventListener('touchstart', (e) => {
-            if(e.target.id === 'attack-btn') {
-                socket.send(JSON.stringify({ type: 'hit', targetId: 'proksimity_check' }));
-            }
-            lastTouchX = e.touches[0].clientX;
-        });
-
-        document.addEventListener('touchmove', (e) => {
+        // JOYSTICK KONTROLLERİ
+        let moveX = 0, moveZ = 0;
+        const stick = document.getElementById('joystick-stick');
+        
+        document.getElementById('joystick-wrapper').addEventListener('touchmove', (e) => {
             const touch = e.touches[0];
-            const deltaX = touch.clientX - lastTouchX;
-            camera.rotation.y -= deltaX * 0.005;
-            lastTouchX = touch.clientX;
-            moveForward = 0.15; // Dokunurken ileri git
+            const rect = e.currentTarget.getBoundingClientRect();
+            const centerX = rect.left + rect.width/2;
+            const centerY = rect.top + rect.height/2;
+            
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const maxDist = 45;
+            
+            if(dist > maxDist) { dx *= maxDist/dist; dy *= maxDist/dist; }
+            stick.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            moveX = dx / maxDist;
+            moveZ = dy / maxDist;
         });
 
-        document.addEventListener('touchend', () => moveForward = 0);
+        document.getElementById('joystick-wrapper').addEventListener('touchend', () => {
+            stick.style.transform = `translate(0,0)`;
+            moveX = 0; moveZ = 0;
+        });
+
+        // EKRAN ÇEVİRME (MOUSE LOOK GİBİ)
+        let lastX = 0;
+        document.addEventListener('touchmove', (e) => {
+            if(e.target.id === 'joystick-wrapper' || e.target.id === 'joystick-stick') return;
+            const tx = e.touches[0].clientX;
+            if(lastX) camera.rotation.y -= (tx - lastX) * 0.005;
+            lastX = tx;
+        });
+        document.addEventListener('touchend', () => lastX = 0);
 
         function animate() {
             requestAnimationFrame(animate);
-            if(moveForward > 0) camera.translateZ(-moveForward);
             
+            // Joystick ile Hareket
+            camera.translateZ(moveZ * 0.15);
+            camera.translateX(moveX * 0.15);
+            camera.position.y = 1.6; // Boy seviyesi sabit
+
             if(socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: 'update',
@@ -129,6 +189,12 @@
             renderer.render(scene, camera);
         }
         animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
