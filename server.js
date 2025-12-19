@@ -1,96 +1,60 @@
 const WebSocket = require('ws');
-const http = require('http');
-const express = require('express');
-
-const app = express();
-const server = http.createServer(app);
+const server = require('http').createServer();
 const wss = new WebSocket.Server({ server });
 
-let players = {};
-let ball = { x: 50, y: 50, dx: 0.2, dy: 0.2 }; // Topun konumu ve hızı
-let scores = { p1: 0, p2: 0 };
+let gameState = {
+    ball: { x: 0, y: 0.8, z: 0, vx: 0, vz: 0 },
+    players: {},
+    score: [0, 0]
+};
 
 wss.on('connection', (ws) => {
     const id = Math.random().toString(36).substring(7);
-    
-    // Maksimum 2 oyuncu
-    if (Object.keys(players).length >= 2) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Oda dolu' }));
-        ws.close();
-        return;
-    }
+    gameState.players[id] = { x: 0, z: 20, team: Object.keys(gameState.players).length === 0 ? 0 : 1 };
 
-    players[id] = { ws, x: id === 0 ? 20 : 80, y: 50, score: 0 };
-    console.log(`Oyuncu bağlandı: ${id}`);
+    ws.on('message', (msg) => {
+        const data = JSON.parse(msg);
+        if(data.type === 'input') {
+            const p = gameState.players[id];
+            p.x += data.dx * 0.5;
+            p.z += data.dz * 0.5;
 
-    if (Object.keys(players).length === 2) {
-        broadcast({ type: 'game_start' });
-    }
-
-    ws.on('message', (message) => {
-        const data = JSON.parse(message);
-        if (data.type === 'move' && players[id]) {
-            // Hareket sınırlandırma (Saha dışına çıkmasın)
-            players[id].x = Math.max(5, Math.min(95, data.x));
-            players[id].y = Math.max(5, Math.min(95, data.y));
+            // Topa Vuruş Kontrolü
+            let dist = Math.hypot(p.x - gameState.ball.x, p.z - gameState.ball.z);
+            if(dist < 2) {
+                gameState.ball.vx = (gameState.ball.x - p.x) * 0.8;
+                gameState.ball.vz = (gameState.ball.z - p.z) * 0.8;
+                if(data.shoot) { gameState.ball.vz *= 3; gameState.ball.vx *= 3; }
+            }
         }
-    });
-
-    ws.on('close', () => {
-        delete players[id];
-        scores = { p1: 0, p2: 0 }; // Oyuncu çıkınca skoru sıfırla
     });
 });
 
-// Oyun Döngüsü (Saniyede 60 kez hesapla)
+// Fizik Döngüsü
 setInterval(() => {
-    if (Object.keys(players).length < 2) return;
+    // Sürtünme ve Hareket
+    gameState.ball.x += gameState.ball.vx;
+    gameState.ball.z += gameState.ball.vz;
+    gameState.ball.vx *= 0.98;
+    gameState.ball.vz *= 0.98;
 
-    // 1. Top Hareket Ettir
-    ball.x += ball.dx;
-    ball.y += ball.dy;
-
-    // 2. Duvarlara Çarpma (Üst ve Alt)
-    if (ball.y <= 0 || ball.y >= 100) ball.dy *= -1;
-
-    // 3. Gol Kontrolü
-    if (ball.x <= 0) {
-        scores.p2++;
-        resetBall();
-    } else if (ball.x >= 100) {
-        scores.p1++;
-        resetBall();
-    }
-
-    // 4. Oyuncu-Top Çarpışma Kontrolü
-    Object.values(players).forEach(p => {
-        let dist = Math.hypot(p.x - ball.x, p.y - ball.y);
-        if (dist < 5) { // Çarpışma mesafesi
-            ball.dx *= -1.1; // Hızı artır ve yön değiştir
-            ball.dy = (ball.y - p.y) * 0.5; // Açıyı değiştir
+    // Gol Kontrolü
+    if(Math.abs(gameState.ball.z) > 50) {
+        if(Math.abs(gameState.ball.x) < 7.5) {
+            gameState.ball.z > 0 ? gameState.score[0]++ : gameState.score[1]++;
+            resetBall();
+        } else {
+            gameState.ball.vx *= -1; // Direkten veya dışarıdan dönme
         }
-    });
-
-    // 5. Herkese Senkronize Et
-    const playerArray = Object.values(players);
-    broadcast({
-        type: 'sync',
-        positions: {
-            ball,
-            p1: { x: playerArray[0].x, y: playerArray[0].y },
-            p2: { x: playerArray[1].x, y: playerArray[1].y }
-        },
-        score: scores
-    });
+    }
+    
+    // Herkese Yayınla
+    const update = JSON.stringify({ type: 'sync', state: gameState });
+    wss.clients.forEach(c => c.send(update));
 }, 1000 / 60);
 
 function resetBall() {
-    ball = { x: 50, y: 50, dx: Math.random() > 0.5 ? 0.3 : -0.3, dy: 0.2 };
+    gameState.ball = { x: 0, y: 0.8, z: 0, vx: 0, vz: 0 };
 }
 
-function broadcast(data) {
-    Object.values(players).forEach(p => p.ws.send(JSON.stringify(data)));
-}
-
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`Sunucu ${PORT} portunda çalışıyor`));
+server.listen(10000);
