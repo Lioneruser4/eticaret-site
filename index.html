@@ -3,127 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Soccer 3D Online</title>
+    <title>Backrooms: The Chase</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #001a00; touch-action: none; }
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; font-family: 'Arial Black', sans-serif; }
-        .score-board { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 10px 40px; border-radius: 10px; border: 2px solid #ffd700; display: flex; gap: 20px; color: white; font-size: 24px; }
-        #joystick-container { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 60px; pointer-events: auto; }
-        #joystick-knob { position: absolute; width: 50px; height: 50px; background: #ffd700; border-radius: 25px; left: 35px; top: 35px; }
-        #shoot-btn { position: absolute; bottom: 40px; right: 40px; width: 100px; height: 100px; background: radial-gradient(#ff0000, #990000); border-radius: 50%; pointer-events: auto; border: 4px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
+        body { margin: 0; overflow: hidden; background: #1a1a10; touch-action: none; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; 
+                   background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.4) 80%); z-index: 10; }
+        #vhs-effect { position: fixed; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; pointer-events: none; background: url('https://media.giphy.com/media/oEI9uWUic89VK/giphy.gif'); z-index: 20; }
+        #ui { position: fixed; bottom: 20px; left: 20px; color: #ffff00; font-family: 'Courier New', monospace; z-index: 30; text-shadow: 2px 2px #000; }
+        .joystick { position: fixed; bottom: 40px; right: 40px; width: 80px; height: 80px; background: rgba(255,255,0,0.2); border: 2px solid #ffff00; border-radius: 50%; z-index: 100; display: flex; align-items: center; justify-content: center; color: yellow; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="ui-layer">
-        <div class="score-board">
-            <span id="p1-name">EV SAHİBİ</span>
-            <span id="score">0 : 0</span>
-            <span id="p2-name">RAKİP</span>
-        </div>
-        <div id="joystick-container"><div id="joystick-knob"></div></div>
-        <div id="shoot-btn">ŞUT</div>
-    </div>
+    <div id="overlay"></div>
+    <div id="vhs-effect"></div>
+    <div id="ui">LEVEL 0 - DURUM: HAYATTA</div>
+    <div class="joystick" id="moveBtn">YÜRÜ</div>
 
     <script>
-        // --- TELEGRAM FULLSCREEN ---
         const tg = window.Telegram.WebApp;
         tg.ready(); tg.expand();
-        if(tg.requestFullscreen) tg.requestFullscreen();
-        tg.disableVerticalSwipes();
 
-        // --- 3D ENGINE ---
+        // --- 3D SAHNE ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x001100);
-        scene.fog = new THREE.Fog(0x001100, 10, 50);
+        scene.background = new THREE.Color(0x222200);
+        scene.fog = new THREE.Fog(0x222200, 1, 15); // Sis efekti (Görüş kısıtlı)
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- SAHA VE ÇİMEN ---
-        const fieldGeo = new THREE.PlaneGeometry(60, 100);
-        const fieldMat = new THREE.MeshPhongMaterial({ color: 0x1a472a });
-        const field = new THREE.Mesh(fieldGeo, fieldMat);
-        field.rotation.x = -Math.PI / 2;
-        field.receiveShadow = true;
-        scene.add(field);
+        // --- DUVARLAR VE ZEMİN (Sarı halı ve duvar kağıdı) ---
+        const wallMat = new THREE.MeshPhongMaterial({ color: 0xcccc77 });
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x888844 });
 
-        // Saha Çizgileri (Professional Lines)
-        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const centerCircle = new THREE.Mesh(new THREE.RingGeometry(9, 9.3, 64), lineMat);
-        centerCircle.rotation.x = -Math.PI / 2; centerCircle.position.y = 0.01;
-        scene.add(centerCircle);
-
-        // Kale Direkleri
-        function createGoal(zPos) {
-            const goalGroup = new THREE.Group();
-            const postGeo = new THREE.CylinderGeometry(0.2, 0.2, 5);
-            const crossGeo = new THREE.CylinderGeometry(0.2, 0.2, 15);
-            
-            const p1 = new THREE.Mesh(postGeo, lineMat); p1.position.set(-7.5, 2.5, 0);
-            const p2 = new THREE.Mesh(postGeo, lineMat); p2.position.set(7.5, 2.5, 0);
-            const cross = new THREE.Mesh(crossGeo, lineMat); cross.rotation.z = Math.PI/2; cross.position.y = 5;
-            
-            goalGroup.add(p1, p2, cross);
-            goalGroup.position.z = zPos;
-            scene.add(goalGroup);
+        // Labirent oluşturma (Basit bir 10x10 alan)
+        for(let i = -5; i < 5; i++) {
+            for(let j = -5; j < 5; j++) {
+                if(Math.random() > 0.7) {
+                    const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), wallMat);
+                    wall.position.set(i*4, 2, j*4);
+                    scene.add(wall);
+                }
+            }
         }
-        createGoal(-50); createGoal(50);
 
-        // --- TOP (BALL) ---
-        const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
-        const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
-        const ball = new THREE.Mesh(ballGeo, ballMat);
-        ball.castShadow = true;
-        ball.position.y = 0.8;
-        scene.add(ball);
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
-        // --- AYDINLATMA (Gece Maçı) ---
-        const spot1 = new THREE.SpotLight(0xffffff, 1);
-        spot1.position.set(30, 40, 30); spot1.castShadow = true;
-        scene.add(spot1);
-        scene.add(new THREE.AmbientLight(0x404040, 0.5));
+        // Cılız Işık (Backrooms Lambası)
+        const light = new THREE.PointLight(0xffffaa, 1, 20);
+        camera.add(light); // Işık kamerayla hareket eder (El feneri gibi)
+        scene.add(camera);
 
-        // --- MULTIPLAYER & LOGIC ---
-        camera.position.set(0, 25, 40);
-        camera.lookAt(0, 0, 0);
+        // --- ONLINE BAĞLANTI ---
+        // BURASI ÖNEMLİ: Kendi Render linkini tırnak içine yaz!
+        const socket = new WebSocket("wss://saskioyunu.onrender.com");
+        let otherPlayers = {};
 
-        // Joystick Logic
-        const knob = document.getElementById('joystick-knob');
-        let moveDir = { x: 0, z: 0 };
-        
-        document.getElementById('joystick-container').addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            const rect = e.target.getBoundingClientRect();
-            let dx = touch.clientX - (rect.left + 60);
-            let dy = touch.clientY - (rect.top + 60);
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if(dist > 50) { dx *= 50/dist; dy *= 50/dist; }
-            knob.style.transform = `translate(${dx}px, ${dy}px)`;
-            moveDir = { x: dx/50, z: dy/50 };
+        socket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if(data.type === 'sync') {
+                Object.keys(data.players).forEach(id => {
+                    if(id === socket.id) return;
+                    if(!otherPlayers[id]) {
+                        // Yeni oyuncu (Canavar veya İnsan)
+                        const geometry = new THREE.BoxGeometry(1, 2, 1);
+                        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                        otherPlayers[id] = new THREE.Mesh(geometry, material);
+                        scene.add(otherPlayers[id]);
+                    }
+                    otherPlayers[id].position.set(data.players[id].x, 1, data.players[id].z);
+                });
+            }
+        };
+
+        // --- HAREKET ---
+        let walking = false;
+        document.getElementById('moveBtn').ontouchstart = () => walking = true;
+        document.getElementById('moveBtn').ontouchend = () => walking = false;
+
+        let lastX = 0;
+        document.addEventListener('touchmove', (e) => {
+            let dx = e.touches[0].clientX - lastX;
+            if(lastX !== 0) camera.rotation.y -= dx * 0.01;
+            lastX = e.touches[0].clientX;
         });
 
-        document.getElementById('joystick-container').addEventListener('touchend', () => {
-            knob.style.transform = `translate(0px, 0px)`;
-            moveDir = { x: 0, z: 0 };
-        });
-
-        // Loop
         function animate() {
             requestAnimationFrame(animate);
-            // Topun dönme efekti
-            ball.rotation.x += moveDir.z * 0.1;
-            ball.rotation.z -= moveDir.x * 0.1;
+            if(walking) camera.translateZ(-0.1);
             
-            // Kamera Topu Takip Etsin
-            camera.position.lerp(new THREE.Vector3(ball.position.x, 20, ball.position.z + 30), 0.1);
-            camera.lookAt(ball.position);
+            // Kafa sallanma efekti (Yürürken)
+            if(walking) camera.position.y = 1.6 + Math.sin(Date.now() * 0.01) * 0.05;
 
+            // Pozisyonu sunucuya bildir
+            if(socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    x: camera.position.x,
+                    z: camera.position.z,
+                    ry: camera.rotation.y
+                }));
+            }
             renderer.render(scene, camera);
         }
         animate();
