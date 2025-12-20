@@ -5,118 +5,102 @@ const crypto = require('crypto');
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
-// Veritabanı yerine memory storage
-const gameRooms = new Map();
+// Game State
+const rooms = new Map();
 const players = new Map();
 const quickMatchQueue = [];
+const activeGames = new Set();
 
-// Oda yapısı
-class GameRoom {
+// Player Class
+class Player {
+    constructor(id, name, ws) {
+        this.id = id;
+        this.name = name;
+        this.ws = ws;
+        this.room = null;
+        this.isReady = false;
+        this.isHost = false;
+        this.isHunter = false;
+        this.isAlive = true;
+        this.position = { x: 0, y: 0, z: 0 };
+        this.rotation = { x: 0, y: 0, z: 0 };
+        this.stats = {
+            photos: 0,
+            hunts: 0,
+            timeSurvived: 0,
+            xp: 0
+        };
+        this.joinedAt = Date.now();
+    }
+}
+
+// Room Class
+class Room {
     constructor(code, name, hostId, hostName, maxPlayers = 10, gameTime = 5) {
         this.code = code;
         this.name = name;
-        this.host = hostId;
+        this.hostId = hostId;
         this.maxPlayers = maxPlayers;
-        this.gameTime = gameTime * 60; // saniye
+        this.gameTime = gameTime * 60; // Convert to seconds
         this.players = new Map();
-        this.settings = {
-            private: false,
-            map: 'backrooms_level0'
-        };
-        
-        // Oyun state
         this.gameState = {
             active: false,
             startedAt: null,
-            monster: null,
-            playersAlive: 0,
-            timeRemaining: 0
+            timeRemaining: 0,
+            hunter: null,
+            photos: []
         };
-        
-        // Timer'lar
         this.timers = {
             game: null,
             update: null
         };
         
-        // Host'u ekle
-        this.addPlayer(hostId, hostName, true);
-        
-        console.log(`📦 Oda oluşturuldu: ${code} (${name})`);
+        console.log(`Room created: ${code} (${name}) by ${hostName}`);
     }
     
-    addPlayer(playerId, playerName, isHost = false) {
-        const player = {
-            id: playerId,
-            name: playerName,
-            isHost: isHost,
-            isReady: false,
-            isMonster: false,
-            isAlive: true,
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            stats: {
-                kills: 0,
-                escapes: 0,
-                timeSurvived: 0,
-                xp: 0
-            },
-            joinedAt: Date.now()
-        };
+    addPlayer(player) {
+        if (this.players.size >= this.maxPlayers) return false;
         
-        this.players.set(playerId, player);
-        console.log(`👤 ${playerName} odaya katıldı: ${this.code}`);
+        player.room = this.code;
+        player.isHost = this.players.size === 0;
+        this.players.set(player.id, player);
         
-        return player;
+        return true;
     }
     
     removePlayer(playerId) {
         const player = this.players.get(playerId);
-        if (player) {
-            this.players.delete(playerId);
-            console.log(`🚪 ${player.name} odadan ayrıldı: ${this.code}`);
-            
-            // Eğer host ayrıldıysa, yeni host seç
-            if (player.isHost && this.players.size > 0) {
-                const newHost = Array.from(this.players.values())[0];
-                newHost.isHost = true;
-                console.log(`👑 Yeni host: ${newHost.name}`);
-            }
-            
-            // Oyun devam ediyorsa ve oyuncu ayrıldıysa
-            if (this.gameState.active && player.isAlive) {
-                this.gameState.playersAlive--;
-                
-                // Canavar ayrıldıysa yeni canavar seç
-                if (player.isMonster && this.players.size > 0) {
-                    this.selectNewMonster();
-                }
-                
-                // Oyun bitirme kontrolü
-                if (this.shouldEndGame()) {
-                    this.endGame();
-                }
-            }
+        if (!player) return null;
+        
+        player.room = null;
+        this.players.delete(playerId);
+        
+        // If host left, assign new host
+        if (player.isHost && this.players.size > 0) {
+            const newHost = Array.from(this.players.values())[0];
+            newHost.isHost = true;
         }
         
         return player;
     }
     
-    setPlayerReady(playerId, isReady) {
-        const player = this.players.get(playerId);
-        if (player) {
-            player.isReady = isReady;
-            return true;
-        }
-        return false;
+    broadcast(message, excludePlayerId = null) {
+        const messageStr = JSON.stringify(message);
+        
+        this.players.forEach(player => {
+            if (player.id !== excludePlayerId && 
+                player.ws.readyState === WebSocket.OPEN) {
+                player.ws.send(messageStr);
+            }
+        });
     }
     
     canStartGame() {
         if (this.players.size < 2) return false;
         if (this.gameState.active) return false;
         
-        // Tüm oyuncular hazır mı?
-        return Array.from(this.players.values()).every(p => p.isReady);
+        const allReady = Array.from(this.players.values()).every(p => p.isReady);
+        return allReady;
     }
     
     startGame() {
@@ -125,203 +109,186 @@ class GameRoom {
         this.gameState.active = true;
         this.gameState.startedAt = Date.now();
         this.gameState.timeRemaining = this.gameTime;
-        this.gameState.playersAlive = this.players.size;
+        this.gameState.photos = [];
         
-        // Rastgele canavar seç
-        this.selectInitialMonster();
+        // Select random hunter
+        const playerIds = Array.from(this.players.keys());
+        const hunterId = playerIds[Math.floor(Math.random() * playerIds.length)];
         
-        // Oyunculara başlangıç pozisyonu ver
-        this.setInitialPositions();
+        // Set player roles and reset stats
+        this.players.forEach(player => {
+            player.isHunter = player.id === hunterId;
+            player.isAlive = true;
+            player.stats.photos = 0;
+            player.stats.hunts = 0;
+            player.stats.timeSurvived = 0;
+            player.stats.xp = 0;
+            
+            // Random starting position
+            player.position = {
+                x: (Math.random() - 0.5) * 40,
+                y: 0,
+                z: (Math.random() - 0.5) * 40
+            };
+        });
         
-        console.log(`🎮 Oyun başladı: ${this.code}, Canavar: ${this.gameState.monster}`);
+        this.gameState.hunter = hunterId;
+        activeGames.add(this.code);
         
-        // Timer'ları başlat
+        console.log(`Game started in room ${this.code}, Hunter: ${hunterId}`);
+        
+        // Start timers
         this.startTimers();
         
         return true;
     }
     
-    selectInitialMonster() {
-        const playerIds = Array.from(this.players.keys());
-        const monsterId = playerIds[Math.floor(Math.random() * playerIds.length)];
-        
-        this.players.forEach(player => {
-            player.isMonster = player.id === monsterId;
-            player.isAlive = true;
-            player.stats.kills = 0;
-            player.stats.escapes = 0;
-            player.stats.timeSurvived = 0;
-        });
-        
-        this.gameState.monster = monsterId;
-    }
-    
-    selectNewMonster() {
-        const alivePlayers = Array.from(this.players.values()).filter(p => p.isAlive);
-        if (alivePlayers.length === 0) return;
-        
-        const newMonster = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-        newMonster.isMonster = true;
-        this.gameState.monster = newMonster.id;
-        
-        console.log(`👹 Yeni canavar: ${newMonster.name}`);
-    }
-    
-    setInitialPositions() {
-        const center = { x: 0, z: 0 };
-        const radius = 5;
-        
-        this.players.forEach((player, index) => {
-            const angle = (index / this.players.size) * Math.PI * 2;
-            player.position = {
-                x: center.x + Math.cos(angle) * radius,
-                y: 0,
-                z: center.z + Math.sin(angle) * radius
-            };
-        });
-    }
-    
     startTimers() {
-        // Ana oyun timer'ı
+        // Game timer
         this.timers.game = setTimeout(() => {
             this.endGame('time');
         }, this.gameTime * 1000);
         
-        // Güncelleme timer'ı
+        // Update timer
         this.timers.update = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.gameState.startedAt) / 1000);
             this.gameState.timeRemaining = Math.max(0, this.gameTime - elapsed);
             
-            // Zamanlayıcıyı güncelle
+            // Update player survival time
             this.players.forEach(player => {
                 if (player.isAlive) {
                     player.stats.timeSurvived++;
                 }
             });
             
-            // Oyun bitirme kontrolü
+            // Send game update
+            this.broadcast({
+                type: 'gameUpdate',
+                timeRemaining: this.gameState.timeRemaining,
+                gameState: this.getGameState()
+            });
+            
+            // Check game end conditions
             if (this.shouldEndGame()) {
                 this.endGame();
             }
         }, 1000);
     }
     
-    handleAttack(attackerId) {
-        if (!this.gameState.active) return null;
+    handleCapture(hunterId, targetId) {
+        const hunter = this.players.get(hunterId);
+        const target = this.players.get(targetId);
         
-        const attacker = this.players.get(attackerId);
-        if (!attacker || !attacker.isMonster || !attacker.isAlive) return null;
+        if (!hunter || !target || !hunter.isHunter || !target.isAlive) return false;
         
-        // Saldırı menzili içindeki en yakın insanı bul
-        let closestHuman = null;
-        let closestDistance = 3.0; // 3 birim menzil
+        // Calculate distance (simplified - in real game use actual positions)
+        const distance = Math.random(); // Replace with actual distance calculation
         
-        this.players.forEach(player => {
-            if (player.id !== attackerId && !player.isMonster && player.isAlive) {
-                const dx = player.position.x - attacker.position.x;
-                const dz = player.position.z - attacker.position.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestHuman = player;
-                }
+        if (distance < 2) { // Capture range
+            target.isAlive = false;
+            hunter.stats.hunts++;
+            hunter.stats.xp += 50;
+            
+            // Check if game should end
+            if (this.shouldEndGame()) {
+                this.endGame('capture');
+                return true;
             }
-        });
-        
-        if (closestHuman) {
-            // Vuruş başarılı
-            closestHuman.isAlive = false;
-            this.gameState.playersAlive--;
             
-            attacker.stats.kills++;
+            // Broadcast capture
+            this.broadcast({
+                type: 'playerCaptured',
+                hunterId: hunterId,
+                runnerId: targetId
+            });
             
-            // Rolleri değiştir
-            closestHuman.isMonster = true;
-            attacker.isMonster = false;
-            this.gameState.monster = closestHuman.id;
+            console.log(`Capture: ${hunter.name} captured ${target.name}`);
             
-            // XP hesapla
-            attacker.stats.xp += 50;
-            closestHuman.stats.xp += 25;
-            
-            console.log(`⚔️ ${attacker.name}, ${closestHuman.name} vurdu!`);
-            
-            return {
-                success: true,
-                attacker: attackerId,
-                target: closestHuman.id,
-                newMonster: closestHuman.id
-            };
-        }
-        
-        return { success: false };
-    }
-    
-    updatePlayerPosition(playerId, position, rotation) {
-        const player = this.players.get(playerId);
-        if (player && player.isAlive) {
-            player.position = position;
-            player.rotation = rotation;
             return true;
         }
+        
         return false;
+    }
+    
+    handlePhoto(playerId, position) {
+        const player = this.players.get(playerId);
+        if (!player) return false;
+        
+        const photoId = crypto.randomBytes(8).toString('hex');
+        const photo = {
+            id: photoId,
+            playerId: playerId,
+            playerName: player.name,
+            position: position,
+            timestamp: Date.now()
+        };
+        
+        this.gameState.photos.push(photo);
+        player.stats.photos++;
+        player.stats.xp += 10;
+        
+        // Broadcast photo
+        this.broadcast({
+            type: 'photoTaken',
+            photoId: photoId,
+            playerId: playerId,
+            playerName: player.name,
+            position: position
+        });
+        
+        console.log(`Photo taken by ${player.name} at ${JSON.stringify(position)}`);
+        
+        return true;
     }
     
     shouldEndGame() {
         if (!this.gameState.active) return false;
         
-        // Canavar kazandı mı? (sadece canavar hayatta)
-        const alivePlayers = Array.from(this.players.values()).filter(p => p.isAlive);
-        if (alivePlayers.length === 1 && alivePlayers[0].isMonster) {
+        // Check if all runners are captured
+        const aliveRunners = Array.from(this.players.values())
+            .filter(p => !p.isHunter && p.isAlive);
+        
+        if (aliveRunners.length === 0) {
             return true;
         }
         
-        // Zaman doldu mu?
+        // Check game time
         if (this.gameState.timeRemaining <= 0) {
-            return true;
-        }
-        
-        // Tüm insanlar öldü mü?
-        const aliveHumans = alivePlayers.filter(p => !p.isMonster);
-        if (aliveHumans.length === 0) {
             return true;
         }
         
         return false;
     }
     
-    endGame(reason = 'monster') {
+    endGame(reason = 'time') {
         if (!this.gameState.active) return;
         
         this.gameState.active = false;
+        activeGames.delete(this.code);
         
-        // Timer'ları temizle
+        // Clear timers
         if (this.timers.game) clearTimeout(this.timers.game);
         if (this.timers.update) clearInterval(this.timers.update);
         
-        // Kazananı belirle
+        // Determine winner
         let winner = null;
-        let winnerStats = null;
         
-        if (reason === 'monster') {
-            // Canavar kazandı
-            winner = this.gameState.monster;
+        if (reason === 'capture') {
+            winner = this.gameState.hunter;
         } else if (reason === 'time') {
-            // En uzun süre hayatta kalan insan kazandı
-            const humans = Array.from(this.players.values())
-                .filter(p => !p.isMonster && p.isAlive)
+            // Runner with most survival time wins
+            const runners = Array.from(this.players.values())
+                .filter(p => !p.isHunter && p.isAlive)
                 .sort((a, b) => b.stats.timeSurvived - a.stats.timeSurvived);
             
-            if (humans.length > 0) {
-                winner = humans[0].id;
+            if (runners.length > 0) {
+                winner = runners[0].id;
             } else {
-                // Hiç insan kalmadıysa canavar kazandı
-                winner = this.gameState.monster;
+                winner = this.gameState.hunter;
             }
         }
         
-        // İstatistikleri hesapla
+        // Calculate final stats and XP
         const gameStats = {
             winner: winner,
             reason: reason,
@@ -329,43 +296,48 @@ class GameRoom {
         };
         
         this.players.forEach(player => {
-            // Bonus XP
+            // Bonus XP for winner
             if (player.id === winner) {
                 player.stats.xp += 100;
             }
-            if (player.isAlive && !player.isMonster) {
+            
+            // Bonus XP for surviving runners
+            if (!player.isHunter && player.isAlive) {
                 player.stats.xp += 50;
-                player.stats.escapes++;
             }
             
             gameStats.players[player.id] = {
-                kills: player.stats.kills,
-                escapes: player.stats.escapes,
+                photos: player.stats.photos,
+                hunts: player.stats.hunts,
                 timeSurvived: player.stats.timeSurvived,
                 xp: player.stats.xp,
                 isWinner: player.id === winner
             };
         });
         
-        console.log(`🏁 Oyun bitti: ${this.code}, Kazanan: ${winner}`);
+        // Broadcast game end
+        this.broadcast({
+            type: 'gameEnded',
+            winner: winner,
+            reason: reason,
+            stats: gameStats.players
+        });
         
-        return gameStats;
+        console.log(`Game ended in room ${this.code}, Winner: ${winner}, Reason: ${reason}`);
+        
+        // Reset player states but keep in room
+        this.players.forEach(player => {
+            player.isReady = false;
+            player.isHunter = false;
+            player.isAlive = true;
+        });
+        
+        this.gameState.active = false;
+        this.gameState.hunter = null;
+        this.gameState.photos = [];
     }
     
-    getRoomData() {
-        return {
-            code: this.code,
-            name: this.name,
-            host: this.host,
-            maxPlayers: this.maxPlayers,
-            playerCount: this.players.size,
-            gameTime: this.gameTime / 60,
-            gameActive: this.gameState.active,
-            settings: this.settings
-        };
-    }
-    
-    getPlayersData() {
+    getGameState() {
         const playersData = {};
         this.players.forEach(player => {
             playersData[player.id] = {
@@ -373,86 +345,94 @@ class GameRoom {
                 name: player.name,
                 isHost: player.isHost,
                 isReady: player.isReady,
-                isMonster: player.isMonster,
+                isHunter: player.isHunter,
                 isAlive: player.isAlive,
                 position: player.position,
                 stats: player.stats
             };
         });
-        return playersData;
-    }
-    
-    getGameStateData() {
+        
         return {
             active: this.gameState.active,
-            monster: this.gameState.monster,
-            playersAlive: this.gameState.playersAlive,
+            hunter: this.gameState.hunter,
             timeRemaining: this.gameState.timeRemaining,
-            startedAt: this.gameState.startedAt
+            photos: this.gameState.photos,
+            players: playersData
+        };
+    }
+    
+    getRoomInfo() {
+        return {
+            code: this.code,
+            name: this.name,
+            hostId: this.hostId,
+            maxPlayers: this.maxPlayers,
+            playerCount: this.players.size,
+            gameTime: this.gameTime / 60,
+            gameActive: this.gameState.active
         };
     }
 }
 
-// WebSocket bağlantıları
+// WebSocket Server
 wss.on('connection', (ws, req) => {
-    console.log('🔗 Yeni bağlantı:', req.socket.remoteAddress);
+    console.log('New connection:', req.socket.remoteAddress);
     
-    let playerId = null;
-    let currentRoom = null;
+    let player = null;
     
-    // Mesaj işleme
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
             handleMessage(ws, message);
         } catch (error) {
-            console.error('Mesaj parse hatası:', error);
-            sendError(ws, 'Geçersiz mesaj formatı');
+            console.error('Message parse error:', error);
+            sendError(ws, 'Invalid message format');
         }
     });
     
-    // Bağlantı kesilirse
     ws.on('close', () => {
-        console.log('❌ Bağlantı kesildi:', playerId);
-        
-        // Oyuncuyu odadan çıkar
-        if (currentRoom && playerId) {
-            const room = gameRooms.get(currentRoom);
-            if (room) {
-                room.removePlayer(playerId);
-                
-                // Oda boşsa sil
-                if (room.players.size === 0) {
-                    gameRooms.delete(currentRoom);
-                    console.log(`🗑️ Oda silindi: ${currentRoom}`);
-                } else {
-                    // Diğer oyunculara bildir
-                    broadcastToRoom(currentRoom, {
-                        type: 'playerLeft',
-                        playerId: playerId,
-                        players: room.getPlayersData()
-                    });
+        if (player) {
+            console.log(`Player disconnected: ${player.name} (${player.id})`);
+            
+            // Remove from room
+            if (player.room) {
+                const room = rooms.get(player.room);
+                if (room) {
+                    const removedPlayer = room.removePlayer(player.id);
+                    
+                    if (removedPlayer) {
+                        // Notify other players
+                        room.broadcast({
+                            type: 'playerLeft',
+                            playerId: player.id,
+                            playerName: player.name,
+                            players: room.getGameState().players
+                        });
+                        
+                        // Clean up empty room
+                        if (room.players.size === 0) {
+                            rooms.delete(room.code);
+                            console.log(`Room deleted: ${room.code}`);
+                        }
+                    }
                 }
             }
-        }
-        
-        // Players map'ten sil
-        if (playerId) {
-            players.delete(playerId);
-        }
-        
-        // Matchmaking kuyruğundan çıkar
-        const queueIndex = quickMatchQueue.indexOf(playerId);
-        if (queueIndex > -1) {
-            quickMatchQueue.splice(queueIndex, 1);
+            
+            // Remove from players map
+            players.delete(player.id);
+            
+            // Remove from quick match queue
+            const queueIndex = quickMatchQueue.indexOf(player.id);
+            if (queueIndex > -1) {
+                quickMatchQueue.splice(queueIndex, 1);
+            }
         }
     });
     
     ws.on('error', (error) => {
-        console.error('WebSocket hatası:', error);
+        console.error('WebSocket error:', error);
     });
     
-    // Mesaj işleyici
     function handleMessage(ws, message) {
         switch (message.type) {
             case 'init':
@@ -463,12 +443,12 @@ wss.on('connection', (ws, req) => {
                 handleCreateRoom(ws, message);
                 break;
                 
-            case 'getRooms':
-                handleGetRooms(ws);
-                break;
-                
             case 'joinRoom':
                 handleJoinRoom(ws, message);
+                break;
+                
+            case 'quickMatch':
+                handleQuickMatch(ws, message);
                 break;
                 
             case 'leaveRoom':
@@ -483,16 +463,20 @@ wss.on('connection', (ws, req) => {
                 handleStartGame(ws, message);
                 break;
                 
-            case 'quickMatch':
-                handleQuickMatch(ws, message);
-                break;
-                
             case 'updatePosition':
                 handleUpdatePosition(ws, message);
                 break;
                 
-            case 'attack':
-                handleAttack(ws, message);
+            case 'capturePlayer':
+                handleCapturePlayer(ws, message);
+                break;
+                
+            case 'takePhoto':
+                handleTakePhoto(ws, message);
+                break;
+                
+            case 'playAgain':
+                handlePlayAgain(ws, message);
                 break;
                 
             case 'leaveGame':
@@ -500,24 +484,19 @@ wss.on('connection', (ws, req) => {
                 break;
                 
             default:
-                console.log('Bilinmeyen mesaj tipi:', message.type);
-                sendError(ws, 'Bilinmeyen mesaj tipi');
+                console.log('Unknown message type:', message.type);
+                sendError(ws, 'Unknown message type');
         }
     }
     
-    // Oyuncu başlatma
     function handleInit(ws, message) {
-        playerId = message.playerId || generatePlayerId();
+        const playerId = message.playerId || generatePlayerId();
         const playerName = message.playerName || 'Player';
         
-        players.set(playerId, {
-            id: playerId,
-            name: playerName,
-            ws: ws,
-            connectedAt: Date.now()
-        });
+        player = new Player(playerId, playerName, ws);
+        players.set(playerId, player);
         
-        console.log(`👤 Oyuncu giriş yaptı: ${playerName} (${playerId})`);
+        console.log(`Player initialized: ${playerName} (${playerId})`);
         
         ws.send(JSON.stringify({
             type: 'initSuccess',
@@ -526,283 +505,256 @@ wss.on('connection', (ws, req) => {
         }));
     }
     
-    // Oda oluşturma
     function handleCreateRoom(ws, message) {
-        if (!playerId) {
-            sendError(ws, 'Önce giriş yapmalısınız');
+        if (!player) {
+            sendError(ws, 'Player not initialized');
             return;
         }
         
-        const roomName = message.roomName || `${players.get(playerId).name}'s Room`;
+        const roomName = message.roomName || `${player.name}'s Hunt`;
         const maxPlayers = Math.min(Math.max(parseInt(message.maxPlayers) || 10, 2), 20);
         const gameTime = Math.min(Math.max(parseInt(message.gameTime) || 5, 1), 30);
         
-        // Oda kodu oluştur
-        const roomCode = generateRoomCode();
+        // Generate unique room code
+        let roomCode;
+        do {
+            roomCode = generateRoomCode();
+        } while (rooms.has(roomCode));
         
-        // Oda oluştur
-        const room = new GameRoom(
+        // Create room
+        const room = new Room(
             roomCode,
             roomName,
-            playerId,
-            players.get(playerId).name,
+            player.id,
+            player.name,
             maxPlayers,
             gameTime
         );
         
-        gameRooms.set(roomCode, room);
-        currentRoom = roomCode;
+        room.addPlayer(player);
+        rooms.set(roomCode, room);
         
-        console.log(`🏠 Oda oluşturuldu: ${roomCode} by ${players.get(playerId).name}`);
+        console.log(`Room created: ${roomCode} by ${player.name}`);
         
         ws.send(JSON.stringify({
             type: 'roomCreated',
             roomCode: roomCode,
-            room: room.getRoomData(),
-            players: room.getPlayersData()
+            room: room.getRoomInfo(),
+            players: room.getGameState().players,
+            isHunter: player.isHunter
         }));
     }
     
-    // Oda listesi
-    function handleGetRooms(ws) {
-        const availableRooms = Array.from(gameRooms.values())
-            .filter(room => 
-                !room.gameState.active && 
-                room.players.size < room.maxPlayers &&
-                !room.settings.private
-            )
-            .map(room => room.getRoomData());
-        
-        ws.send(JSON.stringify({
-            type: 'roomList',
-            rooms: availableRooms
-        }));
-    }
-    
-    // Odaya katılma
     function handleJoinRoom(ws, message) {
-        if (!playerId) {
-            sendError(ws, 'Önce giriş yapmalısınız');
+        if (!player) {
+            sendError(ws, 'Player not initialized');
             return;
         }
         
-        const roomCode = message.roomCode;
-        const room = gameRooms.get(roomCode);
+        const roomCode = message.roomCode?.toUpperCase();
+        if (!roomCode || roomCode.length !== 6) {
+            sendError(ws, 'Invalid room code');
+            return;
+        }
         
+        const room = rooms.get(roomCode);
         if (!room) {
-            sendError(ws, 'Oda bulunamadı');
+            sendError(ws, 'Room not found');
             return;
         }
         
         if (room.gameState.active) {
-            sendError(ws, 'Oyun başlamış, katılamazsınız');
+            sendError(ws, 'Game already started');
             return;
         }
         
-        if (room.players.size >= room.maxPlayers) {
-            sendError(ws, 'Oda dolu');
+        if (!room.addPlayer(player)) {
+            sendError(ws, 'Room is full');
             return;
         }
         
-        // Oyuncuyu odaya ekle
-        const player = players.get(playerId);
-        room.addPlayer(playerId, player.name);
-        currentRoom = roomCode;
+        console.log(`${player.name} joined room ${roomCode}`);
         
-        // Tüm odaya bildir
-        broadcastToRoom(roomCode, {
+        // Notify room
+        room.broadcast({
             type: 'playerJoined',
-            playerId: playerId,
+            playerId: player.id,
             playerName: player.name,
-            players: room.getPlayersData()
+            players: room.getGameState().players
         });
         
-        // Oyuncuya oda bilgisi gönder
+        // Send response to joining player
         ws.send(JSON.stringify({
             type: 'roomJoined',
             roomCode: roomCode,
-            room: room.getRoomData(),
-            players: room.getPlayersData()
+            room: room.getRoomInfo(),
+            players: room.getGameState().players,
+            isHunter: player.isHunter
         }));
     }
     
-    // Odadan ayrılma
-    function handleLeaveRoom(ws, message) {
-        if (!currentRoom || !playerId) return;
+    function handleQuickMatch(ws, message) {
+        if (!player) {
+            sendError(ws, 'Player not initialized');
+            return;
+        }
         
-        const room = gameRooms.get(currentRoom);
+        // Add to queue
+        if (!quickMatchQueue.includes(player.id)) {
+            quickMatchQueue.push(player.id);
+        }
+        
+        console.log(`Quick match queue: ${player.name} added (${quickMatchQueue.length} players)`);
+        
+        // Send queue position
+        ws.send(JSON.stringify({
+            type: 'quickMatchQueued',
+            position: quickMatchQueue.indexOf(player.id) + 1
+        }));
+        
+        // Check if we can create a match
+        if (quickMatchQueue.length >= 2) {
+            createQuickMatch();
+        }
+    }
+    
+    function handleLeaveRoom(ws, message) {
+        if (!player || !player.room) return;
+        
+        const room = rooms.get(player.room);
         if (!room) return;
         
-        const leftPlayer = room.removePlayer(playerId);
+        const removedPlayer = room.removePlayer(player.id);
         
-        if (leftPlayer) {
-            // Diğer oyunculara bildir
-            broadcastToRoom(currentRoom, {
+        if (removedPlayer) {
+            // Notify room
+            room.broadcast({
                 type: 'playerLeft',
-                playerId: playerId,
-                playerName: leftPlayer.name,
-                players: room.getPlayersData()
+                playerId: player.id,
+                playerName: player.name,
+                players: room.getGameState().players
             });
             
-            // Oyuncuya onay gönder
+            // Send confirmation
             ws.send(JSON.stringify({
                 type: 'leftRoom',
-                roomCode: currentRoom
+                roomCode: player.room
             }));
             
-            // Oda boşsa sil
-            if (room.players.size === 0) {
-                gameRooms.delete(currentRoom);
-                console.log(`🗑️ Oda silindi: ${currentRoom}`);
-            }
+            player.room = null;
             
-            currentRoom = null;
+            // Clean up empty room
+            if (room.players.size === 0) {
+                rooms.delete(room.code);
+                console.log(`Room deleted: ${room.code}`);
+            }
         }
     }
     
-    // Hazır olma durumu
     function handleSetReady(ws, message) {
-        if (!currentRoom || !playerId) return;
+        if (!player || !player.room) return;
         
-        const room = gameRooms.get(currentRoom);
-        if (!room) return;
+        const room = rooms.get(player.room);
+        if (!room || room.gameState.active) return;
         
-        const isReady = message.isReady;
-        const success = room.setPlayerReady(playerId, isReady);
+        player.isReady = message.isReady;
         
-        if (success) {
-            // Tüm odaya bildir
-            broadcastToRoom(currentRoom, {
-                type: 'playerReady',
-                playerId: playerId,
-                isReady: isReady,
-                players: room.getPlayersData()
-            });
-        }
+        // Broadcast to room
+        room.broadcast({
+            type: 'playerReady',
+            playerId: player.id,
+            isReady: player.isReady,
+            players: room.getGameState().players
+        });
     }
     
-    // Oyun başlatma
     function handleStartGame(ws, message) {
-        if (!currentRoom || !playerId) return;
+        if (!player || !player.room) return;
         
-        const room = gameRooms.get(currentRoom);
+        const room = rooms.get(player.room);
         if (!room) return;
         
-        // Sadece host oyunu başlatabilir
-        const player = room.players.get(playerId);
-        if (!player || !player.isHost) {
-            sendError(ws, 'Sadece host oyunu başlatabilir');
+        // Check if player is host
+        if (!player.isHost) {
+            sendError(ws, 'Only host can start the game');
             return;
         }
         
         const started = room.startGame();
         if (started) {
-            // Tüm oyunculara oyun başladı mesajı gönder
-            broadcastToRoom(currentRoom, {
+            // Broadcast game start to all players
+            room.broadcast({
                 type: 'gameStarting',
-                players: room.getPlayersData(),
-                isMonster: room.gameState.monster,
-                gameState: room.getGameStateData()
+                players: room.getGameState().players,
+                isHunter: player.isHunter,
+                gameTime: room.gameTime,
+                gameState: room.getGameState()
             });
         } else {
-            sendError(ws, 'Oyun başlatılamadı. Tüm oyuncular hazır olmalı.');
+            sendError(ws, 'Cannot start game. All players must be ready.');
         }
     }
     
-    // Hızlı eşleşme
-    function handleQuickMatch(ws, message) {
-        if (!playerId) {
-            sendError(ws, 'Önce giriş yapmalısınız');
-            return;
-        }
-        
-        const player = players.get(playerId);
-        const playerName = player ? player.name : 'Player';
-        
-        // Kuyruğa ekle
-        if (!quickMatchQueue.includes(playerId)) {
-            quickMatchQueue.push(playerId);
-        }
-        
-        console.log(`🔍 Hızlı eşleşme: ${playerName} kuyrukta (${quickMatchQueue.length} kişi)`);
-        
-        // Eğer kuyrukta yeterli oyuncu varsa oda oluştur
-        if (quickMatchQueue.length >= 2) {
-            createQuickMatchRoom();
-        }
-        
-        ws.send(JSON.stringify({
-            type: 'quickMatchQueued',
-            position: quickMatchQueue.indexOf(playerId) + 1
-        }));
-    }
-    
-    // Pozisyon güncelleme
     function handleUpdatePosition(ws, message) {
-        if (!currentRoom || !playerId) return;
+        if (!player || !player.room || !player.isAlive) return;
         
-        const room = gameRooms.get(currentRoom);
+        const room = rooms.get(player.room);
+        if (!room || !room.gameState.active) return;
+        
+        player.position = message.position;
+        player.rotation = message.rotation;
+        
+        // Broadcast to other players
+        room.broadcast({
+            type: 'playerPosition',
+            playerId: player.id,
+            position: player.position,
+            rotation: player.rotation
+        }, player.id);
+    }
+    
+    function handleCapturePlayer(ws, message) {
+        if (!player || !player.room) return;
+        
+        const room = rooms.get(player.room);
+        if (!room || !room.gameState.active) return;
+        
+        const targetId = message.targetId;
+        room.handleCapture(player.id, targetId);
+    }
+    
+    function handleTakePhoto(ws, message) {
+        if (!player || !player.room) return;
+        
+        const room = rooms.get(player.room);
         if (!room || !room.gameState.active) return;
         
         const position = message.position;
-        const rotation = message.rotation;
-        
-        const updated = room.updatePlayerPosition(playerId, position, rotation);
-        
-        if (updated) {
-            // Diğer oyunculara pozisyonu yayınla
-            broadcastToRoomExcept(currentRoom, playerId, {
-                type: 'playerUpdate',
-                playerId: playerId,
-                position: position,
-                rotation: rotation,
-                isMonster: room.players.get(playerId)?.isMonster || false
-            });
-        }
+        room.handlePhoto(player.id, position);
     }
     
-    // Saldırı
-    function handleAttack(ws, message) {
-        if (!currentRoom || !playerId) return;
+    function handlePlayAgain(ws, message) {
+        if (!player || !player.room) return;
         
-        const room = gameRooms.get(currentRoom);
-        if (!room || !room.gameState.active) return;
+        const room = rooms.get(player.room);
+        if (!room) return;
         
-        const result = room.handleAttack(playerId);
+        // Reset player ready state
+        player.isReady = false;
         
-        if (result && result.success) {
-            // Tüm odaya bildir
-            broadcastToRoom(currentRoom, {
-                type: 'roleChange',
-                newRole: 'monster',
-                targetId: result.newMonster
-            });
-            
-            broadcastToRoom(currentRoom, {
-                type: 'playerAttack',
-                attackerId: result.attacker,
-                targetId: result.target
-            });
-            
-            // Oyun bitirme kontrolü
-            if (room.shouldEndGame()) {
-                const stats = room.endGame('monster');
-                broadcastToRoom(currentRoom, {
-                    type: 'gameEnded',
-                    winner: stats.winner,
-                    reason: stats.reason,
-                    stats: stats.players
-                });
-            }
-        }
+        // Send player back to lobby
+        ws.send(JSON.stringify({
+            type: 'roomJoined',
+            roomCode: room.code,
+            room: room.getRoomInfo(),
+            players: room.getGameState().players
+        }));
     }
     
-    // Oyundan ayrılma
     function handleLeaveGame(ws, message) {
         handleLeaveRoom(ws, message);
     }
     
-    // Hata gönderme
     function sendError(ws, message) {
         ws.send(JSON.stringify({
             type: 'error',
@@ -811,192 +763,151 @@ wss.on('connection', (ws, req) => {
     }
 });
 
-// Hızlı eşleşme oda oluşturma
-function createQuickMatchRoom() {
+// Quick Match System
+function createQuickMatch() {
     if (quickMatchQueue.length < 2) return;
     
-    // İlk 2-10 oyuncuyu al
+    // Get players for match (2-10 players)
     const matchSize = Math.min(quickMatchQueue.length, 10);
-    const matchedPlayers = quickMatchQueue.splice(0, matchSize);
+    const matchedPlayerIds = quickMatchQueue.splice(0, matchSize);
+    const matchedPlayers = matchedPlayerIds.map(id => players.get(id)).filter(p => p);
     
-    // Oda oluştur
+    if (matchedPlayers.length < 2) return;
+    
+    // Create room
     const roomCode = generateRoomCode();
-    const hostId = matchedPlayers[0];
-    const host = players.get(hostId);
+    const host = matchedPlayers[0];
     
-    const room = new GameRoom(
+    const room = new Room(
         roomCode,
-        `Hızlı Maç #${roomCode}`,
-        hostId,
-        host?.name || 'Player',
-        matchSize,
-        5 // 5 dakika
+        `Quick Match ${roomCode}`,
+        host.id,
+        host.name,
+        matchedPlayers.length,
+        5 // 5 minutes for quick match
     );
     
-    gameRooms.set(roomCode, room);
+    // Add all players to room
+    matchedPlayers.forEach(p => {
+        room.addPlayer(p);
+    });
     
-    // Diğer oyuncuları odaya ekle
-    matchedPlayers.slice(1).forEach(playerId => {
-        const player = players.get(playerId);
-        if (player) {
-            room.addPlayer(playerId, player.name);
-            
-            // Oyuncunun WebSocket'ini bul ve odaya katıldı mesajı gönder
-            if (player.ws && player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify({
-                    type: 'roomJoined',
-                    roomCode: roomCode,
-                    room: room.getRoomData(),
-                    players: room.getPlayersData(),
-                    isQuickMatch: true
-                }));
-                
-                // Oyuncuyu odaya kaydet
-                // (Bu kısım için oyuncunun connection handler'ında currentRoom güncellenmeli)
-            }
+    rooms.set(roomCode, room);
+    
+    console.log(`Quick match room created: ${roomCode} with ${matchedPlayers.length} players`);
+    
+    // Notify all players
+    matchedPlayers.forEach(p => {
+        if (p.ws.readyState === WebSocket.OPEN) {
+            p.ws.send(JSON.stringify({
+                type: 'roomJoined',
+                roomCode: roomCode,
+                room: room.getRoomInfo(),
+                players: room.getGameState().players,
+                isQuickMatch: true
+            }));
         }
     });
     
-    // Host'a oda bilgisi gönder
-    if (host?.ws && host.ws.readyState === WebSocket.OPEN) {
-        host.ws.send(JSON.stringify({
-            type: 'roomCreated',
-            roomCode: roomCode,
-            room: room.getRoomData(),
-            players: room.getPlayersData(),
-            isQuickMatch: true
-        }));
-    }
-    
-    console.log(`⚡ Hızlı eşleşme odası oluşturuldu: ${roomCode} (${matchSize} oyuncu)`);
-    
-    // 10 saniye sonra oyunu otomatik başlat
+    // Auto-start game after 10 seconds
     setTimeout(() => {
-        if (room && !room.gameState.active) {
-            // Tüm oyuncuları hazır yap
-            room.players.forEach((player, playerId) => {
-                room.setPlayerReady(playerId, true);
+        if (room && !room.gameState.active && room.players.size >= 2) {
+            // Set all players as ready
+            room.players.forEach(player => {
+                player.isReady = true;
             });
             
-            // Oyunu başlat
-            const started = room.startGame();
-            if (started) {
-                broadcastToRoom(roomCode, {
-                    type: 'gameStarting',
-                    players: room.getPlayersData(),
-                    isMonster: room.gameState.monster,
-                    gameState: room.getGameStateData(),
-                    isQuickMatch: true
-                });
-            }
+            room.startGame();
+            
+            room.broadcast({
+                type: 'gameStarting',
+                players: room.getGameState().players,
+                gameTime: room.gameTime,
+                gameState: room.getGameState(),
+                isQuickMatch: true
+            });
         }
     }, 10000);
 }
 
-// Odaya mesaj yayınlama
-function broadcastToRoom(roomCode, message) {
-    const room = gameRooms.get(roomCode);
-    if (!room) return;
-    
-    const messageStr = JSON.stringify(message);
-    
-    room.players.forEach(player => {
-        const playerData = players.get(player.id);
-        if (playerData?.ws && playerData.ws.readyState === WebSocket.OPEN) {
-            playerData.ws.send(messageStr);
-        }
-    });
-}
-
-// Belirli oyuncu hariç odaya mesaj yayınlama
-function broadcastToRoomExcept(roomCode, exceptPlayerId, message) {
-    const room = gameRooms.get(roomCode);
-    if (!room) return;
-    
-    const messageStr = JSON.stringify(message);
-    
-    room.players.forEach(player => {
-        if (player.id !== exceptPlayerId) {
-            const playerData = players.get(player.id);
-            if (playerData?.ws && playerData.ws.readyState === WebSocket.OPEN) {
-                playerData.ws.send(messageStr);
-            }
-        }
-    });
-}
-
-// Yardımcı fonksiyonlar
+// Helper Functions
 function generatePlayerId() {
     return 'player_' + crypto.randomBytes(8).toString('hex');
 }
 
 function generateRoomCode() {
-    return crypto.randomBytes(3).toString('hex').toUpperCase();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing characters
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
 }
 
-// Oda temizleme cron job'u
+// Cleanup Inactive Rooms
 setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     
-    for (const [code, room] of gameRooms.entries()) {
-        // Boş odaları temizle
+    for (const [code, room] of rooms.entries()) {
+        // Remove empty rooms
         if (room.players.size === 0) {
-            gameRooms.delete(code);
+            rooms.delete(code);
             cleaned++;
+            continue;
         }
         
-        // Uzun süre boş kalan odaları temizle (1 saat)
-        const lastActivity = Math.max(
-            ...Array.from(room.players.values()).map(p => p.joinedAt)
-        );
+        // Remove inactive rooms (no activity for 1 hour)
+        let lastActivity = now;
+        room.players.forEach(player => {
+            if (player.joinedAt < lastActivity) {
+                lastActivity = player.joinedAt;
+            }
+        });
         
-        if (now - lastActivity > 3600000) { // 1 saat
-            gameRooms.delete(code);
+        if (now - lastActivity > 3600000) { // 1 hour
+            rooms.delete(code);
             cleaned++;
         }
     }
     
     if (cleaned > 0) {
-        console.log(`🧹 ${cleaned} oda temizlendi`);
+        console.log(`Cleaned ${cleaned} inactive rooms`);
     }
-}, 300000); // 5 dakikada bir
+}, 300000); // Every 5 minutes
 
-// Sunucu durumu log'u
+// Server Status Log
 setInterval(() => {
-    console.log(`📊 Sunucu Durumu:`);
-    console.log(`   Odalar: ${gameRooms.size}`);
-    console.log(`   Aktif Oyuncular: ${players.size}`);
-    console.log(`   Hızlı Eşleşme Kuyruğu: ${quickMatchQueue.length}`);
-    
-    let activeGames = 0;
-    gameRooms.forEach(room => {
-        if (room.gameState.active) activeGames++;
-    });
-    console.log(`   Aktif Oyunlar: ${activeGames}`);
-}, 60000); // 1 dakikada bir
+    console.log('=== SERVER STATUS ===');
+    console.log(`Rooms: ${rooms.size}`);
+    console.log(`Players: ${players.size}`);
+    console.log(`Active Games: ${activeGames.size}`);
+    console.log(`Quick Match Queue: ${quickMatchQueue.length}`);
+    console.log(`Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    console.log('=====================');
+}, 60000); // Every minute
 
-// Sunucu başlatma
+// Start Server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Backrooms Arena Sunucusu ${PORT} portunda başlatıldı`);
+    console.log(`🚀 Backrooms Hunt Server running on port ${PORT}`);
     console.log(`🌐 WebSocket: wss://localhost:${PORT}`);
 });
 
-// Graceful shutdown
+// Graceful Shutdown
 process.on('SIGINT', () => {
-    console.log('🛑 Sunucu kapatılıyor...');
+    console.log('Shutting down server...');
     
-    // Tüm bağlantıları kapat
+    // Close all WebSocket connections
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.close();
         }
     });
     
-    // Sunucuyu kapat
+    // Close server
     server.close(() => {
-        console.log('✅ Sunucu başarıyla kapatıldı');
+        console.log('Server shutdown complete');
         process.exit(0);
     });
 });
