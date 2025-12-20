@@ -1,431 +1,136 @@
 const WebSocket = require('ws');
 const http = require('http');
-const crypto = require('crypto');
 
-const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+const server = http.createServer((req, res) => {
+    // Health check endpoint for Render
+    if (req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+            status: 'ok', 
+            rooms: rooms.size,
+            players: players.size,
+            timestamp: Date.now()
+        }));
+        return;
+    }
+    
+    // CORS headers
+    res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    
+    if (req.method === 'OPTIONS') {
+        res.end();
+        return;
+    }
+    
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Backrooms Hunt WebSocket Server');
+});
 
-// Game State
+const wss = new WebSocket.Server({ 
+    server,
+    clientTracking: true,
+    perMessageDeflate: {
+        zlibDeflateOptions: {
+            chunkSize: 1024,
+            memLevel: 7,
+            level: 3
+        },
+        zlibInflateOptions: {
+            chunkSize: 10 * 1024
+        },
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+        serverMaxWindowBits: 10,
+        concurrencyLimit: 10,
+        threshold: 1024
+    }
+});
+
+// Simple in-memory storage
 const rooms = new Map();
 const players = new Map();
 const quickMatchQueue = [];
-const activeGames = new Set();
 
-// Player Class
-class Player {
-    constructor(id, name, ws) {
-        this.id = id;
-        this.name = name;
-        this.ws = ws;
-        this.room = null;
-        this.isReady = false;
-        this.isHost = false;
-        this.isHunter = false;
-        this.isAlive = true;
-        this.position = { x: 0, y: 0, z: 0 };
-        this.rotation = { x: 0, y: 0, z: 0 };
-        this.stats = {
-            photos: 0,
-            hunts: 0,
-            timeSurvived: 0,
-            xp: 0
-        };
-        this.joinedAt = Date.now();
+// Generate room code
+function generateRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return code;
 }
 
-// Room Class
-class Room {
-    constructor(code, name, hostId, hostName, maxPlayers = 10, gameTime = 5) {
-        this.code = code;
-        this.name = name;
-        this.hostId = hostId;
-        this.maxPlayers = maxPlayers;
-        this.gameTime = gameTime * 60; // Convert to seconds
-        this.players = new Map();
-        this.gameState = {
-            active: false,
-            startedAt: null,
-            timeRemaining: 0,
-            hunter: null,
-            photos: []
-        };
-        this.timers = {
-            game: null,
-            update: null
-        };
-        
-        console.log(`Room created: ${code} (${name}) by ${hostName}`);
-    }
-    
-    addPlayer(player) {
-        if (this.players.size >= this.maxPlayers) return false;
-        
-        player.room = this.code;
-        player.isHost = this.players.size === 0;
-        this.players.set(player.id, player);
-        
-        return true;
-    }
-    
-    removePlayer(playerId) {
-        const player = this.players.get(playerId);
-        if (!player) return null;
-        
-        player.room = null;
-        this.players.delete(playerId);
-        
-        // If host left, assign new host
-        if (player.isHost && this.players.size > 0) {
-            const newHost = Array.from(this.players.values())[0];
-            newHost.isHost = true;
-        }
-        
-        return player;
-    }
-    
-    broadcast(message, excludePlayerId = null) {
-        const messageStr = JSON.stringify(message);
-        
-        this.players.forEach(player => {
-            if (player.id !== excludePlayerId && 
-                player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(messageStr);
-            }
-        });
-    }
-    
-    canStartGame() {
-        if (this.players.size < 2) return false;
-        if (this.gameState.active) return false;
-        
-        const allReady = Array.from(this.players.values()).every(p => p.isReady);
-        return allReady;
-    }
-    
-    startGame() {
-        if (!this.canStartGame()) return false;
-        
-        this.gameState.active = true;
-        this.gameState.startedAt = Date.now();
-        this.gameState.timeRemaining = this.gameTime;
-        this.gameState.photos = [];
-        
-        // Select random hunter
-        const playerIds = Array.from(this.players.keys());
-        const hunterId = playerIds[Math.floor(Math.random() * playerIds.length)];
-        
-        // Set player roles and reset stats
-        this.players.forEach(player => {
-            player.isHunter = player.id === hunterId;
-            player.isAlive = true;
-            player.stats.photos = 0;
-            player.stats.hunts = 0;
-            player.stats.timeSurvived = 0;
-            player.stats.xp = 0;
-            
-            // Random starting position
-            player.position = {
-                x: (Math.random() - 0.5) * 40,
-                y: 0,
-                z: (Math.random() - 0.5) * 40
-            };
-        });
-        
-        this.gameState.hunter = hunterId;
-        activeGames.add(this.code);
-        
-        console.log(`Game started in room ${this.code}, Hunter: ${hunterId}`);
-        
-        // Start timers
-        this.startTimers();
-        
-        return true;
-    }
-    
-    startTimers() {
-        // Game timer
-        this.timers.game = setTimeout(() => {
-            this.endGame('time');
-        }, this.gameTime * 1000);
-        
-        // Update timer
-        this.timers.update = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.gameState.startedAt) / 1000);
-            this.gameState.timeRemaining = Math.max(0, this.gameTime - elapsed);
-            
-            // Update player survival time
-            this.players.forEach(player => {
-                if (player.isAlive) {
-                    player.stats.timeSurvived++;
-                }
-            });
-            
-            // Send game update
-            this.broadcast({
-                type: 'gameUpdate',
-                timeRemaining: this.gameState.timeRemaining,
-                gameState: this.getGameState()
-            });
-            
-            // Check game end conditions
-            if (this.shouldEndGame()) {
-                this.endGame();
-            }
-        }, 1000);
-    }
-    
-    handleCapture(hunterId, targetId) {
-        const hunter = this.players.get(hunterId);
-        const target = this.players.get(targetId);
-        
-        if (!hunter || !target || !hunter.isHunter || !target.isAlive) return false;
-        
-        // Calculate distance (simplified - in real game use actual positions)
-        const distance = Math.random(); // Replace with actual distance calculation
-        
-        if (distance < 2) { // Capture range
-            target.isAlive = false;
-            hunter.stats.hunts++;
-            hunter.stats.xp += 50;
-            
-            // Check if game should end
-            if (this.shouldEndGame()) {
-                this.endGame('capture');
-                return true;
-            }
-            
-            // Broadcast capture
-            this.broadcast({
-                type: 'playerCaptured',
-                hunterId: hunterId,
-                runnerId: targetId
-            });
-            
-            console.log(`Capture: ${hunter.name} captured ${target.name}`);
-            
-            return true;
-        }
-        
-        return false;
-    }
-    
-    handlePhoto(playerId, position) {
-        const player = this.players.get(playerId);
-        if (!player) return false;
-        
-        const photoId = crypto.randomBytes(8).toString('hex');
-        const photo = {
-            id: photoId,
-            playerId: playerId,
-            playerName: player.name,
-            position: position,
-            timestamp: Date.now()
-        };
-        
-        this.gameState.photos.push(photo);
-        player.stats.photos++;
-        player.stats.xp += 10;
-        
-        // Broadcast photo
-        this.broadcast({
-            type: 'photoTaken',
-            photoId: photoId,
-            playerId: playerId,
-            playerName: player.name,
-            position: position
-        });
-        
-        console.log(`Photo taken by ${player.name} at ${JSON.stringify(position)}`);
-        
-        return true;
-    }
-    
-    shouldEndGame() {
-        if (!this.gameState.active) return false;
-        
-        // Check if all runners are captured
-        const aliveRunners = Array.from(this.players.values())
-            .filter(p => !p.isHunter && p.isAlive);
-        
-        if (aliveRunners.length === 0) {
-            return true;
-        }
-        
-        // Check game time
-        if (this.gameState.timeRemaining <= 0) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    endGame(reason = 'time') {
-        if (!this.gameState.active) return;
-        
-        this.gameState.active = false;
-        activeGames.delete(this.code);
-        
-        // Clear timers
-        if (this.timers.game) clearTimeout(this.timers.game);
-        if (this.timers.update) clearInterval(this.timers.update);
-        
-        // Determine winner
-        let winner = null;
-        
-        if (reason === 'capture') {
-            winner = this.gameState.hunter;
-        } else if (reason === 'time') {
-            // Runner with most survival time wins
-            const runners = Array.from(this.players.values())
-                .filter(p => !p.isHunter && p.isAlive)
-                .sort((a, b) => b.stats.timeSurvived - a.stats.timeSurvived);
-            
-            if (runners.length > 0) {
-                winner = runners[0].id;
-            } else {
-                winner = this.gameState.hunter;
-            }
-        }
-        
-        // Calculate final stats and XP
-        const gameStats = {
-            winner: winner,
-            reason: reason,
-            players: {}
-        };
-        
-        this.players.forEach(player => {
-            // Bonus XP for winner
-            if (player.id === winner) {
-                player.stats.xp += 100;
-            }
-            
-            // Bonus XP for surviving runners
-            if (!player.isHunter && player.isAlive) {
-                player.stats.xp += 50;
-            }
-            
-            gameStats.players[player.id] = {
-                photos: player.stats.photos,
-                hunts: player.stats.hunts,
-                timeSurvived: player.stats.timeSurvived,
-                xp: player.stats.xp,
-                isWinner: player.id === winner
-            };
-        });
-        
-        // Broadcast game end
-        this.broadcast({
-            type: 'gameEnded',
-            winner: winner,
-            reason: reason,
-            stats: gameStats.players
-        });
-        
-        console.log(`Game ended in room ${this.code}, Winner: ${winner}, Reason: ${reason}`);
-        
-        // Reset player states but keep in room
-        this.players.forEach(player => {
-            player.isReady = false;
-            player.isHunter = false;
-            player.isAlive = true;
-        });
-        
-        this.gameState.active = false;
-        this.gameState.hunter = null;
-        this.gameState.photos = [];
-    }
-    
-    getGameState() {
-        const playersData = {};
-        this.players.forEach(player => {
-            playersData[player.id] = {
-                id: player.id,
-                name: player.name,
-                isHost: player.isHost,
-                isReady: player.isReady,
-                isHunter: player.isHunter,
-                isAlive: player.isAlive,
-                position: player.position,
-                stats: player.stats
-            };
-        });
-        
-        return {
-            active: this.gameState.active,
-            hunter: this.gameState.hunter,
-            timeRemaining: this.gameState.timeRemaining,
-            photos: this.gameState.photos,
-            players: playersData
-        };
-    }
-    
-    getRoomInfo() {
-        return {
-            code: this.code,
-            name: this.name,
-            hostId: this.hostId,
-            maxPlayers: this.maxPlayers,
-            playerCount: this.players.size,
-            gameTime: this.gameTime / 60,
-            gameActive: this.gameState.active
-        };
-    }
+// Generate player ID
+function generatePlayerId() {
+    return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-// WebSocket Server
+// Handle WebSocket connections
 wss.on('connection', (ws, req) => {
-    console.log('New connection:', req.socket.remoteAddress);
+    console.log('New WebSocket connection from:', req.socket.remoteAddress);
     
-    let player = null;
+    let playerId = null;
+    let roomCode = null;
+    
+    // Send welcome message
+    ws.send(JSON.stringify({
+        type: 'welcome',
+        message: 'Connected to Backrooms Hunt Server',
+        timestamp: Date.now()
+    }));
     
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data);
             handleMessage(ws, message);
         } catch (error) {
-            console.error('Message parse error:', error);
-            sendError(ws, 'Invalid message format');
+            console.error('Parse error:', error);
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Invalid JSON format'
+            }));
         }
     });
     
     ws.on('close', () => {
-        if (player) {
-            console.log(`Player disconnected: ${player.name} (${player.id})`);
+        console.log('Client disconnected:', playerId);
+        
+        if (playerId && players.has(playerId)) {
+            const player = players.get(playerId);
             
             // Remove from room
-            if (player.room) {
+            if (player.room && rooms.has(player.room)) {
                 const room = rooms.get(player.room);
-                if (room) {
-                    const removedPlayer = room.removePlayer(player.id);
-                    
-                    if (removedPlayer) {
-                        // Notify other players
-                        room.broadcast({
-                            type: 'playerLeft',
-                            playerId: player.id,
-                            playerName: player.name,
-                            players: room.getGameState().players
-                        });
-                        
-                        // Clean up empty room
-                        if (room.players.size === 0) {
-                            rooms.delete(room.code);
-                            console.log(`Room deleted: ${room.code}`);
-                        }
-                    }
+                room.players = room.players.filter(p => p.id !== playerId);
+                
+                // Broadcast player left
+                broadcastToRoom(room.code, {
+                    type: 'playerLeft',
+                    playerId: playerId,
+                    playerName: player.name,
+                    players: room.players
+                });
+                
+                // Remove empty room
+                if (room.players.length === 0) {
+                    rooms.delete(room.code);
+                    console.log('Room deleted:', room.code);
                 }
             }
             
-            // Remove from players map
-            players.delete(player.id);
-            
-            // Remove from quick match queue
-            const queueIndex = quickMatchQueue.indexOf(player.id);
-            if (queueIndex > -1) {
-                quickMatchQueue.splice(queueIndex, 1);
-            }
+            // Remove from players
+            players.delete(playerId);
+        }
+        
+        // Remove from queue
+        const queueIndex = quickMatchQueue.indexOf(playerId);
+        if (queueIndex > -1) {
+            quickMatchQueue.splice(queueIndex, 1);
         }
     });
     
@@ -475,28 +180,42 @@ wss.on('connection', (ws, req) => {
                 handleTakePhoto(ws, message);
                 break;
                 
-            case 'playAgain':
-                handlePlayAgain(ws, message);
-                break;
-                
-            case 'leaveGame':
-                handleLeaveGame(ws, message);
+            case 'ping':
+                ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
                 break;
                 
             default:
                 console.log('Unknown message type:', message.type);
-                sendError(ws, 'Unknown message type');
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Unknown message type: ' + message.type
+                }));
         }
     }
     
     function handleInit(ws, message) {
-        const playerId = message.playerId || generatePlayerId();
+        playerId = message.playerId || generatePlayerId();
         const playerName = message.playerName || 'Player';
         
-        player = new Player(playerId, playerName, ws);
-        players.set(playerId, player);
+        players.set(playerId, {
+            id: playerId,
+            name: playerName,
+            ws: ws,
+            room: null,
+            isReady: false,
+            isHost: false,
+            isHunter: false,
+            isAlive: true,
+            position: { x: 0, y: 0, z: 0 },
+            stats: {
+                photos: 0,
+                hunts: 0,
+                timeSurvived: 0,
+                xp: 0
+            }
+        });
         
-        console.log(`Player initialized: ${playerName} (${playerId})`);
+        console.log('Player initialized:', playerName, playerId);
         
         ws.send(JSON.stringify({
             type: 'initSuccess',
@@ -506,12 +225,18 @@ wss.on('connection', (ws, req) => {
     }
     
     function handleCreateRoom(ws, message) {
-        if (!player) {
-            sendError(ws, 'Player not initialized');
+        if (!playerId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not initialized' }));
             return;
         }
         
-        const roomName = message.roomName || `${player.name}'s Hunt`;
+        const player = players.get(playerId);
+        if (!player) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not found' }));
+            return;
+        }
+        
+        const roomName = message.roomName || `${player.name}'s Room`;
         const maxPlayers = Math.min(Math.max(parseInt(message.maxPlayers) || 10, 2), 20);
         const gameTime = Math.min(Math.max(parseInt(message.gameTime) || 5, 1), 30);
         
@@ -521,393 +246,745 @@ wss.on('connection', (ws, req) => {
             roomCode = generateRoomCode();
         } while (rooms.has(roomCode));
         
-        // Create room
-        const room = new Room(
-            roomCode,
-            roomName,
-            player.id,
-            player.name,
-            maxPlayers,
-            gameTime
-        );
+        const room = {
+            code: roomCode,
+            name: roomName,
+            host: playerId,
+            maxPlayers: maxPlayers,
+            gameTime: gameTime,
+            players: [player],
+            gameState: {
+                active: false,
+                startedAt: null,
+                timeRemaining: 0,
+                hunter: null,
+                photos: []
+            }
+        };
         
-        room.addPlayer(player);
+        player.room = roomCode;
+        player.isHost = true;
+        
         rooms.set(roomCode, room);
+        roomCode = roomCode;
         
-        console.log(`Room created: ${roomCode} by ${player.name}`);
+        console.log('Room created:', roomCode, 'by', player.name);
         
         ws.send(JSON.stringify({
             type: 'roomCreated',
             roomCode: roomCode,
-            room: room.getRoomInfo(),
-            players: room.getGameState().players,
+            room: {
+                code: roomCode,
+                name: roomName,
+                maxPlayers: maxPlayers,
+                gameTime: gameTime,
+                playerCount: 1,
+                gameActive: false
+            },
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive
+            })),
             isHunter: player.isHunter
         }));
     }
     
     function handleJoinRoom(ws, message) {
+        if (!playerId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not initialized' }));
+            return;
+        }
+        
+        const player = players.get(playerId);
         if (!player) {
-            sendError(ws, 'Player not initialized');
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not found' }));
             return;
         }
         
-        const roomCode = message.roomCode?.toUpperCase();
-        if (!roomCode || roomCode.length !== 6) {
-            sendError(ws, 'Invalid room code');
+        const joinCode = message.roomCode?.toUpperCase();
+        if (!joinCode || joinCode.length !== 6) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid room code' }));
             return;
         }
         
-        const room = rooms.get(roomCode);
+        const room = rooms.get(joinCode);
         if (!room) {
-            sendError(ws, 'Room not found');
+            ws.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
             return;
         }
         
         if (room.gameState.active) {
-            sendError(ws, 'Game already started');
+            ws.send(JSON.stringify({ type: 'error', message: 'Game already started' }));
             return;
         }
         
-        if (!room.addPlayer(player)) {
-            sendError(ws, 'Room is full');
+        if (room.players.length >= room.maxPlayers) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Room is full' }));
             return;
         }
         
-        console.log(`${player.name} joined room ${roomCode}`);
+        // Leave current room if any
+        if (player.room && rooms.has(player.room)) {
+            const oldRoom = rooms.get(player.room);
+            oldRoom.players = oldRoom.players.filter(p => p.id !== playerId);
+            broadcastToRoom(oldRoom.code, {
+                type: 'playerLeft',
+                playerId: playerId,
+                playerName: player.name,
+                players: oldRoom.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    isHost: p.isHost,
+                    isReady: p.isReady,
+                    isHunter: p.isHunter,
+                    isAlive: p.isAlive
+                }))
+            });
+            
+            if (oldRoom.players.length === 0) {
+                rooms.delete(oldRoom.code);
+            }
+        }
         
-        // Notify room
-        room.broadcast({
+        // Join new room
+        player.room = joinCode;
+        player.isHost = false;
+        player.isReady = false;
+        room.players.push(player);
+        roomCode = joinCode;
+        
+        console.log('Player joined:', player.name, '->', joinCode);
+        
+        // Notify all players in room
+        broadcastToRoom(joinCode, {
             type: 'playerJoined',
-            playerId: player.id,
+            playerId: playerId,
             playerName: player.name,
-            players: room.getGameState().players
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive
+            }))
         });
         
-        // Send response to joining player
+        // Send success to joining player
         ws.send(JSON.stringify({
             type: 'roomJoined',
-            roomCode: roomCode,
-            room: room.getRoomInfo(),
-            players: room.getGameState().players,
+            roomCode: joinCode,
+            room: {
+                code: joinCode,
+                name: room.name,
+                maxPlayers: room.maxPlayers,
+                gameTime: room.gameTime,
+                playerCount: room.players.length,
+                gameActive: false
+            },
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive
+            })),
             isHunter: player.isHunter
         }));
     }
     
     function handleQuickMatch(ws, message) {
+        if (!playerId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not initialized' }));
+            return;
+        }
+        
+        const player = players.get(playerId);
         if (!player) {
-            sendError(ws, 'Player not initialized');
+            ws.send(JSON.stringify({ type: 'error', message: 'Player not found' }));
             return;
         }
         
         // Add to queue
-        if (!quickMatchQueue.includes(player.id)) {
-            quickMatchQueue.push(player.id);
+        if (!quickMatchQueue.includes(playerId)) {
+            quickMatchQueue.push(playerId);
         }
         
-        console.log(`Quick match queue: ${player.name} added (${quickMatchQueue.length} players)`);
+        console.log('Quick match queue:', quickMatchQueue.length, 'players');
         
-        // Send queue position
         ws.send(JSON.stringify({
             type: 'quickMatchQueued',
-            position: quickMatchQueue.indexOf(player.id) + 1
+            position: quickMatchQueue.indexOf(playerId) + 1,
+            total: quickMatchQueue.length
         }));
         
-        // Check if we can create a match
+        // Try to create match
         if (quickMatchQueue.length >= 2) {
             createQuickMatch();
         }
     }
     
-    function handleLeaveRoom(ws, message) {
-        if (!player || !player.room) return;
+    function createQuickMatch() {
+        if (quickMatchQueue.length < 2) return;
         
-        const room = rooms.get(player.room);
-        if (!room) return;
+        // Take first 2-10 players
+        const matchSize = Math.min(quickMatchQueue.length, 10);
+        const matchPlayers = quickMatchQueue.splice(0, matchSize)
+            .map(id => players.get(id))
+            .filter(p => p);
         
-        const removedPlayer = room.removePlayer(player.id);
+        if (matchPlayers.length < 2) return;
         
-        if (removedPlayer) {
-            // Notify room
-            room.broadcast({
-                type: 'playerLeft',
-                playerId: player.id,
-                playerName: player.name,
-                players: room.getGameState().players
-            });
-            
-            // Send confirmation
-            ws.send(JSON.stringify({
-                type: 'leftRoom',
-                roomCode: player.room
-            }));
-            
-            player.room = null;
-            
-            // Clean up empty room
-            if (room.players.size === 0) {
-                rooms.delete(room.code);
-                console.log(`Room deleted: ${room.code}`);
+        // Create room
+        const roomCode = generateRoomCode();
+        const host = matchPlayers[0];
+        
+        const room = {
+            code: roomCode,
+            name: `Quick Match ${roomCode}`,
+            host: host.id,
+            maxPlayers: matchSize,
+            gameTime: 5, // 5 minutes for quick match
+            players: matchPlayers,
+            gameState: {
+                active: false,
+                startedAt: null,
+                timeRemaining: 0,
+                hunter: null,
+                photos: []
             }
+        };
+        
+        // Set room for all players
+        matchPlayers.forEach((p, index) => {
+            p.room = roomCode;
+            p.isHost = index === 0;
+            p.isReady = false;
+        });
+        
+        rooms.set(roomCode, room);
+        
+        console.log('Quick match created:', roomCode, 'with', matchPlayers.length, 'players');
+        
+        // Notify all players
+        matchPlayers.forEach(p => {
+            if (p.ws.readyState === WebSocket.OPEN) {
+                p.ws.send(JSON.stringify({
+                    type: 'roomJoined',
+                    roomCode: roomCode,
+                    room: {
+                        code: roomCode,
+                        name: room.name,
+                        maxPlayers: room.maxPlayers,
+                        gameTime: room.gameTime,
+                        playerCount: room.players.length,
+                        gameActive: false
+                    },
+                    players: room.players.map(player => ({
+                        id: player.id,
+                        name: player.name,
+                        isHost: player.isHost,
+                        isReady: player.isReady,
+                        isHunter: player.isHunter,
+                        isAlive: player.isAlive
+                    })),
+                    isHunter: p.isHunter,
+                    isQuickMatch: true
+                }));
+            }
+        }));
+        
+        // Auto-start after 5 seconds
+        setTimeout(() => {
+            if (rooms.has(roomCode) && !rooms.get(roomCode).gameState.active) {
+                startQuickMatchGame(roomCode);
+            }
+        }, 5000);
+    }
+    
+    function startQuickMatchGame(roomCode) {
+        const room = rooms.get(roomCode);
+        if (!room || room.gameState.active || room.players.length < 2) return;
+        
+        // Set all players ready
+        room.players.forEach(p => {
+            p.isReady = true;
+        });
+        
+        startGameInRoom(room);
+    }
+    
+    function handleLeaveRoom(ws, message) {
+        if (!playerId || !roomCode) return;
+        
+        const player = players.get(playerId);
+        const room = rooms.get(roomCode);
+        
+        if (!player || !room) return;
+        
+        // Remove player from room
+        room.players = room.players.filter(p => p.id !== playerId);
+        player.room = null;
+        
+        // Broadcast leave
+        broadcastToRoom(roomCode, {
+            type: 'playerLeft',
+            playerId: playerId,
+            playerName: player.name,
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive
+            }))
+        });
+        
+        // Delete empty room
+        if (room.players.length === 0) {
+            rooms.delete(roomCode);
+            console.log('Room deleted (empty):', roomCode);
+        } else if (player.isHost) {
+            // Assign new host
+            room.players[0].isHost = true;
+            room.host = room.players[0].id;
+            
+            broadcastToRoom(roomCode, {
+                type: 'newHost',
+                hostId: room.players[0].id,
+                players: room.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    isHost: p.isHost,
+                    isReady: p.isReady,
+                    isHunter: p.isHunter,
+                    isAlive: p.isAlive
+                }))
+            });
         }
+        
+        roomCode = null;
+        
+        ws.send(JSON.stringify({
+            type: 'leftRoom',
+            roomCode: roomCode
+        }));
     }
     
     function handleSetReady(ws, message) {
-        if (!player || !player.room) return;
+        if (!playerId || !roomCode) return;
         
-        const room = rooms.get(player.room);
-        if (!room || room.gameState.active) return;
+        const player = players.get(playerId);
+        const room = rooms.get(roomCode);
         
-        player.isReady = message.isReady;
+        if (!player || !room || room.gameState.active) return;
         
-        // Broadcast to room
-        room.broadcast({
+        player.isReady = message.isReady !== undefined ? message.isReady : !player.isReady;
+        
+        broadcastToRoom(roomCode, {
             type: 'playerReady',
-            playerId: player.id,
+            playerId: playerId,
             isReady: player.isReady,
-            players: room.getGameState().players
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive
+            }))
         });
     }
     
     function handleStartGame(ws, message) {
-        if (!player || !player.room) return;
+        if (!playerId || !roomCode) return;
         
-        const room = rooms.get(player.room);
-        if (!room) return;
+        const player = players.get(playerId);
+        const room = rooms.get(roomCode);
+        
+        if (!player || !room || room.gameState.active) return;
         
         // Check if player is host
         if (!player.isHost) {
-            sendError(ws, 'Only host can start the game');
+            ws.send(JSON.stringify({ type: 'error', message: 'Only host can start game' }));
             return;
         }
         
-        const started = room.startGame();
-        if (started) {
-            // Broadcast game start to all players
-            room.broadcast({
-                type: 'gameStarting',
-                players: room.getGameState().players,
-                isHunter: player.isHunter,
-                gameTime: room.gameTime,
-                gameState: room.getGameState()
-            });
-        } else {
-            sendError(ws, 'Cannot start game. All players must be ready.');
+        // Check if all players are ready
+        if (!room.players.every(p => p.isReady)) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Not all players are ready' }));
+            return;
         }
+        
+        if (room.players.length < 2) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Need at least 2 players' }));
+            return;
+        }
+        
+        startGameInRoom(room);
+    }
+    
+    function startGameInRoom(room) {
+        room.gameState.active = true;
+        room.gameState.startedAt = Date.now();
+        room.gameState.timeRemaining = room.gameTime * 60;
+        room.gameState.photos = [];
+        
+        // Select random hunter
+        const hunterIndex = Math.floor(Math.random() * room.players.length);
+        room.gameState.hunter = room.players[hunterIndex].id;
+        
+        // Set roles
+        room.players.forEach((p, index) => {
+            p.isHunter = p.id === room.gameState.hunter;
+            p.isAlive = true;
+            p.stats.photos = 0;
+            p.stats.hunts = 0;
+            p.stats.timeSurvived = 0;
+            p.stats.xp = 0;
+            
+            // Random starting position
+            p.position = {
+                x: (Math.random() - 0.5) * 40,
+                y: 0,
+                z: (Math.random() - 0.5) * 40
+            };
+        });
+        
+        console.log('Game started in room:', room.code, 'Hunter:', room.gameState.hunter);
+        
+        // Broadcast game start
+        broadcastToRoom(room.code, {
+            type: 'gameStarting',
+            players: room.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                isHost: p.isHost,
+                isReady: p.isReady,
+                isHunter: p.isHunter,
+                isAlive: p.isAlive,
+                position: p.position,
+                stats: p.stats
+            })),
+            isHunter: room.players.find(p => p.id === playerId)?.isHunter || false,
+            gameTime: room.gameState.timeRemaining,
+            gameState: {
+                active: true,
+                hunter: room.gameState.hunter,
+                timeRemaining: room.gameState.timeRemaining,
+                photos: []
+            }
+        });
+        
+        // Start game timer
+        room.gameTimer = setInterval(() => {
+            if (!room.gameState.active) {
+                clearInterval(room.gameTimer);
+                return;
+            }
+            
+            room.gameState.timeRemaining--;
+            
+            if (room.gameState.timeRemaining <= 0) {
+                endGame(room.code, 'time');
+                clearInterval(room.gameTimer);
+                return;
+            }
+            
+            // Update survival time
+            room.players.forEach(p => {
+                if (p.isAlive) {
+                    p.stats.timeSurvived++;
+                }
+            });
+            
+            // Broadcast update
+            broadcastToRoom(room.code, {
+                type: 'gameUpdate',
+                timeRemaining: room.gameState.timeRemaining,
+                gameState: {
+                    active: room.gameState.active,
+                    hunter: room.gameState.hunter,
+                    timeRemaining: room.gameState.timeRemaining,
+                    photos: room.gameState.photos
+                }
+            });
+            
+            // Check win conditions
+            const aliveRunners = room.players.filter(p => !p.isHunter && p.isAlive);
+            if (aliveRunners.length === 0) {
+                endGame(room.code, 'capture');
+                clearInterval(room.gameTimer);
+            }
+        }, 1000);
     }
     
     function handleUpdatePosition(ws, message) {
-        if (!player || !player.room || !player.isAlive) return;
+        if (!playerId || !roomCode) return;
         
-        const room = rooms.get(player.room);
-        if (!room || !room.gameState.active) return;
+        const player = players.get(playerId);
+        const room = rooms.get(roomCode);
+        
+        if (!player || !room || !room.gameState.active || !player.isAlive) return;
         
         player.position = message.position;
         player.rotation = message.rotation;
         
         // Broadcast to other players
-        room.broadcast({
+        broadcastToRoomExcept(room.code, playerId, {
             type: 'playerPosition',
-            playerId: player.id,
+            playerId: playerId,
             position: player.position,
-            rotation: player.rotation
-        }, player.id);
+            rotation: player.rotation,
+            isHunter: player.isHunter
+        });
     }
     
     function handleCapturePlayer(ws, message) {
-        if (!player || !player.room) return;
+        if (!playerId || !roomCode) return;
         
-        const room = rooms.get(player.room);
-        if (!room || !room.gameState.active) return;
+        const hunter = players.get(playerId);
+        const room = rooms.get(roomCode);
+        
+        if (!hunter || !room || !room.gameState.active || !hunter.isHunter || !hunter.isAlive) return;
         
         const targetId = message.targetId;
-        room.handleCapture(player.id, targetId);
+        const target = players.get(targetId);
+        
+        if (!target || target.isHunter || !target.isAlive) return;
+        
+        // Simple distance check (in real game, use actual positions)
+        const dx = hunter.position.x - target.position.x;
+        const dz = hunter.position.z - target.position.z;
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        
+        if (distance < 2.5) { // Capture range
+            target.isAlive = false;
+            hunter.stats.hunts++;
+            hunter.stats.xp += 50;
+            
+            broadcastToRoom(room.code, {
+                type: 'playerCaptured',
+                hunterId: hunter.id,
+                runnerId: target.id,
+                hunterName: hunter.name,
+                runnerName: target.name
+            });
+            
+            console.log('Player captured:', target.name, 'by', hunter.name);
+            
+            // Check if game should end
+            const aliveRunners = room.players.filter(p => !p.isHunter && p.isAlive);
+            if (aliveRunners.length === 0) {
+                endGame(room.code, 'capture');
+            }
+        }
     }
     
     function handleTakePhoto(ws, message) {
-        if (!player || !player.room) return;
+        if (!playerId || !roomCode) return;
         
-        const room = rooms.get(player.room);
+        const player = players.get(playerId);
+        const room = rooms.get(roomCode);
+        
+        if (!player || !room || !room.gameState.active || !player.isAlive) return;
+        
+        const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const photo = {
+            id: photoId,
+            playerId: playerId,
+            playerName: player.name,
+            position: message.position,
+            timestamp: Date.now()
+        };
+        
+        room.gameState.photos.push(photo);
+        player.stats.photos++;
+        player.stats.xp += 10;
+        
+        broadcastToRoom(room.code, {
+            type: 'photoTaken',
+            photoId: photoId,
+            playerId: playerId,
+            playerName: player.name,
+            position: message.position,
+            timestamp: Date.now()
+        });
+        
+        console.log('Photo taken by:', player.name);
+    }
+    
+    function endGame(roomCode, reason) {
+        const room = rooms.get(roomCode);
         if (!room || !room.gameState.active) return;
         
-        const position = message.position;
-        room.handlePhoto(player.id, position);
-    }
-    
-    function handlePlayAgain(ws, message) {
-        if (!player || !player.room) return;
+        room.gameState.active = false;
         
-        const room = rooms.get(player.room);
-        if (!room) return;
+        if (room.gameTimer) {
+            clearInterval(room.gameTimer);
+        }
         
-        // Reset player ready state
-        player.isReady = false;
+        // Determine winner
+        let winner = null;
         
-        // Send player back to lobby
-        ws.send(JSON.stringify({
-            type: 'roomJoined',
-            roomCode: room.code,
-            room: room.getRoomInfo(),
-            players: room.getGameState().players
-        }));
-    }
-    
-    function handleLeaveGame(ws, message) {
-        handleLeaveRoom(ws, message);
-    }
-    
-    function sendError(ws, message) {
-        ws.send(JSON.stringify({
-            type: 'error',
-            message: message
-        }));
+        if (reason === 'capture') {
+            winner = room.gameState.hunter;
+        } else if (reason === 'time') {
+            // Find runner with most survival time
+            const runners = room.players.filter(p => !p.isHunter && p.isAlive);
+            if (runners.length > 0) {
+                runners.sort((a, b) => b.stats.timeSurvived - a.stats.timeSurvived);
+                winner = runners[0].id;
+            } else {
+                winner = room.gameState.hunter;
+            }
+        }
+        
+        // Calculate XP
+        room.players.forEach(p => {
+            if (p.id === winner) {
+                p.stats.xp += 100;
+            }
+            if (!p.isHunter && p.isAlive) {
+                p.stats.xp += 50;
+            }
+        });
+        
+        // Prepare stats
+        const stats = {};
+        room.players.forEach(p => {
+            stats[p.id] = {
+                photos: p.stats.photos,
+                hunts: p.stats.hunts,
+                timeSurvived: p.stats.timeSurvived,
+                xp: p.stats.xp,
+                isWinner: p.id === winner
+            };
+        });
+        
+        // Reset player states (keep in room)
+        room.players.forEach(p => {
+            p.isReady = false;
+            p.isHunter = false;
+            p.isAlive = true;
+        });
+        
+        room.gameState.hunter = null;
+        room.gameState.photos = [];
+        
+        broadcastToRoom(roomCode, {
+            type: 'gameEnded',
+            winner: winner,
+            reason: reason,
+            stats: stats
+        });
+        
+        console.log('Game ended in room:', roomCode, 'Winner:', winner, 'Reason:', reason);
     }
 });
 
-// Quick Match System
-function createQuickMatch() {
-    if (quickMatchQueue.length < 2) return;
+// Helper functions
+function broadcastToRoom(roomCode, message) {
+    const room = rooms.get(roomCode);
+    if (!room) return;
     
-    // Get players for match (2-10 players)
-    const matchSize = Math.min(quickMatchQueue.length, 10);
-    const matchedPlayerIds = quickMatchQueue.splice(0, matchSize);
-    const matchedPlayers = matchedPlayerIds.map(id => players.get(id)).filter(p => p);
+    const messageStr = JSON.stringify(message);
     
-    if (matchedPlayers.length < 2) return;
-    
-    // Create room
-    const roomCode = generateRoomCode();
-    const host = matchedPlayers[0];
-    
-    const room = new Room(
-        roomCode,
-        `Quick Match ${roomCode}`,
-        host.id,
-        host.name,
-        matchedPlayers.length,
-        5 // 5 minutes for quick match
-    );
-    
-    // Add all players to room
-    matchedPlayers.forEach(p => {
-        room.addPlayer(p);
-    });
-    
-    rooms.set(roomCode, room);
-    
-    console.log(`Quick match room created: ${roomCode} with ${matchedPlayers.length} players`);
-    
-    // Notify all players
-    matchedPlayers.forEach(p => {
-        if (p.ws.readyState === WebSocket.OPEN) {
-            p.ws.send(JSON.stringify({
-                type: 'roomJoined',
-                roomCode: roomCode,
-                room: room.getRoomInfo(),
-                players: room.getGameState().players,
-                isQuickMatch: true
-            }));
+    room.players.forEach(player => {
+        if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+            player.ws.send(messageStr);
         }
     });
+}
+
+function broadcastToRoomExcept(roomCode, exceptPlayerId, message) {
+    const room = rooms.get(roomCode);
+    if (!room) return;
     
-    // Auto-start game after 10 seconds
-    setTimeout(() => {
-        if (room && !room.gameState.active && room.players.size >= 2) {
-            // Set all players as ready
-            room.players.forEach(player => {
-                player.isReady = true;
-            });
-            
-            room.startGame();
-            
-            room.broadcast({
-                type: 'gameStarting',
-                players: room.getGameState().players,
-                gameTime: room.gameTime,
-                gameState: room.getGameState(),
-                isQuickMatch: true
-            });
+    const messageStr = JSON.stringify(message);
+    
+    room.players.forEach(player => {
+        if (player.id !== exceptPlayerId && 
+            player.ws && 
+            player.ws.readyState === WebSocket.OPEN) {
+            player.ws.send(messageStr);
         }
-    }, 10000);
+    });
 }
 
-// Helper Functions
-function generatePlayerId() {
-    return 'player_' + crypto.randomBytes(8).toString('hex');
-}
-
-function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing characters
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-}
-
-// Cleanup Inactive Rooms
+// Cleanup inactive rooms every 5 minutes
 setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     
     for (const [code, room] of rooms.entries()) {
-        // Remove empty rooms
-        if (room.players.size === 0) {
+        // Check if room is empty
+        if (room.players.length === 0) {
             rooms.delete(code);
             cleaned++;
             continue;
         }
         
-        // Remove inactive rooms (no activity for 1 hour)
+        // Check if room is inactive (no activity for 30 minutes)
         let lastActivity = now;
-        room.players.forEach(player => {
-            if (player.joinedAt < lastActivity) {
-                lastActivity = player.joinedAt;
+        room.players.forEach(p => {
+            // Simple activity check based on connection time
+            if (p.ws && p.ws.readyState === WebSocket.OPEN) {
+                // Connection is alive
+            } else {
+                // Connection is dead, room should be cleaned
+                lastActivity = Math.min(lastActivity, now - 3600000);
             }
         });
         
-        if (now - lastActivity > 3600000) { // 1 hour
+        if (now - lastActivity > 1800000) { // 30 minutes
             rooms.delete(code);
             cleaned++;
         }
     }
     
     if (cleaned > 0) {
-        console.log(`Cleaned ${cleaned} inactive rooms`);
+        console.log('Cleaned', cleaned, 'inactive rooms');
     }
-}, 300000); // Every 5 minutes
+}, 300000); // 5 minutes
 
-// Server Status Log
+// Heartbeat to keep connections alive
 setInterval(() => {
-    console.log('=== SERVER STATUS ===');
-    console.log(`Rooms: ${rooms.size}`);
-    console.log(`Players: ${players.size}`);
-    console.log(`Active Games: ${activeGames.size}`);
-    console.log(`Quick Match Queue: ${quickMatchQueue.length}`);
-    console.log(`Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
-    console.log('=====================');
-}, 60000); // Every minute
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.ping();
+        }
+    });
+}, 30000); // 30 seconds
 
-// Start Server
+// Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Backrooms Hunt Server running on port ${PORT}`);
-    console.log(`🌐 WebSocket: wss://localhost:${PORT}`);
+    console.log(`🚀 Backrooms Hunt Server started on port ${PORT}`);
+    console.log(`📡 WebSocket URL: ws://localhost:${PORT}`);
+    console.log(`🌐 Health check: http://localhost:${PORT}/health`);
 });
 
-// Graceful Shutdown
-process.on('SIGINT', () => {
-    console.log('Shutting down server...');
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
     
     // Close all WebSocket connections
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.close();
+            client.close(1000, 'Server shutdown');
         }
     });
     
     // Close server
     server.close(() => {
-        console.log('Server shutdown complete');
+        console.log('Server shut down successfully');
         process.exit(0);
     });
 });
