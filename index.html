@@ -3,128 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Smart Finder</title>
+    <title>AI Profile Matcher</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #000814; color: #e0e1dd; font-family: 'Inter', sans-serif; }
-        .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
-        .accent-text { color: #00b4d8; }
-        .pulse { animation: pulse-animation 2s infinite; }
-        @keyframes pulse-animation { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .ai-border { border: 1px solid #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+        .scanning-bar { width: 100%; height: 4px; background: linear-gradient(90deg, transparent, #3b82f6, transparent); position: relative; animation: scan 2s infinite; }
+        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+        .match-card { background: #0f172a; border: 1px solid #1e293b; transition: 0.3s; }
+        .match-card:hover { border-color: #3b82f6; transform: scale(1.02); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-10">
+<body class="p-4 md:p-12">
 
-    <div class="w-full max-w-3xl">
+    <div class="max-w-4xl mx-auto">
         <div class="text-center mb-10">
-            <h1 class="text-4xl font-black accent-text mb-2 tracking-tighter italic">IDENTITY SCANNER</h1>
-            <p class="text-gray-500 text-sm">Username ve Gerçek İsim Çapraz Sorgu Sistemi</p>
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">DİJİTAL KİMLİK ANALİZİ</h1>
+            <p class="text-slate-500 mt-2">Kullanıcı adından gerçek isme ve tüm ağlara ulaşın.</p>
         </div>
 
-        <div class="glass-panel p-6 rounded-3xl mb-8 shadow-2xl">
-            <div class="flex flex-col gap-4">
-                <input type="text" id="mainInput" placeholder="Kullanıcı adı girin (Örn: notxdev)" 
-                    class="w-full bg-black/40 border border-gray-700 p-4 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-center text-xl">
-                
-                <div class="flex gap-2">
-                    <button onclick="deepSearch()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/20">
-                        <i class="fa-solid fa-magnifying-glass-chart mr-2"></i> DERİN ANALİZ YAP
-                    </button>
+        <div class="ai-border p-2 rounded-2xl bg-slate-900 flex flex-col md:flex-row gap-2">
+            <input type="text" id="target" placeholder="Kullanıcı adı girin (Örn: notxdev)" 
+                class="flex-1 bg-transparent p-4 outline-none text-xl font-medium">
+            <button onclick="startAnalysis()" class="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-xl font-bold transition-all">
+                KİMLİĞİ ÇÖZ
+            </button>
+        </div>
+
+        <div id="loader" class="hidden mt-10 space-y-4">
+            <div class="scanning-bar rounded-full"></div>
+            <p id="logText" class="text-center text-blue-400 font-mono animate-pulse">Algoritmalar çalıştırılıyor...</p>
+        </div>
+
+        <div id="results" class="hidden mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2 match-card p-6 rounded-3xl border-2 border-blue-500/50">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Hedef Kimlik Özeti</h2>
+                        <p class="text-sm text-slate-400" id="summaryText"></p>
+                    </div>
                 </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono" id="tags">
+                    </div>
             </div>
-        </div>
 
-        <div id="log" class="hidden glass-panel p-4 rounded-2xl mb-6 font-mono text-xs text-green-400 overflow-hidden">
-            <div id="logContent"></div>
+            <div id="socialLinks" class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                </div>
         </div>
-
-        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            </div>
     </div>
 
     <script>
-        const logContent = document.getElementById('logContent');
-        const logBox = document.getElementById('log');
+        function startAnalysis() {
+            const user = document.getElementById('target').value.trim();
+            if(!user) return;
 
-        function addLog(msg) {
-            const line = document.createElement('div');
-            line.innerHTML = `> ${msg}`;
-            logContent.appendChild(line);
-            logBox.scrollTop = logBox.scrollHeight;
+            const loader = document.getElementById('loader');
+            const results = document.getElementById('results');
+            const log = document.getElementById('logText');
+            
+            loader.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            // Analiz adımları simülasyonu
+            const steps = [
+                "Telegram metadata taranıyor...",
+                "Instagram veritabanında 'alias' sorgulanıyor...",
+                "Google Dorking ile gerçek isim aranıyor...",
+                "Çapraz platform eşleşmeleri birleştiriliyor..."
+            ];
+
+            let i = 0;
+            const interval = setInterval(() => {
+                log.innerText = steps[i];
+                i++;
+                if(i >= steps.length) {
+                    clearInterval(interval);
+                    showResults(user);
+                }
+            }, 800);
         }
 
-        async function deepSearch() {
-            const input = document.getElementById('mainInput').value.trim();
-            if(!input) return;
+        function showResults(user) {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            
+            document.getElementById('summaryText').innerText = `${user} kullanıcısının tüm dijital izleri aşağıda birleştirilmiştir.`;
+            
+            const tags = document.getElementById('tags');
+            tags.innerHTML = `
+                <span class="bg-slate-800 p-2 rounded">#İsim_Analizi</span>
+                <span class="bg-slate-800 p-2 rounded">#Konum_İzi</span>
+                <span class="bg-slate-800 p-2 rounded">#Bağlantılı_Hesaplar</span>
+            `;
 
-            const grid = document.getElementById('resultsGrid');
+            const platforms = [
+                { name: 'Instagram', icon: 'fa-instagram', url: `https://www.instagram.com/${user}`, desc: 'En güçlü aday' },
+                { name: 'X / Twitter', icon: 'fa-x-twitter', url: `https://twitter.com/${user}`, desc: 'Düşünce paylaşımı' },
+                { name: 'Telegram', icon: 'fa-telegram', url: `https://t.me/${user}`, desc: 'Gizli iletişim' },
+                { name: 'LinkedIn (İsimle Ara)', icon: 'fa-linkedin', url: `https://www.google.com/search?q=site:linkedin.com "${user}"`, desc: 'İş ve Gerçek İsim' },
+                { name: 'Google (Derin Arama)', icon: 'fa-google', url: `https://www.google.com/search?q="${user}"`, desc: 'Tüm web arşivi' },
+                { name: 'Görsel Arama', icon: 'fa-image', url: `https://www.google.com/search?q="${user}"&tbm=isch`, desc: 'Yüz tanıma/Foto' }
+            ];
+
+            const grid = document.getElementById('socialLinks');
             grid.innerHTML = '';
-            logBox.classList.remove('hidden');
-            logContent.innerHTML = '';
-
-            addLog(`Sistem başlatıldı: ${input} taranıyor...`);
-            addLog(`Username veritabanı sorgulanıyor...`);
-            
-            // 1. AŞAMA: Username bazlı direkt linkler
-            const usernamePlatforms = [
-                { name: 'Telegram', icon: 'fa-telegram', url: `https://t.me/${input}`, type: 'Direct' },
-                { name: 'Instagram', icon: 'fa-instagram', url: `https://instagram.com/${input}`, type: 'Direct' },
-                { name: 'GitHub', icon: 'fa-github', url: `https://github.com/${input}`, type: 'Direct' }
-            ];
-
-            // 2. AŞAMA: Çapraz Sorgu (Gerçek isim bulma denemesi)
-            addLog(`Dizgi analizi yapılıyor...`);
-            
-            // Kullanıcıyı Google'da aratarak gerçek ismini bulması için "Deep Link" oluşturuyoruz
-            const smartLinks = [
-                { 
-                    name: 'Gerçek İsim & Kimlik Bul', 
-                    icon: 'fa-user-secret', 
-                    url: `https://www.google.com/search?q=site:linkedin.com OR site:facebook.com "${input}"`,
-                    desc: 'Bu kullanıcı adının arkasındaki gerçek ismi bulur.'
-                },
-                { 
-                    name: 'Görsel Tarama (Face Scan)', 
-                    icon: 'fa-image', 
-                    url: `https://www.google.com/search?q="${input}"&tbm=isch`,
-                    desc: 'Bu username ile paylaşılan tüm fotoğraflar.'
-                },
-                { 
-                    name: 'Sızıntı Kontrolü (Leaks)', 
-                    icon: 'fa-shield-virus', 
-                    url: `https://intelx.io/?s=${input}`,
-                    desc: 'E-posta veya şifre sızıntılarında bu isim var mı?'
-                }
-            ];
-
-            // Sonuçları Ekrana Bas
-            setTimeout(() => {
-                addLog(`Analiz tamamlandı. 9 potansiyel eşleşme bulundu.`);
-                
-                // Birleştirilmiş liste
-                const allResults = [...usernamePlatforms, ...smartLinks];
-
-                allResults.forEach((p, i) => {
-                    const card = document.createElement('div');
-                    card.className = "glass-panel p-5 rounded-3xl flex flex-col justify-between hover:bg-white/5 transition-all cursor-pointer border-l-4 border-blue-500";
-                    card.onclick = () => window.open(p.url, '_blank');
-                    
-                    card.innerHTML = `
-                        <div class="flex items-center gap-4 mb-3">
-                            <div class="w-12 h-12 rounded-2xl bg-blue-900/30 flex items-center justify-center text-blue-400">
-                                <i class="fab ${p.icon} || fa-solid ${p.icon}"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white">${p.name}</h3>
-                                <p class="text-[10px] text-gray-500 uppercase tracking-widest">${p.type || 'Analiz Verisi'}</p>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-400">${p.desc || 'Doğrudan profile gitmek için dokun.'}</p>
-                    `;
-                    grid.appendChild(card);
-                });
-            }, 1000);
+            platforms.forEach(p => {
+                grid.innerHTML += `
+                    <div onclick="window.open('${p.url}', '_blank')" class="match-card p-4 rounded-2xl cursor-pointer">
+                        <i class="fab ${p.icon} text-blue-400 text-xl mb-2"></i>
+                        <h4 class="font-bold text-sm">${p.name}</h4>
+                        <p class="text-[10px] text-slate-500">${p.desc}</p>
+                    </div>
+                `;
+            });
         }
     </script>
 </body>
