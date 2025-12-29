@@ -3,89 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Profil Dedektifi</title>
+    <title>Social Tracker Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; }
-        .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .profile-card { transition: all 0.3s ease; border: 1px solid #1e293b; }
-        .profile-card:hover { transform: translateY(-5px); background: #1e293b; border-color: #3b82f6; }
+        body { background: #050505; color: #00ff41; font-family: 'Courier New', Courier, monospace; }
+        .glitch-border { border: 1px solid #00ff41; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); }
+        .scan-line { height: 2px; background: rgba(0, 255, 65, 0.3); position: absolute; width: 100%; animation: scan 3s linear infinite; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .platform-card { background: rgba(20, 20, 20, 0.8); transition: all 0.2s; border-left: 4px solid transparent; }
+        .platform-card:hover { border-left: 4px solid #00ff41; background: #111; transform: translateX(5px); }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="flex items-center justify-center min-h-screen p-4">
 
-    <div class="max-w-4xl mx-auto">
-        <div class="text-center mb-10">
-            <h1 class="text-4xl font-extrabold text-blue-500 mb-2 tracking-tight">SCANNER PRO</h1>
-            <p class="text-slate-400">Username yazın, tüm dijital izleri bulalım.</p>
-        </div>
+    <div class="max-w-2xl w-full relative p-8 glitch-border bg-black">
+        <div class="scan-line"></div>
+        
+        <h1 class="text-2xl font-bold mb-6 text-center tracking-widest uppercase">Target Identity Scanner v1.0</h1>
 
-        <div class="relative mb-10">
-            <input type="text" id="targetUser" placeholder="Kullanıcı adı veya İsim Soyisim..." 
-                class="w-full p-5 bg-slate-800 rounded-2xl border-2 border-slate-700 focus:border-blue-500 outline-none text-xl transition shadow-2xl">
-            <button onclick="startDeepSearch()" class="absolute right-3 top-3 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-bold transition">
-                TARAMAYI BAŞLAT
+        <div class="mb-8">
+            <input type="text" id="userInput" placeholder="KULLANICI ADI GİRİN..." 
+                class="w-full bg-black border border-green-900 p-4 text-green-500 outline-none focus:border-green-400 text-lg uppercase">
+            <button onclick="smartSearch()" class="w-full mt-4 bg-green-900 hover:bg-green-700 text-black font-bold py-4 transition">
+                DERİN TARAMAYI BAŞLAT
             </button>
         </div>
 
-        <div id="loading" class="hidden text-center py-10">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-700 h-12 w-12 mb-4 mx-auto"></div>
-            <p class="text-blue-400 animate-pulse">Sosyal medya ağları taranıyor...</p>
-        </div>
+        <div id="status" class="hidden mb-4 text-xs italic opacity-70"></div>
 
-        <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="resultsGrid" class="space-y-3">
             </div>
     </div>
 
     <script>
-        async function startDeepSearch() {
-            const user = document.getElementById('targetUser').value;
+        function smartSearch() {
+            const user = document.getElementById('userInput').value.trim();
+            if (!user) return alert("Lütfen bir hedef belirleyin!");
+
             const grid = document.getElementById('resultsGrid');
-            const loader = document.getElementById('loading');
+            const status = document.getElementById('status');
             
-            if(!user) return alert("Bir isim giriniz!");
-
             grid.innerHTML = '';
-            loader.classList.remove('hidden');
+            status.innerText = "Sistem analiz ediliyor: " + user + "...";
+            status.classList.remove('hidden');
 
-            // Simüle edilmiş derin arama motoru (Google Dorking API simülasyonu)
+            // Platform listesi ve URL yapıları (Doğrudan Profil Linkleri)
             const platforms = [
-                { name: 'Instagram', icon: 'fa-instagram', color: 'text-pink-500', query: `site:instagram.com "${user}"` },
-                { name: 'Facebook', icon: 'fa-facebook', color: 'text-blue-600', query: `site:facebook.com "${user}"` },
-                { name: 'Twitter / X', icon: 'fa-x-twitter', color: 'text-white', query: `site:twitter.com "${user}"` },
-                { name: 'LinkedIn', icon: 'fa-linkedin', color: 'text-blue-400', query: `site:linkedin.com/in/ "${user}"` },
-                { name: 'TikTok', icon: 'fa-tiktok', color: 'text-red-400', query: `site:tiktok.com "@${user}"` },
-                { name: 'Pinterest', icon: 'fa-pinterest', color: 'text-red-600', query: `site:pinterest.com "${user}"` }
+                { name: 'INSTAGRAM', icon: 'fa-instagram', url: `https://www.instagram.com/${user}` },
+                { name: 'TWITTER / X', icon: 'fa-x-twitter', url: `https://twitter.com/${user}` },
+                { name: 'TIKTOK', icon: 'fa-tiktok', url: `https://www.tiktok.com/@${user}` },
+                { name: 'FACEBOOK', icon: 'fa-facebook', url: `https://www.facebook.com/${user}` },
+                { name: 'LINKEDIN', icon: 'fa-linkedin', url: `https://www.linkedin.com/in/${user}` },
+                { name: 'GITHUB', icon: 'fa-github', url: `https://github.com/${user}` },
+                { name: 'YOUTUBE', icon: 'fa-youtube', url: `https://www.youtube.com/@${user}` },
+                { name: 'PINTEREST', icon: 'fa-pinterest', url: `https://www.pinterest.com/${user}` },
+                { name: 'STEAM', icon: 'fa-steam', url: `https://steamcommunity.com/id/${user}` }
             ];
 
-            // Her platform için sonuçları getir
-            setTimeout(() => {
-                loader.classList.add('hidden');
-                
-                platforms.forEach(p => {
+            platforms.forEach((p, index) => {
+                setTimeout(() => {
                     const card = document.createElement('div');
-                    card.className = "profile-card p-5 rounded-2xl bg-slate-800/50 flex items-center justify-between cursor-pointer";
-                    card.onclick = () => window.open(`https://www.google.com/search?q=${encodeURIComponent(p.query)}`, '_blank');
+                    card.className = "platform-card p-4 flex justify-between items-center cursor-pointer";
+                    // Tıklayınca doğrudan siteye gider
+                    card.onclick = () => window.open(p.url, '_blank');
                     
                     card.innerHTML = `
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-2xl ${p.color}">
-                                <i class="fab ${p.icon}"></i>
-                            </div>
+                            <i class="fab ${p.icon} text-xl"></i>
                             <div>
-                                <h3 class="font-bold">${p.name}</h3>
-                                <p class="text-xs text-slate-500">Veri bulundu, görüntülemek için tıkla</p>
+                                <div class="text-sm font-bold uppercase">${p.name}</div>
+                                <div class="text-[10px] opacity-50">${p.url}</div>
                             </div>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-slate-600"></i>
+                        <div class="text-[10px] border border-green-900 px-2 py-1">PROFİLİ GÖR</div>
                     `;
                     grid.appendChild(card);
-                });
-            }, 1500);
+                }, index * 150); // Animasyonlu geliş efekti
+            });
         }
     </script>
 </body>
 </html>
-
