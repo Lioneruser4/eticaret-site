@@ -3,121 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Identity Linker</title>
+    <title>Deep Identity Finder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; }
-        .ai-card { background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; border-radius: 24px; }
-        .scanning { position: relative; overflow: hidden; }
-        .scanning::after { content: ""; position: absolute; top: -100%; left: 0; width: 100%; height: 100%; background: linear-gradient(0deg, transparent, rgba(59, 130, 246, 0.2), transparent); animation: scan 2s linear infinite; }
-        @keyframes scan { 0% { top: -100%; } 100% { top: 100%; } }
+        body { background: #010409; color: #c9d1d9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .terminal-card { background: #0d1117; border: 1px solid #30363d; border-radius: 12px; transition: 0.3s; }
+        .terminal-card:hover { border-color: #58a6ff; box-shadow: 0 0 15px rgba(88, 166, 255, 0.1); }
+        .step-active { border-left: 4px solid #238636; background: rgba(35, 134, 54, 0.05); }
+        .status-dot { height: 8px; width: 8px; background-color: #238636; border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="p-6 md:p-12 min-h-screen flex flex-col items-center">
+<body class="p-4 md:p-10 min-h-screen">
 
-    <div class="max-w-3xl w-full">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent italic">TARGET ANALYZER PRO</h1>
-            <p class="text-slate-500 text-sm mt-2">İsimden veya kullanıcı adından dijital kimlik oluşturma</p>
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-10 border-b border-gray-800 pb-6">
+            <h1 class="text-2xl font-bold text-white"><i class="fa-solid fa-microchip mr-2 text-blue-500"></i> OTO-DEDEKTİF v2.0</h1>
+            <p class="text-gray-500 text-sm mt-1">Username -> İsim -> Görsel zincirleme arama sistemi.</p>
         </div>
 
-        <div class="ai-card p-4 shadow-2xl flex flex-col md:flex-row gap-3">
-            <input type="text" id="targetInput" placeholder="İsim Soyisim veya Username..." 
-                class="flex-1 bg-transparent p-4 outline-none text-white text-lg border-b md:border-b-0 md:border-r border-slate-700">
-            <button onclick="deepAnalyze()" class="bg-blue-600 hover:bg-blue-700 px-10 py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-brain text-sm"></i> ANALİZ ET
-            </button>
-        </div>
-
-        <div id="statusBox" class="hidden mt-8 text-center space-y-4">
-            <div class="scanning w-24 h-24 rounded-full border-2 border-blue-500 mx-auto flex items-center justify-center">
-                <i class="fa-solid fa-fingerprint text-3xl text-blue-500 animate-pulse"></i>
+        <div class="terminal-card p-6 mb-8">
+            <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Başlangıç Verisi (Username veya İsim)</label>
+            <div class="flex gap-2">
+                <input type="text" id="target" placeholder="Örn: notxdev veya Xaliq Mustafayev" 
+                    class="flex-1 bg-black border border-gray-700 p-3 rounded-lg outline-none focus:border-blue-500 text-white">
+                <button onclick="startChainSearch()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                    ZİNCİRİ BAŞLAT
+                </button>
             </div>
-            <p id="statusText" class="font-mono text-blue-400 text-sm italic">Veri ağları çapraz sorgulanıyor...</p>
         </div>
 
-        <div id="resultPanel" class="hidden mt-10 space-y-6">
-            <div class="ai-card p-6 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2">Yapay Zeka Kararı</h2>
-                <p id="aiVerdict" class="text-lg font-semibold text-white"></p>
-                <div id="confidence" class="mt-2 h-1 bg-slate-800 rounded-full w-full">
-                    <div class="h-full bg-blue-500 rounded-full" style="width: 85%;"></div>
+        <div id="analysisPanel" class="hidden space-y-6">
+            
+            <div class="terminal-card p-4 step-active">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-green-500"><span class="status-dot"></span> AŞAMA 1: SOSYAL MEDYA ANALİZİ</h3>
+                </div>
+                <div id="socialGrid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    </div>
+            </div>
+
+            <div class="terminal-card p-4 border-l-4 border-l-blue-500">
+                <h3 class="text-sm font-bold text-blue-400 mb-4 uppercase italic">AŞAMA 2: GERÇEK KİMLİK & FOTOĞRAF GALERİSİ</h3>
+                <p class="text-xs text-gray-500 mb-4">Yukarıdaki profillerden ismi bulduysanız, o isimle tüm internetteki resimlerini dökün:</p>
+                
+                <div class="flex flex-col gap-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="realName" placeholder="Bulunan Gerçek İsim Soyisim..." 
+                            class="flex-1 bg-black border border-gray-700 p-3 rounded-lg outline-none focus:border-orange-500 text-white">
+                        <button onclick="deepImageSearch()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-bold uppercase">
+                            Resimleri Bul
+                        </button>
+                    </div>
+                    
+                    <div id="imageResults" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        </div>
                 </div>
             </div>
 
-            <div id="matchGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
         </div>
     </div>
 
     <script>
-        function deepAnalyze() {
-            const val = document.getElementById('targetInput').value.trim();
-            if(!val) return;
+        function startChainSearch() {
+            const input = document.getElementById('target').value.trim();
+            if(!input) return;
 
-            const statusBox = document.getElementById('statusBox');
-            const resultPanel = document.getElementById('resultPanel');
-            const aiVerdict = document.getElementById('aiVerdict');
-            const matchGrid = document.getElementById('matchGrid');
+            document.getElementById('analysisPanel').classList.remove('hidden');
+            const grid = document.getElementById('socialGrid');
+            grid.innerHTML = '';
 
-            statusBox.classList.remove('hidden');
-            resultPanel.classList.add('hidden');
-            matchGrid.innerHTML = '';
+            // Otomatik temizlenmiş kullanıcı adı (boşluksuz)
+            const cleanUser = input.toLowerCase().replace(/\s/g, '');
 
-            // Kullanıcı adını temizle (Boşlukları silerek olası username oluştur)
-            const possibleUsername = val.toLowerCase().replace(/\s/g, '');
+            const platforms = [
+                { name: 'TikTok', icon: 'fa-tiktok', url: `https://www.tiktok.com/@${cleanUser}` },
+                { name: 'Instagram', icon: 'fa-instagram', url: `https://www.instagram.com/${cleanUser}` },
+                { name: 'Twitter', icon: 'fa-twitter', url: `https://twitter.com/${cleanUser}` },
+                { name: 'Profile Check', icon: 'fa-magnifying-glass', url: `https://www.google.com/search?q=site:instagram.com OR site:tiktok.com "${input}"` }
+            ];
 
-            setTimeout(() => {
-                statusBox.classList.add('hidden');
-                resultPanel.classList.remove('hidden');
-                
-                aiVerdict.innerText = `"${val}" için dijital kimlik doğrulandı.`;
+            platforms.forEach(p => {
+                grid.innerHTML += `
+                    <div onclick="window.open('${p.url}', '_blank')" class="bg-black/50 p-3 rounded border border-gray-800 text-center cursor-pointer hover:bg-gray-800 transition">
+                        <i class="fab ${p.icon} || fa-solid ${p.icon} mb-2 block text-blue-400 text-xl"></i>
+                        <span class="text-[10px] font-bold">${p.name}</span>
+                    </div>
+                `;
+            });
+        }
 
-                // Platformlar ve Akıllı Linkleme
-                const platforms = [
-                    { 
-                        name: 'Instagram', 
-                        icon: 'fa-instagram', 
-                        url: `https://www.instagram.com/${possibleUsername}`,
-                        desc: `Kullanıcı adı eşleşmesi: @${possibleUsername}`
-                    },
-                    { 
-                        name: 'Google Kimlik Analizi', 
-                        icon: 'fa-google', 
-                        url: `https://www.google.com/search?q=site:instagram.com OR site:facebook.com OR site:linkedin.com "${val}"`,
-                        desc: 'Bu isme ait tüm sosyal medya profillerini tarar.'
-                    },
-                    { 
-                        name: 'Telegram', 
-                        icon: 'fa-telegram', 
-                        url: `https://t.me/${possibleUsername}`,
-                        desc: 'Olası mesajlaşma hesabı.'
-                    },
-                    { 
-                        name: 'LinkedIn Profesyonel', 
-                        icon: 'fa-linkedin', 
-                        url: `https://www.google.com/search?q=site:linkedin.com/in/ "${val}"`,
-                        desc: 'Gerçek iş hayatı ve CV kayıtları.'
-                    }
-                ];
+        function deepImageSearch() {
+            const name = document.getElementById('realName').value.trim();
+            if(!name) return alert("Lütfen önce bir isim girin!");
 
-                platforms.forEach(p => {
-                    matchGrid.innerHTML += `
-                        <div onclick="window.open('${p.url}', '_blank')" class="ai-card p-5 hover:border-blue-500 transition-all cursor-pointer group">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                    <i class="fab ${p.icon} || fa-solid ${p.icon} text-xl"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-sm">${p.name}</h4>
-                                    <p class="text-[11px] text-slate-500">${p.desc}</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }, 1500);
+            const res = document.getElementById('imageResults');
+            res.innerHTML = `
+                <div onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(name)}+profile+picture&tbm=isch', '_blank')" 
+                    class="p-4 bg-orange-900/20 border border-orange-900 rounded-xl cursor-pointer hover:bg-orange-900/40 transition">
+                    <h4 class="text-orange-400 font-bold text-xs uppercase">Google Görsel Arşivi</h4>
+                    <p class="text-[10px] text-gray-400">${name} kişisine ait tüm fotoğraflar.</p>
+                </div>
+                <div onclick="window.open('https://yandex.com/images/search?text=${encodeURIComponent(name)}', '_blank')" 
+                    class="p-4 bg-red-900/20 border border-red-900 rounded-xl cursor-pointer hover:bg-red-900/40 transition">
+                    <h4 class="text-red-400 font-bold text-xs uppercase">Yandex Yüz Tanıma Verisi</h4>
+                    <p class="text-[10px] text-gray-400">Sosyal medya dışındaki diğer resimler.</p>
+                </div>
+            `;
         }
     </script>
 </body>
