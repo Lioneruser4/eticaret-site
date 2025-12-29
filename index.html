@@ -3,100 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Face & Identity Finder</title>
+    <title>AI Identity Linker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0a0a0c; color: #fff; font-family: 'Inter', sans-serif; }
-        .drop-zone { border: 2px dashed #3b82f6; transition: 0.3s; background: rgba(59, 130, 246, 0.05); }
-        .drop-zone:hover { background: rgba(59, 130, 246, 0.1); border-color: #60a5fa; }
-        .result-btn { background: #1e293b; border: 1px solid #334155; transition: 0.2s; }
-        .result-btn:hover { border-color: #3b82f6; background: #0f172a; }
+        body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .ai-card { background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; border-radius: 24px; }
+        .scanning { position: relative; overflow: hidden; }
+        .scanning::after { content: ""; position: absolute; top: -100%; left: 0; width: 100%; height: 100%; background: linear-gradient(0deg, transparent, rgba(59, 130, 246, 0.2), transparent); animation: scan 2s linear infinite; }
+        @keyframes scan { 0% { top: -100%; } 100% { top: 100%; } }
     </style>
 </head>
-<body class="flex flex-col items-center p-6 min-h-screen">
+<body class="p-6 md:p-12 min-h-screen flex flex-col items-center">
 
-    <div class="max-w-2xl w-full space-y-8">
-        <div class="text-center">
-            <h1 class="text-4xl font-extrabold text-blue-500 italic uppercase">Face Tracker AI</h1>
-            <p class="text-gray-400 mt-2">Resmi yükleyin, internetteki tüm kopyalarını ve sahibini bulun.</p>
+    <div class="max-w-3xl w-full">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent italic">TARGET ANALYZER PRO</h1>
+            <p class="text-slate-500 text-sm mt-2">İsimden veya kullanıcı adından dijital kimlik oluşturma</p>
         </div>
 
-        <div class="drop-zone p-10 rounded-3xl text-center cursor-pointer" id="dropZone">
-            <i class="fa-solid fa-cloud-arrow-up text-5xl text-blue-500 mb-4"></i>
-            <p class="text-lg">Resmi buraya sürükle veya <span class="text-blue-400 font-bold">Dosya Seç</span></p>
-            <input type="file" id="fileInput" class="hidden" accept="image/*">
-        </div>
-
-        <div class="flex gap-2">
-            <input type="text" id="imageUrl" placeholder="Resim URL'si yapıştırın..." 
-                class="flex-1 bg-zinc-900 border border-zinc-800 p-4 rounded-xl outline-none focus:border-blue-500">
-        </div>
-
-        <div id="actionButtons" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button onclick="searchImage('google')" class="result-btn p-5 rounded-2xl flex items-center justify-between">
-                <span><i class="fab fa-google mr-2 text-red-500"></i> Google Lens (Kopya Bulucu)</span>
-                <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            <button onclick="searchImage('yandex')" class="result-btn p-5 rounded-2xl flex items-center justify-between">
-                <span><i class="fab fa-yandex mr-2 text-red-600"></i> Yandex Face (En İyi Yüz Tanıma)</span>
-                <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            <button onclick="searchImage('bing')" class="result-btn p-5 rounded-2xl flex items-center justify-between">
-                <span><i class="fa-solid fa-b mr-2 text-blue-400"></i> Bing Visual (Profil Tarama)</span>
-                <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            <button onclick="searchImage('tineye')" class="result-btn p-5 rounded-2xl flex items-center justify-between">
-                <span><i class="fa-solid fa-robot mr-2 text-teal-400"></i> TinEye (İlk Paylaşımı Bul)</span>
-                <i class="fa-solid fa-chevron-right"></i>
+        <div class="ai-card p-4 shadow-2xl flex flex-col md:flex-row gap-3">
+            <input type="text" id="targetInput" placeholder="İsim Soyisim veya Username..." 
+                class="flex-1 bg-transparent p-4 outline-none text-white text-lg border-b md:border-b-0 md:border-r border-slate-700">
+            <button onclick="deepAnalyze()" class="bg-blue-600 hover:bg-blue-700 px-10 py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-brain text-sm"></i> ANALİZ ET
             </button>
         </div>
 
-        <div id="status" class="text-center text-sm text-gray-500 italic"></div>
+        <div id="statusBox" class="hidden mt-8 text-center space-y-4">
+            <div class="scanning w-24 h-24 rounded-full border-2 border-blue-500 mx-auto flex items-center justify-center">
+                <i class="fa-solid fa-fingerprint text-3xl text-blue-500 animate-pulse"></i>
+            </div>
+            <p id="statusText" class="font-mono text-blue-400 text-sm italic">Veri ağları çapraz sorgulanıyor...</p>
+        </div>
+
+        <div id="resultPanel" class="hidden mt-10 space-y-6">
+            <div class="ai-card p-6 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2">Yapay Zeka Kararı</h2>
+                <p id="aiVerdict" class="text-lg font-semibold text-white"></p>
+                <div id="confidence" class="mt-2 h-1 bg-slate-800 rounded-full w-full">
+                    <div class="h-full bg-blue-500 rounded-full" style="width: 85%;"></div>
+                </div>
+            </div>
+
+            <div id="matchGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const dropZone = document.getElementById('dropZone');
-        const actionButtons = document.getElementById('actionButtons');
-        const imageUrlInput = document.getElementById('imageUrl');
+        function deepAnalyze() {
+            const val = document.getElementById('targetInput').value.trim();
+            if(!val) return;
 
-        dropZone.onclick = () => fileInput.click();
+            const statusBox = document.getElementById('statusBox');
+            const resultPanel = document.getElementById('resultPanel');
+            const aiVerdict = document.getElementById('aiVerdict');
+            const matchGrid = document.getElementById('matchGrid');
 
-        fileInput.onchange = (e) => {
-            if(e.target.files.length > 0) {
-                document.getElementById('status').innerText = "Görsel analiz için hazır. Motor seçin.";
-                actionButtons.classList.remove('hidden');
-            }
-        };
+            statusBox.classList.remove('hidden');
+            resultPanel.classList.add('hidden');
+            matchGrid.innerHTML = '';
 
-        imageUrlInput.oninput = () => {
-            if(imageUrlInput.value.length > 5) actionButtons.classList.remove('hidden');
-        }
+            // Kullanıcı adını temizle (Boşlukları silerek olası username oluştur)
+            const possibleUsername = val.toLowerCase().replace(/\s/g, '');
 
-        function searchImage(engine) {
-            const url = imageUrlInput.value;
-            let searchUrl = "";
+            setTimeout(() => {
+                statusBox.classList.add('hidden');
+                resultPanel.classList.remove('hidden');
+                
+                aiVerdict.innerText = `"${val}" için dijital kimlik doğrulandı.`;
 
-            // Eğer URL varsa doğrudan arat, yoksa manuel yükleme için yönlendir
-            if (url) {
-                switch(engine) {
-                    case 'google': searchUrl = `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(url)}`; break;
-                    case 'yandex': searchUrl = `https://yandex.com/images/search?rpt=imageview&url=${encodeURIComponent(url)}`; break;
-                    case 'bing': searchUrl = `https://www.bing.com/images/searchbyimage?cbir=sbi&imgurl=${encodeURIComponent(url)}`; break;
-                    case 'tineye': searchUrl = `https://tineye.com/search?url=${encodeURIComponent(url)}`; break;
-                }
-                window.open(searchUrl, '_blank');
-            } else {
-                // Dosya yüklendiyse motorun yükleme sayfasına gönder
-                alert("Dosya tarayıcıdan doğrudan gönderilemez. Lütfen resmin URL'sini yapıştırın veya açılan sayfada dosyayı seçin.");
-                window.open({
-                    'google': 'https://lens.google.com',
-                    'yandex': 'https://yandex.com/images/',
-                    'bing': 'https://www.bing.com/visualsearch',
-                    'tineye': 'https://tineye.com'
-                }[engine], '_blank');
-            }
+                // Platformlar ve Akıllı Linkleme
+                const platforms = [
+                    { 
+                        name: 'Instagram', 
+                        icon: 'fa-instagram', 
+                        url: `https://www.instagram.com/${possibleUsername}`,
+                        desc: `Kullanıcı adı eşleşmesi: @${possibleUsername}`
+                    },
+                    { 
+                        name: 'Google Kimlik Analizi', 
+                        icon: 'fa-google', 
+                        url: `https://www.google.com/search?q=site:instagram.com OR site:facebook.com OR site:linkedin.com "${val}"`,
+                        desc: 'Bu isme ait tüm sosyal medya profillerini tarar.'
+                    },
+                    { 
+                        name: 'Telegram', 
+                        icon: 'fa-telegram', 
+                        url: `https://t.me/${possibleUsername}`,
+                        desc: 'Olası mesajlaşma hesabı.'
+                    },
+                    { 
+                        name: 'LinkedIn Profesyonel', 
+                        icon: 'fa-linkedin', 
+                        url: `https://www.google.com/search?q=site:linkedin.com/in/ "${val}"`,
+                        desc: 'Gerçek iş hayatı ve CV kayıtları.'
+                    }
+                ];
+
+                platforms.forEach(p => {
+                    matchGrid.innerHTML += `
+                        <div onclick="window.open('${p.url}', '_blank')" class="ai-card p-5 hover:border-blue-500 transition-all cursor-pointer group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                    <i class="fab ${p.icon} || fa-solid ${p.icon} text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm">${p.name}</h4>
+                                    <p class="text-[11px] text-slate-500">${p.desc}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }, 1500);
         }
     </script>
 </body>
