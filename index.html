@@ -2,134 +2,227 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Football Multiplayer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Futbol Oyunu</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/",
+        "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js",
+        "nipplejs": "https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"
+      }
+    }
+    </script>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; touch-action: none; }
-        #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; }
-        .lobby { background: #222; padding: 20px; border-radius: 20px; text-align: center; width: 300px; border: 2px solid #00f2fe; }
-        #joystick { position: fixed; bottom: 50px; left: 50px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid white; }
-        #controls { position: fixed; bottom: 50px; right: 30px; display: flex; gap: 10px; }
-        .btn { width: 70px; height: 70px; border-radius: 50%; border: none; font-weight: bold; color: white; cursor: pointer; }
-        #shootBtn { background: #ff416c; }
-        #passBtn { background: #4facfe; }
+        body { margin: 0; overflow: hidden; background: #000; }
+        #lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        #hud { position: absolute; top: 10px; left: 10px; color: white; z-index: 50; }
+        #mobileControls { position: absolute; bottom: 20px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 50; }
+        .btn { width: 80px; height: 80px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        #joystickZone { width: 150px; height: 150px; }
     </style>
 </head>
 <body>
-
-<div id="ui-overlay">
-    <div class="lobby">
-        <img id="uImg" style="width:60px; border-radius:50%;">
-        <h3 id="uName">Yükleniyor...</h3>
-        <select id="duration" style="width:100%; padding:10px; margin:10px 0;">
-            <option value="5">5 Dakika</option>
-            <option value="15">15 Dakika</option>
+    <div id="lobby">
+        <img id="profilePic" width="100" height="100" style="border-radius:50%;">
+        <h1 id="username">Yükleniyor...</h1>
+        <button id="createRoom">Oda Kur</button>
+        <select id="timeSelect">
+            <option value="300">5 Dakika</option>
+            <option value="600">10 Dakika</option>
+            <option value="900">15 Dakika</option>
+            <option value="1500">25 Dakika</option>
+            <option value="1800">30 Dakika</option>
         </select>
-        <button onclick="initGame()" style="width:100%; padding:15px; background:#00f2fe; border:none; border-radius:10px; font-weight:bold;">ODA KUR / GİR</button>
+        <input id="joinInput" placeholder="Oda ID ile katıl">
+        <button id="joinRoom">Katıl</button>
+        <div id="roomList"></div>
     </div>
-</div>
 
-<div id="joystick"></div>
-<div id="controls">
-    <button id="shootBtn" class="btn">ŞUT</button>
-    <button id="passBtn" class="btn">PAS</button>
-</div>
+    <div id="hud">Skor: Mavi 0 - Kırmızı 0 | Süre: --</div>
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    const user = tg.initDataUnsafe?.user || { first_name: "Player", photo_url: "" };
-    document.getElementById('uName').innerText = user.first_name;
-    document.getElementById('uImg').src = user.photo_url || "https://via.placeholder.com/60";
+    <div id="mobileControls">
+        <div id="joystickZone"></div>
+        <div>
+            <div class="btn" id="passBtn">PAS</div>
+            <div class="btn" id="shootBtn">ŞUT</div>
+        </div>
+    </div>
 
-    let scene, camera, renderer, socket, myId;
-    let players = {};
-    let ball;
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import * as CANNON from 'cannon-es';
+        import nipplejs from 'nipplejs';
 
-    function initGame() {
-        document.getElementById('ui-overlay').style.display = 'none';
-        socket = io("https://saskioyunu.onrender.com");
-        
-        setup3D();
-        setupEvents();
-    }
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
 
-    function setup3D() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x228b22);
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        const user = Telegram.WebApp.initDataUnsafe.user || { id: 999, first_name: 'Misafir', photo_url: '' };
+        document.getElementById('username').innerText = user.first_name || user.username || 'Misafir';
+        document.getElementById('profilePic').src = user.photo_url || 'https://via.placeholder.com/100';
+
+        const socket = io();
+
+        // ==== THREE.JS SETUP ====
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x88ccff);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Işıklandırma
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
+        // Işık
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(20, 40, 20);
+        light.castShadow = true;
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        // Saha
-        const groundGeo = new THREE.PlaneGeometry(100, 60);
-        const groundMat = new THREE.MeshPhongMaterial({ color: 0x2d5a27 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
+        // Saha (basit yeşil zemin + çizgiler + duvarlar)
+        const fieldGeo = new THREE.PlaneGeometry(100, 60);
+        const fieldMat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
+        const field = new THREE.Mesh(fieldGeo, fieldMat);
+        field.rotation.x = -Math.PI / 2;
+        field.receiveShadow = true;
+        scene.add(field);
 
-        // Kale Direkleri (Basit 3D Model)
-        const goalGeo = new THREE.BoxGeometry(2, 10, 20);
-        const goalMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        // Kale basit kutu
+        const goalGeo = new THREE.BoxGeometry(20, 10, 5);
+        const goalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true });
         const goal1 = new THREE.Mesh(goalGeo, goalMat);
-        goal1.position.set(-50, 5, 0);
+        goal1.position.set(0, 5, -35);
         scene.add(goal1);
+        const goal2 = goal1.clone();
+        goal2.position.z = 35;
+        scene.add(goal2);
+
+        // Duvarlar (top dışarı çıkmasın)
+        const wallMat = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0 });
+        const wall1 = new THREE.Mesh(new THREE.BoxGeometry(110, 20, 5), wallMat);
+        wall1.position.z = -33;
+        scene.add(wall1);
+        const wall2 = wall1.clone();
+        wall2.position.z = 33;
+        scene.add(wall2);
+        const wall3 = new THREE.Mesh(new THREE.BoxGeometry(5, 20, 70), wallMat);
+        wall3.position.x = -53;
+        scene.add(wall3);
+        const wall4 = wall3.clone();
+        wall4.position.x = 53;
+        scene.add(wall4);
+
+        // ==== CANNON PHYSICS ====
+        const world = new CANNON.World();
+        world.gravity.set(0, -20, 0);
+        world.broadphase = new CANNON.NaiveBroadphase();
+
+        // Saha zemin fizik
+        const groundBody = new CANNON.Body({ mass: 0 });
+        groundBody.addShape(new CANNON.Box(new CANNON.Vec3(50, 0.1, 30)));
+        groundBody.position.set(0, -0.1, 0);
+        world.addBody(groundBody);
 
         // Top
-        const ballGeo = new THREE.SphereGeometry(0.8, 16, 16);
-        const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
-        ball = new THREE.Mesh(ballGeo, ballMat);
-        ball.position.y = 0.8;
-        scene.add(ball);
+        const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        scene.add(ballMesh);
+        const ballBody = new CANNON.Body({ mass: 1 });
+        ballBody.addShape(new CANNON.Sphere(1));
+        ballBody.position.set(0, 5, 0);
+        world.addBody(ballBody);
 
-        camera.position.set(0, 40, 50);
-        camera.lookAt(0,0,0);
-        
-        animate();
-    }
+        // Oyuncu modeli (basit Mixamo karakter - koşma animasyonlu)
+        const loader = new GLTFLoader();
+        let playerMixer, playerModel;
+        const players = {}; // { socketId: { mesh, body, mixer, team } }
 
-    function createPlayer(id, team) {
-        // İnsan formunda basit mesh (Gövde, Kafa, Ayaklar)
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3, 1), new THREE.MeshPhongMaterial({ color: team }));
-        body.position.y = 1.5;
-        group.add(body);
-        
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshPhongMaterial({ color: 0xffdbac }));
-        head.position.y = 3.5;
-        group.add(head);
-
-        scene.add(group);
-        players[id] = group;
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-        // Topa yaklaşınca topun hafif önünde kayması mantığı
-        if(players[socket.id]) {
-            let pPos = players[socket.id].position;
-            let dist = pPos.distanceTo(ball.position);
-            if(dist < 2) {
-                ball.position.x += (ball.position.x - pPos.x) * 0.1;
-                ball.position.z += (ball.position.z - pPos.z) * 0.1;
-            }
-        }
-    }
-
-    function setupEvents() {
-        socket.on('connect', () => {
-            socket.emit('joinRoom', { roomId: 'lobby', user: { name: user.first_name, img: user.photo_url } });
+        loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Soldier.glb', (gltf) => {
+            playerModel = gltf.scene;
+            playerMixer = new THREE.AnimationMixer(playerModel);
+            const runAction = playerMixer.clipAction(gltf.animations[1]); // Run animasyonu
+            runAction.play();
         });
-    }
-</script>
+
+        // Kamera kontrol (PC için orbit, mobil için takip)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        camera.position.set(0, 20, 50);
+
+        // Mobil kontrol
+        if (Telegram.WebApp.platform !== 'unknown') {
+            document.getElementById('mobileControls').style.display = 'flex';
+            const manager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'static', position: { left: '50%', bottom: '50%' }, color: 'white' });
+            let moveVec = new THREE.Vector3();
+            manager.on('move', (evt, data) => {
+                moveVec.set(data.vector.x, 0, -data.vector.y);
+            });
+            manager.on('end', () => moveVec.set(0,0,0));
+
+            document.getElementById('shootBtn').addEventListener('touchstart', () => socket.emit('kick', { power: 20 }));
+            document.getElementById('passBtn').addEventListener('touchstart', () => socket.emit('kick', { power: 8 }));
+        }
+
+        // Animasyon döngüsü
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            world.step(1/60, delta);
+
+            // Top sync
+            ballMesh.position.copy(ballBody.position);
+            ballMesh.quaternion.copy(ballBody.quaternion);
+
+            // Oyuncu hareket (basit örnek - kendi oyuncunu hareket ettir)
+            if (myPlayerBody && moveVec.length() > 0) {
+                const velocity = moveVec.clone().multiplyScalar(15);
+                myPlayerBody.velocity.x = velocity.x;
+                myPlayerBody.velocity.z = velocity.z;
+                if (playerMixer) playerMixer.update(delta);
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ==== SOCKET.IO ====
+        let myId, myTeam, myPlayerBody;
+        socket.emit('joinLobby', { userId: user.id, username: user.first_name });
+
+        document.getElementById('createRoom').onclick = () => {
+            const time = document.getElementById('timeSelect').value;
+            socket.emit('createRoom', { time });
+        };
+
+        document.getElementById('joinRoom').onclick = () => {
+            const roomId = document.getElementById('joinInput').value;
+            socket.emit('joinRoom', roomId);
+        };
+
+        socket.on('roomJoined', (data) => {
+            document.getElementById('lobby').style.display = 'none';
+            // Takım seçimi vs burada
+        });
+
+        socket.on('playerUpdate', (playersData) => {
+            // Diğer oyuncuları sync et (basit pozisyon)
+        });
+
+        socket.on('kickBall', (force) => {
+            // Topa yakınsa kuvvet uygula
+            const direction = new CANNON.Vec3(); // kamera yönüne göre
+            ballBody.applyImpulse(direction.scale(force), ballBody.position);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
