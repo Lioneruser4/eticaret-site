@@ -1,66 +1,43 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Bot Girişi</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #1e293b; padding: 25px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .user-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 15px; }
-        .user-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #38bdf8; }
-        input { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #0f172a; color: white; margin-bottom: 15px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #38bdf8; color: #0f172a; font-weight: bold; cursor: pointer; }
-        #status { font-size: 12px; margin-top: 10px; color: #38bdf8; display: none; }
+        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .box { background: #1e293b; padding: 20px; border-radius: 15px; display: inline-block; width: 80%; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #38bdf8; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div class="card">
-    <div id="userHeader" class="user-info">
-        <span id="userName">Giriş yapılıyor...</span>
+    <div class="box">
+        <h3 id="userWelcome">Yükleniyor...</h3>
+        <input type="text" id="mName" placeholder="Müzik adı (örn: Miyagi)">
+        <br>
+        <button onclick="gonder()">BOTA GÖNDER</button>
     </div>
-    <h2>Müzik Ara</h2>
-    <input type="text" id="mInput" placeholder="Şarkı adı yazın...">
-    <button onclick="sendReq()" id="mainBtn">BOTA GÖNDER</button>
-    <div id="status">İşlem yapılıyor, lütfen bota bakın...</div>
-</div>
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    // Kullanıcı Bilgilerini Göster
-    const user = tg.initDataUnsafe?.user;
-    if (user) {
-        document.getElementById('userName').innerText = "Selam, " + user.first_name;
-        if(user.photo_url) {
-            const img = document.createElement('img');
-            img.src = user.photo_url;
-            document.getElementById('userHeader').prepend(img);
-        }
-    }
-
-    async function sendReq() {
-        const music = document.getElementById('mInput').value;
-        const btn = document.getElementById('mainBtn');
-        const status = document.getElementById('status');
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const user = tg.initDataUnsafe?.user;
         
-        if(!music) return alert("İsim yaz!");
-        
-        btn.disabled = true;
-        status.style.display = "block";
-
-        try {
-            const res = await fetch(`https://saskioyunu.onrender.com/indir?chat_id=${user.id}&music=${encodeURIComponent(music)}`);
-            alert("İstek Render'a ulaştı. Botu kontrol et!");
-        } catch (e) {
-            alert("Bağlantı hatası! Render uyuyor olabilir.");
-        } finally {
-            btn.disabled = false;
+        if(user) {
+            document.getElementById('userWelcome').innerText = "Hoş geldin, " + user.first_name;
         }
-    }
-</script>
+
+        async function gonder() {
+            const m = document.getElementById('mName').value;
+            if(!m) return;
+            
+            // Render linkin
+            const url = `https://saskioyunu.onrender.com/indir?chat_id=${user.id}&music=${encodeURIComponent(m)}`;
+            
+            fetch(url);
+            alert("İstek bota iletildi! Botu kontrol et.");
+        }
+    </script>
 </body>
 </html>
