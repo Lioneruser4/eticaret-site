@@ -1,96 +1,52 @@
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
-const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(cors());
-app.use(express.json());
+let rooms = {};
 
-app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
+io.on('connection', (socket) => {
+    socket.on('createRoom', (data) => {
+        const roomId = "Room_" + Math.random().toString(36).substr(2, 9);
+        rooms[roomId] = {
+            id: roomId,
+            duration: data.duration * 60,
+            timer: data.duration * 60,
+            players: {},
+            ball: { x: 0, y: 1, z: 0, vx: 0, vz: 0 },
+            score: { red: 0, blue: 0 }
+        };
+        socket.emit('roomCreated', roomId);
+    });
 
-app.post('/osint', async (req, res) => {
-    const { phone } = req.body;
-    if (!phone || !phone.startsWith('+')) {
-        return res.json({ error: 'Invalid phone' });
-    }
+    socket.on('joinRoom', ({ roomId, user }) => {
+        if (!rooms[roomId]) return;
+        socket.join(roomId);
+        rooms[roomId].players[socket.id] = {
+            id: socket.id,
+            name: user.name,
+            img: user.img,
+            team: 'red', // Varsayılan
+            x: Math.random() * 10,
+            z: Math.random() * 10,
+            anim: 'idle'
+        };
+        io.to(roomId).emit('updateState', rooms[roomId]);
+    });
 
-    try {
-        const results = await scrapeAll(phone);
-        res.json(results);
-    } catch(e) {
-        res.json({ names: [], whatsapp: false, carrier: 'Error', error: e.message });
-    }
+    socket.on('move', (data) => {
+        if (rooms[data.roomId] && rooms[data.roomId].players[socket.id]) {
+            let p = rooms[data.roomId].players[socket.id];
+            p.x = data.x;
+            p.z = data.z;
+            p.anim = data.anim;
+            socket.to(data.roomId).emit('playerMoved', { id: socket.id, x: p.x, z: p.z, anim: p.anim });
+        }
+    });
 });
 
-async function scrapeAll(phone) {
-    const results = { names: [], sources: [], whatsapp: false, carrier: '' };
-
-    // 1. TRUECALLER
-    try {
-        const tc = await scrape('https://www.truecaller.com/search/tr/' + phone.slice(1), 
-            ['.person-name', 'h1', '.name', '[data-testid="person-name"]']);
-        results.names.push(...tc);
-        results.sources.push(...tc.map(() => 'TrueCaller'));
-    } catch(e) {}
-
-    // 2. GETCONTACT
-    try {
-        const gc = await scrape('https://getcontact.com/search/' + phone.slice(1), 
-            ['.contact-name', '.tag-name', 'h3']);
-        results.names.push(...gc);
-        results.sources.push(...gc.map(() => 'GetContact'));
-    } catch(e) {}
-
-    // 3. SYNCME
-    try {
-        const sm = await scrape('https://sync.me/search?q=' + phone.slice(1), 
-            ['.contact-name', '.result-name']);
-        results.names.push(...sm);
-        results.sources.push(...sm.map(() => 'Sync.ME'));
-    } catch(e) {}
-
-    // 4. WHATSAPP
-    try {
-        await axios.get('https://wa.me/' + phone.slice(1), { timeout: 5000 });
-        results.whatsapp = true;
-        results.sources.push('WhatsApp');
-    } catch(e) {}
-
-    // Unique names
-    results.names = [...new Set(results.names.filter(n => n && n.length > 2))];
-    results.sources = results.sources.slice(0, results.names.length);
-
-    return results;
-}
-
-async function scrape(url, selectors) {
-    try {
-        const { data } = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            },
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(data);
-        const names = [];
-        
-        selectors.forEach(sel => {
-            $(sel).each((i, el) => {
-                const name = $(el).text().trim();
-                if (name && name.length > 2 && !names.includes(name)) {
-                    names.push(name);
-                }
-            });
-        });
-
-        return names.slice(0, 5);
-    } catch(e) {
-        return [];
-    }
-}
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server on port ${port}`));
+server.listen(10000, () => console.log('Saskio Arena Running...'));
