@@ -3,105 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HackerAI OSINT - Gerçek Veri Analizi</title>
+    <title>HackerAI OSINT - GERÇEK VERİ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'neon-blue': '#00f5ff',
-                        'neon-green': '#39ff14',
-                        'matrix-green': '#00ff41'
-                    }
-                }
-            }
-        }
-    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto+Mono:wght@300;400;500&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Roboto Mono', monospace; 
             background: linear-gradient(45deg, #000000 0%, #0a0a0a 50%, #000000 100%);
-            overflow-x: hidden;
-            min-height: 100vh;
+            color: #00ff41;
         }
         .neon-glow { 
-            text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor;
-        }
-        .matrix-bg {
-            background: linear-gradient(90deg, #000 30%, #001100 50%, #000 70%);
-            position: relative;
-            overflow: hidden;
-        }
-        .matrix-bg::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 255, 65, 0.03) 2px,
-                rgba(0, 255, 65, 0.03) 4px
-            );
-            animation: matrixRain 20s linear infinite;
-        }
-        @keyframes matrixRain {
-            0% { transform: translateY(0) rotate(0deg); }
-            100% { transform: translateY(100vh) rotate(360deg); }
-        }
-        .scan-line {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #00ff41, #00f5ff, transparent);
-            z-index: 1000;
-            animation: scan 3s linear infinite;
-        }
-        @keyframes scan {
-            0% { top: 0; opacity: 0; }
-            50% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-        }
-        .pulse-glow {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 65, 0.5); }
-            50% { box-shadow: 0 0 40px rgba(0, 255, 65, 0.8), 0 0 60px rgba(0, 255, 65, 0.4); }
-        }
-        .terminal-input {
-            background: rgba(0,0,0,0.9) !important;
-            border: 2px solid #00ff41 !important;
-            backdrop-filter: blur(10px);
-            color: white !important;
-            transition: all 0.3s ease;
-        }
-        .terminal-input:focus {
-            border-color: #00f5ff !important;
-            box-shadow: 0 0 20px rgba(0, 245, 255, 0.5) !important;
-        }
-        .terminal-input::placeholder {
-            color: #00ff41 !important;
-        }
-        .result-card {
-            background: rgba(10, 10, 20, 0.95);
-            border: 1px solid rgba(0, 255, 65, 0.3);
-            backdrop-filter: blur(20px);
-            transition: all 0.3s ease;
-        }
-        .result-card:hover {
-            border-color: #00ff41;
-            box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+            text-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41, 0 0 20px #00ff41;
         }
         .loading-spinner {
             border: 3px solid rgba(0,255,65,0.3);
@@ -109,332 +22,163 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .terminal-input {
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #00ff41;
+            color: white;
         }
-        .search-btn {
-            background: linear-gradient(45deg, #00ff41, #00f5ff) !important;
-            border: none !important;
-            color: black !important;
-            font-weight: bold !important;
-            font-size: 1.1rem;
-        }
-        .search-btn:hover {
-            background: linear-gradient(45deg, #00f5ff, #00ff41) !important;
-            transform: scale(1.05) !important;
-            box-shadow: 0 0 30px rgba(0, 255, 65, 0.6) !important;
+        .terminal-input:focus {
+            border-color: #00f5ff;
+            box-shadow: 0 0 20px rgba(0,245,255,0.5);
         }
     </style>
 </head>
-<body class="matrix-bg text-white">
-    <!-- Scanning Animation -->
-    <div class="scan-line"></div>
-
-    <div class="container mx-auto px-4 py-8 max-w-6xl min-h-screen">
+<body class="min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
         <!-- Header -->
-        <div class="text-center mb-12 pt-8">
-            <div class="flex items-center justify-center mb-6 flex-col md:flex-row">
-                <div class="w-20 h-20 bg-gradient-to-r from-neon-green to-neon-blue rounded-full neon-glow pulse-glow flex items-center justify-center mb-4 md:mb-0 md:mr-4">
-                    <i class="fas fa-globe text-2xl"></i>
-                </div>
-                <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-r from-neon-blue to-neon-green bg-clip-text text-transparent neon-glow">
-                    HackerAI OSINT
-                </h1>
-            </div>
-            <p class="text-neon-green text-lg font-mono">Gerçek Dünya Dijital İz Takibi</p>
-            <div class="flex justify-center mt-4">
-                <div class="loading-spinner w-8 h-8 border-2 mx-2"></div>
-                <div class="loading-spinner w-6 h-6 border-2 mx-2" style="animation-duration: 1.5s;"></div>
-                <div class="loading-spinner w-4 h-4 border-2 mx-2" style="animation-duration: 2s;"></div>
-            </div>
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold bg-gradient-to-r from-[#00ff41] to-[#00f5ff] bg-clip-text text-transparent neon-glow mb-4">
+                HackerAI OSINT - GERÇEK
+            </h1>
+            <p class="text-xl text-gray-400">TrueCaller • WhatsApp • Sync.ME • Gerçek Zamanlı</p>
         </div>
 
-        <!-- Main Search Panel -->
+        <!-- Backend Status -->
+        <div class="bg-black/50 border border-green-500 p-6 rounded-xl mb-8 flex items-center">
+            <div class="loading-spinner w-6 h-6 mr-4"></div>
+            <span id="status">🟢 Backend Aktif - Gerçek scraping</span>
+        </div>
+
+        <!-- Search -->
         <div class="grid md:grid-cols-2 gap-8 mb-12">
-            <!-- Telefon Numarası Arama -->
-            <div class="result-card p-8 rounded-2xl">
-                <h2 class="text-2xl font-bold text-orange-400 mb-6 flex items-center">
-                    <i class="fas fa-phone-volume mr-3"></i> Telefon Numarası Takibi
+            <div class="bg-black/70 border border-green-500 p-8 rounded-2xl">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-phone mr-3 text-green-400"></i>Telefon Numarası
                 </h2>
-                <div class="space-y-4">
-                    <input type="text" id="phoneInput" placeholder="📱 +90 555 123 45 67 veya +994 55 123 45 67" 
-                           class="terminal-input w-full p-4 rounded-xl text-lg focus:ring-4 focus:ring-orange-400 focus:outline-none font-mono">
-                    <button id="phoneSearchBtn" class="search-btn w-full py-4 px-6 rounded-xl neon-glow transform transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500">
-                        <i class="fas fa-search mr-2"></i> NUMARA ANALİZİ
-                    </button>
-                </div>
-            </div>
-
-            <!-- Username/İsim Arama -->
-            <div class="result-card p-8 rounded-2xl">
-                <h2 class="text-2xl font-bold text-neon-green mb-6 flex items-center">
-                    <i class="fas fa-user-secret mr-3"></i> Username & İsim Takibi
-                </h2>
-                <div class="space-y-4">
-                    <input type="text" id="usernameInput" placeholder="👤 ahmetyilmaz veya ahmet yılmaz" 
-                           class="terminal-input w-full p-4 rounded-xl text-lg focus:ring-4 focus:ring-neon-green focus:outline-none font-mono">
-                    <button id="usernameSearchBtn" class="search-btn w-full py-4 px-6 rounded-xl neon-glow transform transition-all duration-300">
-                        <i class="fas fa-bolt mr-2"></i> KİMLİK ANALİZİ
-                    </button>
-                </div>
+                <input type="text" id="phoneInput" placeholder="+905551234567" 
+                       class="terminal-input w-full p-4 rounded-xl text-xl font-mono">
+                <button id="searchBtn" class="w-full mt-4 bg-gradient-to-r from-green-500 to-green-400 text-black font-bold py-4 px-6 rounded-xl hover:from-green-400 hover:to-green-500 transition-all">
+                    <i class="fas fa-search mr-3"></i>GERÇEK ARAMA
+                </button>
             </div>
         </div>
 
-        <!-- Results Section -->
-        <div id="resultsSection">
-            <!-- Loading -->
-            <div id="loading" class="hidden text-center py-20">
-                <div class="loading-spinner w-16 h-16 mx-auto mb-6"></div>
-                <div class="space-y-2">
-                    <p class="text-2xl text-neon-green font-mono">GERÇEK ZAMANLI TARAMA...</p>
-                    <div class="flex flex-wrap justify-center space-x-2 text-sm">
-                        <span class="text-orange-400">TrueCaller</span>
-                        <span class="text-purple-400">Sync.ME</span>
-                        <span class="text-yellow-400">IntelX</span>
-                        <span class="text-pink-400">Numverify</span>
-                        <span class="text-blue-400">Social Links</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results -->
-            <div id="resultsContent" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
-        </div>
+        <!-- Results -->
+        <div id="results" class="space-y-6"></div>
     </div>
 
     <script>
-        // 🚨 GERÇEK DÜNYA VERİ TAKİP SİSTEMİ
-        // Her numara için gerçek hayatta tespit edilebilecek bağlantılar
-        
-        const realWorldTracker = {
-            // Türkiye numaraları - Gerçek pattern'ler
-            phones: {
-                // Örnek gerçek pattern (+90 ile başlar)
-                '+905551234567': {
-                    primaryName: 'Ahmet Yılmaz',
-                    detectedNames: ['Ahmet Yılmaz', 'Ahmet Yilmaz', 'A. Yılmaz'],
-                    platforms: {
-                        whatsapp: true,
-                        telegram: 't.me/ahmet_yilmaz',
-                        instagram: '@ahmetyilmaz_real',
-                        facebook: 'Ahmet Yılmaz (Bakırköy)'
-                    },
-                    sources: ['TrueCaller (555 verified)', 'Sync.ME Database', 'WhatsApp Business']
-                },
-                '+905551234568': {
-                    primaryName: 'Ayşe Korkmaz',
-                    detectedNames: ['Ayşe Korkmaz', 'Ayse K.', 'Ayşe K'],
-                    platforms: {
-                        whatsapp: true,
-                        instagram: '@aysekorkmaz',
-                        tiktok: '@aysekorkmaz_off'
-                    },
-                    sources: ['TrueCaller', 'Instagram Linktree']
-                },
-                // Azerbaycan numaraları (+994)
-                '+994551234567': {
-                    primaryName: 'Elvin Məmmədov',
-                    detectedNames: ['Elvin Memmedov', 'Elvin Mammadov'],
-                    platforms: {
-                        whatsapp: true,
-                        telegram: 't.me/elvinmemmedov',
-                        instagram: '@elvinmemmedov'
-                    },
-                    sources: ['TrueCaller AZ', 'Telegram Public']
-                }
-            },
-            
-            usernames: {
-                'ahmetyilmaz': {
-                    realName: 'Ahmet Yılmaz',
-                    phonePattern: '+90 555 XXX XX XX',
-                    socials: ['instagram.com/ahmetyilmaz_real', 'facebook.com/ahmet.yilmaz']
-                }
-            }
+        const BACKEND_URL = 'http://localhost:3000'; // Server.js portu
+
+        document.getElementById('searchBtn').onclick = searchPhone;
+        document.getElementById('phoneInput').onkeypress = (e) => {
+            if (e.key === 'Enter') searchPhone();
         };
 
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Telefon arama
-            document.getElementById('phoneSearchBtn').addEventListener('click', () => searchPhone());
-            document.getElementById('phoneInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchPhone();
-            });
-
-            // Username arama
-            document.getElementById('usernameSearchBtn').addEventListener('click', () => searchUsername());
-            document.getElementById('usernameInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchUsername();
-            });
-        });
-
-        function searchPhone() {
-            const phone = normalizePhone(document.getElementById('phoneInput').value.trim());
+        async function searchPhone() {
+            const phone = document.getElementById('phoneInput').value.trim();
             if (!phone || !phone.startsWith('+')) {
-                showError('Lütfen geçerli bir uluslararası numara girin: +90555... veya +99455...');
-                return;
+                return showError('Geçerli numara: +905551234567');
             }
 
             showLoading();
-            setTimeout(() => {
-                const result = realWorldTracker.phones[phone];
-                hideLoading();
-                if (result) {
-                    showPhoneResult(result, phone);
-                } else {
-                    showRealisticNoResult(phone);
-                }
-            }, 3000);
-        }
-
-        function searchUsername() {
-            const query = document.getElementById('usernameInput').value.trim().toLowerCase();
-            if (!query) {
-                showError('Username veya isim girin');
-                return;
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                
+                const data = await response.json();
+                showResult(data, phone);
+            } catch(e) {
+                showError('Backend bağlantı hatası. server.js çalıştırın!');
             }
-
-            showLoading();
-            setTimeout(() => {
-                const result = realWorldTracker.usernames[query];
-                hideLoading();
-                if (result) {
-                    showUsernameResult(result, query);
-                } else {
-                    showRealisticNoResult(query);
-                }
-            }, 2500);
-        }
-
-        function normalizePhone(phone) {
-            // +90 555 123 45 67 → +905551234567
-            return phone.replace(/[\s\-\(\)]/g, '').replace(/^90/, '+90').replace(/^0/, '+90');
         }
 
         function showLoading() {
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('resultsContent').innerHTML = '';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').classList.add('hidden');
-        }
-
-        function showPhoneResult(data, phone) {
-            document.getElementById('resultsContent').innerHTML = `
-                <div class="col-span-full result-card p-8 md:p-12 rounded-3xl">
-                    <div class="text-center mb-8">
-                        <div class="inline-block w-24 h-24 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mb-6 shadow-2xl">
-                            <i class="fas fa-phone-slash text-3xl text-white"></i>
+            document.getElementById('results').innerHTML = `
+                <div class="bg-black/70 border-2 border-yellow-500 p-12 rounded-3xl text-center">
+                    <div class="loading-spinner w-16 h-16 mx-auto mb-6"></div>
+                    <div class="space-y-4">
+                        <p class="text-2xl font-mono">🔍 GERÇEK TARAMA...</p>
+                        <div class="flex flex-wrap justify-center text-sm space-x-4 text-yellow-400">
+                            <span>TrueCaller</span>
+                            <span>WhatsApp</span>
+                            <span>Sync.ME</span>
+                            <span>Google</span>
                         </div>
-                        <h2 class="text-3xl md:text-4xl font-bold text-orange-400 mb-2 font-mono">${phone}</h2>
-                        <p class="text-xl text-yellow-400">✅ NUMARA TESPİT EDİLDİ</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showResult(data, phone) {
+            document.getElementById('results').innerHTML = `
+                <div class="bg-black/70 border-2 border-green-500 p-8 rounded-3xl">
+                    <div class="text-center mb-8">
+                        <div class="inline-flex w-24 h-24 bg-green-500 rounded-full items-center justify-center mb-4">
+                            <i class="fas fa-check text-3xl text-black"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-green-400 font-mono">${phone}</h2>
+                        <p class="text-xl text-yellow-400 mt-2">✅ TESPİT EDİLDİ</p>
                     </div>
 
-                    <!-- İsimler -->
+                    ${data.names && data.names.length ? `
                     <div class="mb-8">
-                        <h3 class="text-2xl font-bold text-white mb-6 flex items-center">
-                            <i class="fas fa-users mr-3 text-orange-400"></i> TESPİT EDİLEN İSİMLER
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fas fa-id-card mr-3 text-orange-400"></i>GERÇEK İSİM ETİKETLERİ
                         </h3>
-                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${data.detectedNames.map(name => `
-                                <div class="p-6 bg-gradient-to-br from-orange-900/60 to-red-900/60 rounded-2xl border-2 border-orange-400/50 hover:border-orange-400">
-                                    <div class="font-mono font-bold text-xl text-white mb-2">${name}</div>
-                                    <div class="text-sm text-orange-300 flex items-center">
-                                        <i class="fas fa-check-circle mr-2"></i> TrueCaller Etiketi
+                        <div class="grid md:grid-cols-2 gap-4">
+                            ${data.names.map(name => `
+                                <div class="p-6 bg-gradient-to-r from-orange-900/80 to-red-900/80 rounded-2xl border-l-4 border-orange-400">
+                                    <div class="text-xl font-bold text-white mb-2">${name}</div>
+                                    <div class="text-orange-300 flex items-center">
+                                        <i class="fas fa-check-circle mr-2"></i>${data.sources?.join(' | ') || 'TrueCaller'}
                                     </div>
                                 </div>
                             `).join('')}
-                            <div class="p-6 bg-gradient-to-br from-green-900/60 to-emerald-900/60 rounded-2xl border-2 border-green-400/50">
-                                <div class="font-mono font-bold text-xl text-green-400 mb-2">${data.primaryName}</div>
-                                <div class="text-sm text-green-300 flex items-center">
-                                    <i class="fas fa-crown mr-2"></i> Ana Sahip
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.whatsapp ? `
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fab fa-whatsapp mr-3 text-green-400"></i>WHATSAPP AKTİF
+                        </h3>
+                        <a href="https://wa.me/${phone.slice(1)}" target="_blank" 
+                           class="block p-6 bg-gradient-to-r from-green-900/80 to-emerald-900/80 rounded-2xl border-2 border-green-400 hover:border-green-300">
+                            <div class="flex items-center">
+                                <i class="fab fa-whatsapp text-2xl text-green-400 mr-4"></i>
+                                <div>
+                                    <div class="font-bold text-xl text-green-300">Mesaj Gönder</div>
+                                    <div class="text-sm text-green-200">wa.me/${phone.slice(1)}</div>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
+                    ` : ''}
 
-                    <!-- Platformlar -->
-                    <div>
-                        <h3 class="text-2xl font-bold text-white mb-6 flex items-center">
-                            <i class="fas fa-share-alt mr-3 text-purple-400"></i> BAĞLI HESAPLAR
-                        </h3>
-                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${Object.entries(data.platforms).map(([platform, value]) => {
-                                if (platform === 'whatsapp' && value === true) {
-                                    return `
-                                        <div class="p-6 bg-gradient-to-br from-green-900/70 to-emerald-900/70 rounded-2xl border-2 border-green-400 hover:border-green-400 group">
-                                            <div class="flex items-center mb-3">
-                                                <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mr-4 group-hover:bg-green-500/40">
-                                                    <i class="fab fa-whatsapp text-2xl text-green-400"></i>
-                                                </div>
-                                                <div class="font-bold text-xl text-green-400">WHATSAPP</div>
-                                            </div>
-                                            <div class="text-sm text-green-300">Aktif - Mesaj gönderilebilir</div>
-                                            <div class="text-xs text-gray-400 mt-2">wa.me/${phone.slice(1)}</div>
-                                        </div>
-                                    `;
-                                } else if (value) {
-                                    return `
-                                        <div class="p-6 bg-gradient-to-br from-purple-900/60 to-indigo-900/60 rounded-2xl border-2 border-purple-400/50 hover:border-purple-400">
-                                            <div class="flex items-center mb-3">
-                                                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mr-4">
-                                                    <i class="fas fa-${platform === 'telegram' ? 'telegram-plane' : 'globe'} text-2xl text-purple-400"></i>
-                                                </div>
-                                                <div class="font-bold text-xl text-purple-400">${platform.toUpperCase()}</div>
-                                            </div>
-                                            <div class="font-mono text-sm text-purple-300">${value}</div>
-                                        </div>
-                                    `;
-                                }
-                                return '';
-                            }).join('')}
-                        </div>
-                    </div>
-
-                    <div class="mt-8 p-6 bg-gray-900/50 rounded-2xl border-l-4 border-yellow-400">
-                        <div class="text-sm text-yellow-400">
-                            📊 Kaynaklar: ${data.sources.join(', ')} | 🕒 Son güncelleme: ${new Date().toLocaleString('tr-TR')}
+                    <div class="p-6 bg-gray-900/50 rounded-2xl border-t-4 border-green-500">
+                        <div class="text-sm text-green-400">
+                            🕒 Tarama: ${new Date().toLocaleString('tr-TR')} | 
+                            📊 Kaynaklar: ${data.sources?.join(', ') || 'Web scraping'}
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function showRealisticNoResult(query) {
-            document.getElementById('resultsContent').innerHTML = `
-                <div class="col-span-full result-card p-12 md:p-16 rounded-3xl text-center">
-                    <div class="inline-block w-24 h-24 bg-gray-900/50 rounded-full flex items-center justify-center mb-8 border-4 border-gray-700">
-                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-500"></i>
-                    </div>
-                    <h2 class="text-3xl md:text-4xl font-bold text-gray-400 mb-4 font-mono">${query}</h2>
-                    <p class="text-xl text-gray-500 mb-8">için halka açık veri bulunamadı</p>
-                    
-                    <div class="text-sm text-gray-400 mb-8 max-w-2xl mx-auto">
-                        ℹ️ Bu numara TrueCaller/Sync.ME veritabanlarında halka açık değil veya gizlilik ayarları aktif.
-                    </div>
-
-                    <div class="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                        <div class="p-6 bg-gray-900/50 rounded-xl border-2 border-gray-600 cursor-pointer hover:border-gray-500 transition-all">
-                            <div class="text-orange-400 font-bold mb-2">🔍 TrueCaller Check</div>
-                            <div class="text-sm text-gray-400">Manuel doğrulama</div>
-                        </div>
-                        <div class="p-6 bg-gray-900/50 rounded-xl border-2 border-gray-600 cursor-pointer hover:border-gray-500 transition-all">
-                            <div class="text-green-400 font-bold mb-2">📱 WhatsApp Test</div>
-                            <div class="text-sm text-gray-400">wa.me/${query.startsWith('+') ? query.slice(1) : query}</div>
-                        </div>
-                        <div class="p-6 bg-gray-900/50 rounded-xl border-2 border-gray-600 cursor-pointer hover:border-gray-500 transition-all">
-                            <div class="text-purple-400 font-bold mb-2">🌐 Reverse Search</div>
-                            <div class="text-sm text-gray-400">Google/Social scan</div>
-                        </div>
-                    </div>
+        function showError(msg) {
+            document.getElementById('results').innerHTML = `
+                <div class="bg-black/70 border-2 border-red-500 p-12 rounded-3xl text-center">
+                    <i class="fas fa-exclamation-triangle text-6xl text-red-400 mb-6"></i>
+                    <p class="text-2xl text-red-400">${msg}</p>
                 </div>
             `;
-        }
-
-        function showError(message) {
-            alert('❌ ' + message);
         }
     </script>
 </body>
