@@ -695,4 +695,79 @@
                     this.shoot();
                 });
                 
-                const joystickBase = document.
+                const joystickBase = document.getElementById('joystickBase');
+                const joystick = document.getElementById('joystick');
+                
+                joystickBase.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.joystickActive = true;
+                });
+                
+                joystickBase.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (!this.joystickActive) return;
+                    
+                    const touch = e.touches[0];
+                    const rect = joystickBase.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    let deltaX = touch.clientX - centerX;
+                    let deltaY = touch.clientY - centerY;
+                    
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const maxDistance = 35;
+                    
+                    if (distance > maxDistance) {
+                        deltaX = (deltaX / distance) * maxDistance;
+                        deltaY = (deltaY / distance) * maxDistance;
+                    }
+                    
+                    joystick.style.left = (35 + deltaX) + 'px';
+                    joystick.style.top = (35 + deltaY) + 'px';
+                    
+                    this.joystickDirection.x = deltaX / maxDistance;
+                    this.joystickDirection.y = deltaY / maxDistance;
+                });
+                
+                joystickBase.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.joystickActive = false;
+                    joystick.style.left = '35px';
+                    joystick.style.top = '35px';
+                    this.joystickDirection = {x: 0, y: 0};
+                });
+                
+                document.getElementById('shootBtn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.shoot();
+                });
+                
+                document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (this.myPlayer && !this.myPlayer.isJumping) {
+                        this.keys[' '] = true;
+                        setTimeout(() => this.keys[' '] = false, 100);
+                    }
+                });
+                
+                window.addEventListener('resize', () => {
+                    if (this.camera && this.renderer) {
+                        this.camera.aspect = window.innerWidth / window.innerHeight;
+                        this.camera.updateProjectionMatrix();
+                        this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    }
+                });
+            },
+
+            updateGameState(data) {
+                // Server'dan gelen oyun durumu güncellemeleri
+            }
+        };
+
+        window.addEventListener('load', () => {
+            game.init();
+        });
+    </script>
+</body>
+</html>
