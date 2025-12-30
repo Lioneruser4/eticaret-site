@@ -2,227 +2,697 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>3D Futbol Oyunu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Football Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/",
-        "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js",
-        "nipplejs": "https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"
-      }
-    }
-    </script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        #lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        #hud { position: absolute; top: 10px; left: 10px; color: white; z-index: 50; }
-        #mobileControls { position: absolute; bottom: 20px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 50; }
-        .btn { width: 80px; height: 80px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        #joystickZone { width: 150px; height: 150px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            touch-action: none;
+        }
+        #mainMenu, #lobbyScreen, #gameScreen { display: none; position: absolute; width: 100%; height: 100%; }
+        #mainMenu.active, #lobbyScreen.active, #gameScreen.active { display: flex; }
+        #mainMenu { 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .profile-section { 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 20px; 
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        .profile-img { 
+            width: 100px; 
+            height: 100px; 
+            border-radius: 50%; 
+            margin-bottom: 15px;
+            border: 4px solid #667eea;
+        }
+        .profile-name { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .btn { 
+            padding: 15px 40px; 
+            font-size: 18px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s;
+        }
+        .btn:active { transform: scale(0.95); }
+        #lobbyScreen { 
+            flex-direction: column; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .lobby-header { 
+            background: rgba(255,255,255,0.95); 
+            padding: 20px; 
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .create-room { margin-bottom: 20px; }
+        .time-selector { 
+            display: flex; 
+            gap: 10px; 
+            margin: 10px 0; 
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .time-btn { 
+            padding: 10px 20px; 
+            background: #667eea; 
+            color: white; 
+            border: 2px solid transparent;
+            border-radius: 10px; 
+            cursor: pointer;
+        }
+        .time-btn.selected { border-color: #fff; background: #764ba2; }
+        .teams-container { 
+            display: flex; 
+            gap: 20px; 
+            flex: 1;
+        }
+        .team { 
+            flex: 1; 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 15px; 
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .team.blue { border: 3px solid #3498db; }
+        .team.red { border: 3px solid #e74c3c; }
+        .team-header { 
+            font-size: 20px; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .player-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 8px; 
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .team.blue .player-item { background: #3498db; color: white; }
+        .team.red .player-item { background: #e74c3c; color: white; }
+        .start-game-btn { 
+            margin-top: 20px; 
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+        }
+        #gameScreen { background: #000; }
+        #gameCanvas { width: 100%; height: 100%; display: block; }
+        .mobile-controls { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            pointer-events: none;
+        }
+        .joystick-container { 
+            position: absolute; 
+            bottom: 30px; 
+            left: 30px; 
+            width: 120px; 
+            height: 120px;
+            pointer-events: auto;
+        }
+        .joystick-base { 
+            width: 120px; 
+            height: 120px; 
+            background: rgba(255,255,255,0.3); 
+            border-radius: 50%; 
+            position: relative;
+        }
+        .joystick-stick { 
+            width: 50px; 
+            height: 50px; 
+            background: rgba(255,255,255,0.8); 
+            border-radius: 50%; 
+            position: absolute; 
+            top: 35px; 
+            left: 35px;
+            transition: none;
+        }
+        .action-buttons { 
+            position: absolute; 
+            bottom: 30px; 
+            right: 30px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .action-btn { 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            border: 3px solid white; 
+            background: rgba(255,255,255,0.3); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+        }
+        .action-btn:active { background: rgba(255,255,255,0.5); }
+        .hud { 
+            position: absolute; 
+            top: 20px; 
+            width: 100%; 
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .timer { margin-top: 10px; font-size: 24px; }
     </style>
 </head>
 <body>
-    <div id="lobby">
-        <img id="profilePic" width="100" height="100" style="border-radius:50%;">
-        <h1 id="username">Yükleniyor...</h1>
-        <button id="createRoom">Oda Kur</button>
-        <select id="timeSelect">
-            <option value="300">5 Dakika</option>
-            <option value="600">10 Dakika</option>
-            <option value="900">15 Dakika</option>
-            <option value="1500">25 Dakika</option>
-            <option value="1800">30 Dakika</option>
-        </select>
-        <input id="joinInput" placeholder="Oda ID ile katıl">
-        <button id="joinRoom">Katıl</button>
-        <div id="roomList"></div>
+    <div id="mainMenu" class="active">
+        <div class="profile-section">
+            <img id="profileImg" class="profile-img" src="" alt="Profile">
+            <div id="profileName" class="profile-name">Loading...</div>
+        </div>
+        <button class="btn" onclick="game.showLobby()">🎮 Oda Kur</button>
     </div>
 
-    <div id="hud">Skor: Mavi 0 - Kırmızı 0 | Süre: --</div>
+    <div id="lobbyScreen">
+        <div class="lobby-header">
+            <h2 style="text-align:center; margin-bottom:15px;">⚽ Oyun Odası Oluştur</h2>
+            <div class="time-selector">
+                <button class="time-btn" onclick="game.selectTime(5)">5 dk</button>
+                <button class="time-btn selected" onclick="game.selectTime(10)">10 dk</button>
+                <button class="time-btn" onclick="game.selectTime(15)">15 dk</button>
+                <button class="time-btn" onclick="game.selectTime(25)">25 dk</button>
+                <button class="time-btn" onclick="game.selectTime(30)">30 dk</button>
+            </div>
+        </div>
+        <div class="teams-container">
+            <div class="team blue">
+                <div class="team-header" style="color:#3498db;">🔵 Mavi Takım</div>
+                <div id="blueTeam"></div>
+            </div>
+            <div class="team red">
+                <div class="team-header" style="color:#e74c3c;">🔴 Kırmızı Takım</div>
+                <div id="redTeam"></div>
+            </div>
+        </div>
+        <button class="btn start-game-btn" onclick="game.startGame()">🎮 Oyunu Başlat</button>
+    </div>
 
-    <div id="mobileControls">
-        <div id="joystickZone"></div>
-        <div>
-            <div class="btn" id="passBtn">PAS</div>
-            <div class="btn" id="shootBtn">ŞUT</div>
+    <div id="gameScreen">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="score">
+                <span style="color:#3498db;">Mavi: <span id="blueScore">0</span></span>
+                <span style="margin:0 30px;">-</span>
+                <span style="color:#e74c3c;">Kırmızı: <span id="redScore">0</span></span>
+            </div>
+            <div class="timer" id="gameTimer">10:00</div>
+        </div>
+        <div class="mobile-controls" id="mobileControls" style="display:none;">
+            <div class="joystick-container">
+                <div class="joystick-base" id="joystickBase">
+                    <div class="joystick-stick" id="joystick"></div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <div class="action-btn" id="shootBtn">⚽</div>
+                <div class="action-btn" id="jumpBtn">⬆️</div>
+            </div>
         </div>
     </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import * as CANNON from 'cannon-es';
-        import nipplejs from 'nipplejs';
+    <script>
+        const game = {
+            tg: window.Telegram.WebApp,
+            ws: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            players: {},
+            ball: null,
+            selectedTime: 10,
+            gameStartTime: 0,
+            blueScore: 0,
+            redScore: 0,
+            myPlayer: null,
+            keys: {},
+            joystickActive: false,
+            joystickDirection: {x: 0, y: 0},
 
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
+            init() {
+                this.tg.ready();
+                this.tg.expand();
+                
+                const user = this.tg.initDataUnsafe.user;
+                if (user) {
+                    document.getElementById('profileName').textContent = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+                    if (user.photo_url) {
+                        document.getElementById('profileImg').src = user.photo_url;
+                    } else {
+                        document.getElementById('profileImg').src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23667eea"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="white" font-size="40">' + user.first_name[0] + '</text></svg>';
+                    }
+                } else {
+                    document.getElementById('profileName').textContent = 'Demo Player';
+                    document.getElementById('profileImg').src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23667eea"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="white" font-size="40">D</text></svg>';
+                }
 
-        const user = Telegram.WebApp.initDataUnsafe.user || { id: 999, first_name: 'Misafir', photo_url: '' };
-        document.getElementById('username').innerText = user.first_name || user.username || 'Misafir';
-        document.getElementById('profilePic').src = user.photo_url || 'https://via.placeholder.com/100';
+                this.connectWebSocket();
+                this.setupControls();
+            },
 
-        const socket = io();
+            connectWebSocket() {
+                try {
+                    this.ws = new WebSocket('wss://saskioyunu.onrender.com');
+                    
+                    this.ws.onopen = () => {
+                        const user = this.tg.initDataUnsafe.user;
+                        this.ws.send(JSON.stringify({
+                            type: 'join',
+                            userId: user?.id || Math.random().toString(),
+                            username: user?.first_name || 'Player',
+                            photo: user?.photo_url || ''
+                        }));
+                    };
 
-        // ==== THREE.JS SETUP ====
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x88ccff);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleServerMessage(data);
+                    };
 
-        // Işık
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(20, 40, 20);
-        light.castShadow = true;
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                    this.ws.onerror = () => {
+                        console.log('WebSocket connection failed, using local mode');
+                    };
+                } catch(e) {
+                    console.log('WebSocket not available, using local mode');
+                }
+            },
 
-        // Saha (basit yeşil zemin + çizgiler + duvarlar)
-        const fieldGeo = new THREE.PlaneGeometry(100, 60);
-        const fieldMat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
-        const field = new THREE.Mesh(fieldGeo, fieldMat);
-        field.rotation.x = -Math.PI / 2;
-        field.receiveShadow = true;
-        scene.add(field);
+            handleServerMessage(data) {
+                switch(data.type) {
+                    case 'playerJoined':
+                        this.addPlayerToLobby(data.player);
+                        break;
+                    case 'gameState':
+                        this.updateGameState(data);
+                        break;
+                    case 'goal':
+                        this.handleGoal(data);
+                        break;
+                }
+            },
 
-        // Kale basit kutu
-        const goalGeo = new THREE.BoxGeometry(20, 10, 5);
-        const goalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true });
-        const goal1 = new THREE.Mesh(goalGeo, goalMat);
-        goal1.position.set(0, 5, -35);
-        scene.add(goal1);
-        const goal2 = goal1.clone();
-        goal2.position.z = 35;
-        scene.add(goal2);
+            showLobby() {
+                document.getElementById('mainMenu').classList.remove('active');
+                document.getElementById('lobbyScreen').classList.add('active');
+                
+                this.addPlayerToLobby({id: '1', username: 'Oyuncu 1', team: 'blue'});
+                this.addPlayerToLobby({id: '2', username: 'Oyuncu 2', team: 'red'});
+            },
 
-        // Duvarlar (top dışarı çıkmasın)
-        const wallMat = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0 });
-        const wall1 = new THREE.Mesh(new THREE.BoxGeometry(110, 20, 5), wallMat);
-        wall1.position.z = -33;
-        scene.add(wall1);
-        const wall2 = wall1.clone();
-        wall2.position.z = 33;
-        scene.add(wall2);
-        const wall3 = new THREE.Mesh(new THREE.BoxGeometry(5, 20, 70), wallMat);
-        wall3.position.x = -53;
-        scene.add(wall3);
-        const wall4 = wall3.clone();
-        wall4.position.x = 53;
-        scene.add(wall4);
+            selectTime(minutes) {
+                this.selectedTime = minutes;
+                document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('selected'));
+                event.target.classList.add('selected');
+            },
 
-        // ==== CANNON PHYSICS ====
-        const world = new CANNON.World();
-        world.gravity.set(0, -20, 0);
-        world.broadphase = new CANNON.NaiveBroadphase();
+            addPlayerToLobby(player) {
+                const teamDiv = document.getElementById(player.team + 'Team');
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-item';
+                playerDiv.innerHTML = `${player.username}`;
+                playerDiv.onclick = () => this.switchTeam(player.id);
+                playerDiv.id = 'player-' + player.id;
+                teamDiv.appendChild(playerDiv);
+            },
 
-        // Saha zemin fizik
-        const groundBody = new CANNON.Body({ mass: 0 });
-        groundBody.addShape(new CANNON.Box(new CANNON.Vec3(50, 0.1, 30)));
-        groundBody.position.set(0, -0.1, 0);
-        world.addBody(groundBody);
+            switchTeam(playerId) {
+                const playerEl = document.getElementById('player-' + playerId);
+                const currentTeam = playerEl.parentElement.id.includes('blue') ? 'blue' : 'red';
+                const newTeam = currentTeam === 'blue' ? 'red' : 'blue';
+                
+                playerEl.remove();
+                document.getElementById(newTeam + 'Team').appendChild(playerEl);
+                
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({type: 'switchTeam', playerId, newTeam}));
+                }
+            },
 
-        // Top
-        const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-        scene.add(ballMesh);
-        const ballBody = new CANNON.Body({ mass: 1 });
-        ballBody.addShape(new CANNON.Sphere(1));
-        ballBody.position.set(0, 5, 0);
-        world.addBody(ballBody);
+            startGame() {
+                document.getElementById('lobbyScreen').classList.remove('active');
+                document.getElementById('gameScreen').classList.add('active');
+                this.initThreeJS();
+                this.gameStartTime = Date.now();
+                this.startGameTimer();
+                
+                if (/Mobi|Android/i.test(navigator.userAgent)) {
+                    document.getElementById('mobileControls').style.display = 'block';
+                }
+            },
 
-        // Oyuncu modeli (basit Mixamo karakter - koşma animasyonlu)
-        const loader = new GLTFLoader();
-        let playerMixer, playerModel;
-        const players = {}; // { socketId: { mesh, body, mixer, team } }
+            initThreeJS() {
+                const canvas = document.getElementById('gameCanvas');
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87CEEB);
+                
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 15, 25);
+                this.camera.lookAt(0, 0, 0);
+                
+                this.renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                
+                const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambient);
+                const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+                sun.position.set(50, 50, 50);
+                sun.castShadow = true;
+                sun.shadow.mapSize.width = 2048;
+                sun.shadow.mapSize.height = 2048;
+                sun.shadow.camera.left = -30;
+                sun.shadow.camera.right = 30;
+                sun.shadow.camera.top = 30;
+                sun.shadow.camera.bottom = -30;
+                this.scene.add(sun);
+                
+                const fieldGeom = new THREE.BoxGeometry(40, 0.5, 60);
+                const fieldMat = new THREE.MeshStandardMaterial({color: 0x2ECC71});
+                const field = new THREE.Mesh(fieldGeom, fieldMat);
+                field.receiveShadow = true;
+                this.scene.add(field);
+                
+                const lineMat = new THREE.LineBasicMaterial({color: 0xffffff});
+                const points = [];
+                points.push(new THREE.Vector3(-20, 0.3, -30));
+                points.push(new THREE.Vector3(20, 0.3, -30));
+                points.push(new THREE.Vector3(20, 0.3, 30));
+                points.push(new THREE.Vector3(-20, 0.3, 30));
+                points.push(new THREE.Vector3(-20, 0.3, -30));
+                const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(lineGeom, lineMat);
+                this.scene.add(line);
+                
+                const centerPoints = [
+                    new THREE.Vector3(-20, 0.3, 0),
+                    new THREE.Vector3(20, 0.3, 0)
+                ];
+                const centerLineGeom = new THREE.BufferGeometry().setFromPoints(centerPoints);
+                const centerLine = new THREE.Line(centerLineGeom, lineMat);
+                this.scene.add(centerLine);
+                
+                this.createGoal(0, -30, 0x3498db);
+                this.createGoal(0, 30, 0xe74c3c);
+                
+                const ballGeom = new THREE.SphereGeometry(0.5, 16, 16);
+                const ballMat = new THREE.MeshStandardMaterial({color: 0xffffff});
+                this.ball = new THREE.Mesh(ballGeom, ballMat);
+                this.ball.position.set(0, 0.5, 0);
+                this.ball.castShadow = true;
+                this.ball.velocity = new THREE.Vector3(0, 0, 0);
+                this.scene.add(this.ball);
+                
+                this.createPlayer('blue', -5, -10);
+                this.createPlayer('red', 5, 10);
+                
+                this.animate();
+            },
 
-        loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Soldier.glb', (gltf) => {
-            playerModel = gltf.scene;
-            playerMixer = new THREE.AnimationMixer(playerModel);
-            const runAction = playerMixer.clipAction(gltf.animations[1]); // Run animasyonu
-            runAction.play();
-        });
+            createGoal(x, z, color) {
+                const goalGroup = new THREE.Group();
+                const postMat = new THREE.MeshStandardMaterial({color: 0xffffff});
+                
+                const postGeom = new THREE.CylinderGeometry(0.15, 0.15, 3, 8);
+                const leftPost = new THREE.Mesh(postGeom, postMat);
+                leftPost.position.set(x - 4, 1.5, z);
+                const rightPost = new THREE.Mesh(postGeom, postMat);
+                rightPost.position.set(x + 4, 1.5, z);
+                const topPost = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 8, 8), postMat);
+                topPost.rotation.z = Math.PI / 2;
+                topPost.position.set(x, 3, z);
+                
+                goalGroup.add(leftPost, rightPost, topPost);
+                
+                const netGeom = new THREE.BoxGeometry(8, 3, 0.1);
+                const netMat = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const net = new THREE.Mesh(netGeom, netMat);
+                net.position.set(x, 1.5, z);
+                goalGroup.add(net);
+                
+                this.scene.add(goalGroup);
+            },
 
-        // Kamera kontrol (PC için orbit, mobil için takip)
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
-        camera.position.set(0, 20, 50);
+            createPlayer(team, x, z) {
+                const playerGroup = new THREE.Group();
+                const color = team === 'blue' ? 0x3498db : 0xe74c3c;
+                
+                const bodyGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.8, 8);
+                const bodyMat = new THREE.MeshStandardMaterial({color});
+                const body = new THREE.Mesh(bodyGeom, bodyMat);
+                body.position.y = 1.2;
+                body.castShadow = true;
+                playerGroup.add(body);
+                
+                const headGeom = new THREE.SphereGeometry(0.25, 16, 16);
+                const head = new THREE.Mesh(headGeom, bodyMat);
+                head.position.y = 2;
+                head.castShadow = true;
+                playerGroup.add(head);
+                
+                const armGeom = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+                const leftArm = new THREE.Mesh(armGeom, bodyMat);
+                leftArm.position.set(-0.4, 1.2, 0);
+                leftArm.castShadow = true;
+                playerGroup.add(leftArm);
+                
+                const rightArm = new THREE.Mesh(armGeom, bodyMat);
+                rightArm.position.set(0.4, 1.2, 0);
+                rightArm.castShadow = true;
+                playerGroup.add(rightArm);
+                
+                const legGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8);
+                const leftLeg = new THREE.Mesh(legGeom, bodyMat);
+                leftLeg.position.set(-0.2, 0.4, 0);
+                leftLeg.castShadow = true;
+                playerGroup.add(leftLeg);
+                
+                const rightLeg = new THREE.Mesh(legGeom, bodyMat);
+                rightLeg.position.set(0.2, 0.4, 0);
+                rightLeg.castShadow = true;
+                playerGroup.add(rightLeg);
+                
+                playerGroup.position.set(x, 0, z);
+                playerGroup.velocity = new THREE.Vector3(0, 0, 0);
+                playerGroup.team = team;
+                playerGroup.isJumping = false;
+                playerGroup.armSwing = 0;
+                playerGroup.legSwing = 0;
+                playerGroup.userData = {leftArm, rightArm, leftLeg, rightLeg};
+                
+                this.scene.add(playerGroup);
+                
+                if (!this.myPlayer) {
+                    this.myPlayer = playerGroup;
+                }
+                
+                return playerGroup;
+            },
 
-        // Mobil kontrol
-        if (Telegram.WebApp.platform !== 'unknown') {
-            document.getElementById('mobileControls').style.display = 'flex';
-            const manager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'static', position: { left: '50%', bottom: '50%' }, color: 'white' });
-            let moveVec = new THREE.Vector3();
-            manager.on('move', (evt, data) => {
-                moveVec.set(data.vector.x, 0, -data.vector.y);
-            });
-            manager.on('end', () => moveVec.set(0,0,0));
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                if (this.myPlayer) {
+                    this.updatePlayer();
+                    this.updateBall();
+                    this.checkGoals();
+                    
+                    this.camera.position.x = this.myPlayer.position.x;
+                    this.camera.position.z = this.myPlayer.position.z + 15;
+                    this.camera.lookAt(this.myPlayer.position);
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            },
 
-            document.getElementById('shootBtn').addEventListener('touchstart', () => socket.emit('kick', { power: 20 }));
-            document.getElementById('passBtn').addEventListener('touchstart', () => socket.emit('kick', { power: 8 }));
-        }
+            updatePlayer() {
+                const player = this.myPlayer;
+                const speed = 0.3;
+                let moving = false;
+                
+                if (this.keys['w'] || this.keys['ArrowUp']) {
+                    player.position.z -= speed;
+                    moving = true;
+                }
+                if (this.keys['s'] || this.keys['ArrowDown']) {
+                    player.position.z += speed;
+                    moving = true;
+                }
+                if (this.keys['a'] || this.keys['ArrowLeft']) {
+                    player.position.x -= speed;
+                    moving = true;
+                }
+                if (this.keys['d'] || this.keys['ArrowRight']) {
+                    player.position.x += speed;
+                    moving = true;
+                }
+                
+                if (this.joystickActive) {
+                    player.position.x += this.joystickDirection.x * speed;
+                    player.position.z += this.joystickDirection.y * speed;
+                    if (Math.abs(this.joystickDirection.x) > 0.1 || Math.abs(this.joystickDirection.y) > 0.1) {
+                        moving = true;
+                    }
+                }
+                
+                if (moving) {
+                    player.armSwing += 0.2;
+                    player.legSwing += 0.2;
+                    player.userData.leftArm.rotation.x = Math.sin(player.armSwing) * 0.5;
+                    player.userData.rightArm.rotation.x = -Math.sin(player.armSwing) * 0.5;
+                    player.userData.leftLeg.rotation.x = Math.sin(player.legSwing) * 0.3;
+                    player.userData.rightLeg.rotation.x = -Math.sin(player.legSwing) * 0.3;
+                }
+                
+                if (this.keys[' '] && !player.isJumping) {
+                    player.velocity.y = 0.4;
+                    player.isJumping = true;
+                }
+                
+                player.velocity.y -= 0.02;
+                player.position.y += player.velocity.y;
+                
+                if (player.position.y <= 0) {
+                    player.position.y = 0;
+                    player.velocity.y = 0;
+                    player.isJumping = false;
+                }
+                
+                player.position.x = Math.max(-19, Math.min(19, player.position.x));
+                player.position.z = Math.max(-29, Math.min(29, player.position.z));
+            },
 
-        // Animasyon döngüsü
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            world.step(1/60, delta);
+            updateBall() {
+                const ball = this.ball;
+                
+                const dist = this.myPlayer.position.distanceTo(ball.position);
+                if (dist < 1) {
+                    const dir = new THREE.Vector3()
+                        .subVectors(ball.position, this.myPlayer.position)
+                        .normalize();
+                    ball.velocity.copy(dir.multiplyScalar(0.3));
+                }
+                
+                ball.position.add(ball.velocity);
+                ball.velocity.multiplyScalar(0.98);
+                
+                ball.velocity.y -= 0.02;
+                if (ball.position.y <= 0.5) {
+                    ball.position.y = 0.5;
+                    ball.velocity.y *= -0.6;
+                }
+                
+                if (Math.abs(ball.position.x) > 19) {
+                    ball.velocity.x *= -0.8;
+                    ball.position.x = Math.sign(ball.position.x) * 19;
+                }
+                if (Math.abs(ball.position.z) > 29) {
+                    ball.velocity.z *= -0.8;
+                    ball.position.z = Math.sign(ball.position.z) * 29;
+                }
+            },
 
-            // Top sync
-            ballMesh.position.copy(ballBody.position);
-            ballMesh.quaternion.copy(ballBody.quaternion);
+            checkGoals() {
+                const ball = this.ball;
+                
+                if (ball.position.z < -29 && Math.abs(ball.position.x) < 4 && ball.position.y < 3) {
+                    this.redScore++;
+                    document.getElementById('redScore').textContent = this.redScore;
+                    this.resetBall();
+                }
+                
+                if (ball.position.z > 29 && Math.abs(ball.position.x) < 4 && ball.position.y < 3) {
+                    this.blueScore++;
+                    document.getElementById('blueScore').textContent = this.blueScore;
+                    this.resetBall();
+                }
+            },
 
-            // Oyuncu hareket (basit örnek - kendi oyuncunu hareket ettir)
-            if (myPlayerBody && moveVec.length() > 0) {
-                const velocity = moveVec.clone().multiplyScalar(15);
-                myPlayerBody.velocity.x = velocity.x;
-                myPlayerBody.velocity.z = velocity.z;
-                if (playerMixer) playerMixer.update(delta);
-            }
+            resetBall() {
+                this.ball.position.set(0, 0.5, 0);
+                this.ball.velocity.set(0, 0, 0);
+            },
 
-            renderer.render(scene, camera);
-        }
-        animate();
+            shoot() {
+                if (!this.myPlayer) return;
+                const dist = this.myPlayer.position.distanceTo(this.ball.position);
+                if (dist < 2) {
+                    const dir = new THREE.Vector3()
+                        .subVectors(this.ball.position, this.myPlayer.position)
+                        .normalize();
+                    this.ball.velocity.copy(dir.multiplyScalar(1.5));
+                    this.ball.velocity.y = 0.3;
+                }
+            },
 
-        // ==== SOCKET.IO ====
-        let myId, myTeam, myPlayerBody;
-        socket.emit('joinLobby', { userId: user.id, username: user.first_name });
+            startGameTimer() {
+                setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - this.gameStartTime) / 1000);
+                    const remaining = this.selectedTime * 60 - elapsed;
+                    
+                    if (remaining <= 0) {
+                        alert(`Oyun Bitti!\nMavi: ${this.blueScore} - Kırmızı: ${this.redScore}`);
+                        location.reload();
+                        return;
+                    }
+                    
+                    const mins = Math.floor(remaining / 60);
+                    const secs = remaining % 60;
+                    document.getElementById('gameTimer').textContent = 
+                        `${mins}:${secs.toString().padStart(2, '0')}`;
+                }, 1000);
+            },
 
-        document.getElementById('createRoom').onclick = () => {
-            const time = document.getElementById('timeSelect').value;
-            socket.emit('createRoom', { time });
-        };
-
-        document.getElementById('joinRoom').onclick = () => {
-            const roomId = document.getElementById('joinInput').value;
-            socket.emit('joinRoom', roomId);
-        };
-
-        socket.on('roomJoined', (data) => {
-            document.getElementById('lobby').style.display = 'none';
-            // Takım seçimi vs burada
-        });
-
-        socket.on('playerUpdate', (playersData) => {
-            // Diğer oyuncuları sync et (basit pozisyon)
-        });
-
-        socket.on('kickBall', (force) => {
-            // Topa yakınsa kuvvet uygula
-            const direction = new CANNON.Vec3(); // kamera yönüne göre
-            ballBody.applyImpulse(direction.scale(force), ballBody.position);
-        });
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
+            setupControls() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+                });
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+                
+                document.addEventListener('click', () => {
+                    this.shoot();
+                });
+                
+                const joystickBase = document.
