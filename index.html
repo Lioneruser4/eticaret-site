@@ -1,58 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Hızlı Müzik İndir</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Football Multiplayer</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        input { width: 80%; padding: 15px; border-radius: 10px; border: none; margin-bottom: 10px; }
-        button { padding: 15px 30px; border-radius: 10px; border: none; background: #ff0000; color: white; font-weight: bold; cursor: pointer; }
-        .info { margin-top: 20px; color: #aaa; font-size: 14px; }
+        body { margin: 0; overflow: hidden; background: #111; touch-action: none; }
+        #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; }
+        .lobby { background: #222; padding: 20px; border-radius: 20px; text-align: center; width: 300px; border: 2px solid #00f2fe; }
+        #joystick { position: fixed; bottom: 50px; left: 50px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid white; }
+        #controls { position: fixed; bottom: 50px; right: 30px; display: flex; gap: 10px; }
+        .btn { width: 70px; height: 70px; border-radius: 50%; border: none; font-weight: bold; color: white; cursor: pointer; }
+        #shootBtn { background: #ff416c; }
+        #passBtn { background: #4facfe; }
     </style>
 </head>
 <body>
-    <h2>🎵 Ücretsiz Müzik İndir</h2>
-    <input type="text" id="urlInput" placeholder="YouTube Linkini Yapıştır...">
-    <br>
-    <button onclick="indir()">MÜZİĞİ İNDİR</button>
-    
-    <div class="info" id="status"></div>
 
-    <script>
-        async function indir() {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            if(!url) return alert("Link ekle!");
+<div id="ui-overlay">
+    <div class="lobby">
+        <img id="uImg" style="width:60px; border-radius:50%;">
+        <h3 id="uName">Yükleniyor...</h3>
+        <select id="duration" style="width:100%; padding:10px; margin:10px 0;">
+            <option value="5">5 Dakika</option>
+            <option value="15">15 Dakika</option>
+        </select>
+        <button onclick="initGame()" style="width:100%; padding:15px; background:#00f2fe; border:none; border-radius:10px; font-weight:bold;">ODA KUR / GİR</button>
+    </div>
+</div>
 
-            status.innerText = "Dosya hazırlanıyor... Lütfen bekleyin.";
+<div id="joystick"></div>
+<div id="controls">
+    <button id="shootBtn" class="btn">ŞUT</button>
+    <button id="passBtn" class="btn">PAS</button>
+</div>
 
-            // Bu ücretsiz bir API servisidir (Cobalt API)
-            try {
-                const response = await fetch("https://api.cobalt.tools/api/json", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        isAudioOnly: true,
-                        aFormat: "mp3"
-                    })
-                });
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user || { first_name: "Player", photo_url: "" };
+    document.getElementById('uName').innerText = user.first_name;
+    document.getElementById('uImg').src = user.photo_url || "https://via.placeholder.com/60";
 
-                const data = await response.json();
-                if(data.url) {
-                    window.location.href = data.url; // İndirmeyi otomatik başlatır
-                    status.innerText = "İndirme başladı!";
-                } else {
-                    status.innerText = "Hata oluştu, bu link desteklenmiyor olabilir.";
-                }
-            } catch (e) {
-                status.innerText = "Servis şu an meşgul, daha sonra tekrar dene.";
+    let scene, camera, renderer, socket, myId;
+    let players = {};
+    let ball;
+
+    function initGame() {
+        document.getElementById('ui-overlay').style.display = 'none';
+        socket = io("https://saskioyunu.onrender.com");
+        
+        setup3D();
+        setupEvents();
+    }
+
+    function setup3D() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x228b22);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Işıklandırma
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        // Saha
+        const groundGeo = new THREE.PlaneGeometry(100, 60);
+        const groundMat = new THREE.MeshPhongMaterial({ color: 0x2d5a27 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Kale Direkleri (Basit 3D Model)
+        const goalGeo = new THREE.BoxGeometry(2, 10, 20);
+        const goalMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const goal1 = new THREE.Mesh(goalGeo, goalMat);
+        goal1.position.set(-50, 5, 0);
+        scene.add(goal1);
+
+        // Top
+        const ballGeo = new THREE.SphereGeometry(0.8, 16, 16);
+        const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        ball = new THREE.Mesh(ballGeo, ballMat);
+        ball.position.y = 0.8;
+        scene.add(ball);
+
+        camera.position.set(0, 40, 50);
+        camera.lookAt(0,0,0);
+        
+        animate();
+    }
+
+    function createPlayer(id, team) {
+        // İnsan formunda basit mesh (Gövde, Kafa, Ayaklar)
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3, 1), new THREE.MeshPhongMaterial({ color: team }));
+        body.position.y = 1.5;
+        group.add(body);
+        
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshPhongMaterial({ color: 0xffdbac }));
+        head.position.y = 3.5;
+        group.add(head);
+
+        scene.add(group);
+        players[id] = group;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+        // Topa yaklaşınca topun hafif önünde kayması mantığı
+        if(players[socket.id]) {
+            let pPos = players[socket.id].position;
+            let dist = pPos.distanceTo(ball.position);
+            if(dist < 2) {
+                ball.position.x += (ball.position.x - pPos.x) * 0.1;
+                ball.position.z += (ball.position.z - pPos.z) * 0.1;
             }
         }
-    </script>
+    }
+
+    function setupEvents() {
+        socket.on('connect', () => {
+            socket.emit('joinRoom', { roomId: 'lobby', user: { name: user.first_name, img: user.photo_url } });
+        });
+    }
+</script>
 </body>
 </html>
