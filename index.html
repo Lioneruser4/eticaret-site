@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HackerAI OSINT V2 - REAL DATA</title>
+    <title>HackerAI OSINT - RENDER BACKEND</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -32,77 +32,58 @@
 </head>
 <body class="min-h-screen p-8">
     <div class="max-w-4xl mx-auto">
+        <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-[#00ff41] to-[#00f5ff] bg-clip-text text-transparent neon-glow mb-4">
-                HackerAI OSINT V2 - 🔥 REAL
+                HackerAI OSINT - RENDER 🚀
             </h1>
-            <p class="text-xl text-gray-400">TrueCaller • Sync.ME • GetContact • WhatsApp • Numverify</p>
+            <p class="text-xl text-gray-400">TrueCaller • Sync.ME • GetContact • WhatsApp | <span class="text-yellow-400">srv-d4r85oqdbo4c73c7f1jg</span></p>
         </div>
 
+        <!-- Backend Status -->
         <div class="bg-black/50 border border-green-500 p-6 rounded-xl mb-8 flex items-center">
             <div class="loading-spinner w-6 h-6 mr-4"></div>
-            <span id="status">🟢 V2 - 15+ PROXY + SMART EXTRACTOR</span>
+            <span id="status">🟢 Backend: <a href="https://saskioyunu.onrender.com/" target="_blank" class="underline">saskioyunu.onrender.com</a></span>
         </div>
 
+        <!-- Search -->
         <div class="grid md:grid-cols-2 gap-8 mb-12">
             <div class="bg-black/70 border border-green-500 p-8 rounded-2xl">
                 <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <i class="fas fa-phone mr-3 text-green-400"></i>Numara
+                    <i class="fas fa-phone mr-3 text-green-400"></i>Telefon Numarası
                 </h2>
                 <input type="text" id="phoneInput" placeholder="+905551234567" 
                        class="terminal-input w-full p-4 rounded-xl text-xl font-mono"
                        value="+905551234567">
                 <button id="searchBtn" class="w-full mt-4 bg-gradient-to-r from-green-500 to-green-400 text-black font-bold py-4 px-6 rounded-xl hover:from-green-400 hover:to-green-500 transition-all">
-                    <i class="fas fa-rocket mr-3"></i>🚀 V2 ARAMA BAŞLAT
+                    <i class="fas fa-rocket mr-3"></i>🔥 RENDER BACKEND ARAMA
                 </button>
             </div>
         </div>
 
+        <!-- Results -->
         <div id="results" class="space-y-6"></div>
     </div>
 
     <script>
-        // 🔥 15+ GÜÇLÜ PROXY POOL
-        const PROXIES = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://thingproxy.freeboard.io/fetch/',
-            'https://api.codetabs.com/v1/proxy?quest=',
-            'https://corsproxy.org/?',
-            'https://elixir.corsproxy.io/?',
-            'https://cors-anywhere.herokuapp.com/',
-            'https://proxy-server.onrender.com/',
-            'https://corsproxy.lol/',
-            'https://api.allorigins.win/get?url=',
-            'https://whateverproxy.xyz/fetch/',
-            'https://cors.bridged.cc/?',
-            'https://ghproxy.com/https://',
-            'https://proxy.cors.sh/'
-        ];
-        let proxyIndex = 0;
+        // 🔥 RENDER BACKEND URL
+        const BACKEND_URL = 'https://saskioyunu.onrender.com';
 
-        // ✅ TEST NUMARALARI İÇİN REAL DATA
-        const KNOWN_TEST_DATA = {
-            '+905551234567': {
-                names: ['Test User', 'Ahmet Yılmaz', 'Ali Veli'],
-                sources: ['TrueCaller', 'GetContact', 'Sync.ME'],
-                whatsapp: true,
-                carrier: 'Turkcell'
-            },
-            '+905551234568': {
-                names: ['Fatma Şahin', 'Business Contact'],
-                sources: ['TrueCaller', 'GetContact'],
-                whatsapp: true,
-                carrier: 'Vodafone'
-            },
-            '+994551234567': {
-                names: ['Azeri Test', 'Bakü User'],
-                sources: ['Sync.ME'],
-                whatsapp: false,
-                carrier: 'Azercell'
+        // Test backend bağlantısı
+        async function testBackend() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                if (response.ok) {
+                    document.getElementById('status').innerHTML = '🟢 Backend <span class="text-green-400">ÇALIŞIYOR</span>';
+                    return true;
+                }
+            } catch(e) {
+                document.getElementById('status').innerHTML = '🔴 Backend bağlantı hatası';
             }
-        };
+            return false;
+        }
 
+        // Event listeners
         document.getElementById('searchBtn').onclick = searchPhone;
         document.getElementById('phoneInput').onkeypress = (e) => e.key === 'Enter' && searchPhone();
 
@@ -114,181 +95,58 @@
 
             showLoading(phone);
             
-            // ✅ TEST NUMARALARI İÇİN REAL DATA GÖSTER (demo)
-            if (KNOWN_TEST_DATA[phone]) {
-                setTimeout(() => {
-                    showResult(KNOWN_TEST_DATA[phone], phone);
-                }, 2000);
-                return;
-            }
-
             try {
-                const results = await performOSINT(phone);
-                showResult(results, phone);
-            } catch(e) {
-                // Fallback: Numverify API (ücretsiz carrier info)
-                await fallbackCarrierLookup(phone);
-            }
-        }
-
-        async function performOSINT(phone) {
-            const results = { names: [], whatsapp: false, sources: [], carrier: '' };
-
-            // 1. NUMVERIFY - ÜCRETSİZ CARRIER (HER ZAMAN ÇALIŞIR!)
-            try {
-                const carrierData = await fetchProxy(`http://apilayer.net/api/validate?access_key=578e1d1b0a4f8e8b8f8c8d8e8f8c8d8e&number=${phone.slice(1)}&country_code=&format=1`);
-                const carrierJson = JSON.parse(carrierData);
-                if (carrierJson.carrier) {
-                    results.carrier = carrierJson.carrier;
-                    results.sources.push('Numverify');
-                }
-            } catch(e) {}
-
-            // 2. TRUECALLER - MOBILE URL
-            await scrapeSmart(`https://www.truecaller.com/search/tr/${phone.slice(1)}`, 
-                ['name', 'title', 'h1', 'strong', '.person'], 'TrueCaller', results);
-
-            // 3. GETCONTACT DIRECT
-            await scrapeSmart(`https://gcdn.getcontact.com/search?q=${phone.slice(1)}`, 
-                ['name', 'tag', 'label'], 'GetContact', results);
-
-            // 4. SYNCME
-            await scrapeSmart(`https://sync.me/search/${phone.slice(1)}`, 
-                ['.name', '.contact', 'h3'], 'Sync.ME', results);
-
-            // 5. WHATSAPP
-            try {
-                await fetchProxy(`https://wa.me/${phone.slice(1)}`);
-                results.whatsapp = true;
-                results.sources.push('WhatsApp');
-            } catch(e) {}
-
-            return results;
-        }
-
-        // 🔥 SMART REGEX + TEXT EXTRACTOR (JS rendering bypass)
-        async function scrapeSmart(url, keywords, source, results) {
-            try {
-                const html = await fetchProxy(url);
-                const names = smartExtract(html, keywords);
-                names.forEach(name => {
-                    if (name && name.length > 2 && !results.names.includes(name)) {
-                        results.names.push(name);
-                        results.sources.push(source);
-                    }
+                // 🔥 RENDER BACKEND'E İSTEK
+                const response = await fetch(`${BACKEND_URL}/osint`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
                 });
+
+                if (!response.ok) throw new Error('Backend error');
+
+                const data = await response.json();
+                showResult(data, phone);
             } catch(e) {
-                console.log(`${source} skip`);
+                showError('❌ Backend timeout. Render uyuyor olabilir.');
             }
         }
 
-        // 🔥 REGEX + KEYWORD BASED EXTRACTOR (DOM bypass)
-        function smartExtract(html, keywords) {
-            const names = [];
-            const patterns = [
-                /name["'\s]*[:=]["'\s]*([^<>"']{2,50})/gi,
-                /title["'\s]*[:=]["'\s]*([^<>"']{2,50})/gi,
-                /"([^<>"']{2,50})"/g,
-                />([^<]{2,50})</g
-            ];
-
-            patterns.forEach(pattern => {
-                let match;
-                while (match = pattern.exec(html)) {
-                    const candidate = match[1].trim();
-                    if (candidate.length > 2 && candidate.match(/^[A-Za-z\s]{2,50}$/) && 
-                        !names.includes(candidate) && 
-                        !candidate.match(/^(search|result|loading|click|more)/i)) {
-                        names.push(candidate);
-                    }
-                }
-            });
-
-            return names.slice(0, 5);
-        }
-
-        // GÜÇLENDİRİLMİŞ PROXY
-        async function fetchProxy(url, maxRetries = 5) {
-            for (let i = 0; i < maxRetries; i++) {
-                const proxy = PROXIES[proxyIndex % PROXIES.length];
-                proxyIndex = (proxyIndex + 1) % PROXIES.length;
-
-                try {
-                    let proxyUrl = proxy + encodeURIComponent(url);
-                    
-                    // Proxy format fix
-                    if (proxy.includes('allorigins.win/raw')) {
-                        proxyUrl = proxy + encodeURIComponent(url);
-                    } else if (proxy.includes('corsproxy.io')) {
-                        proxyUrl = proxy + encodeURIComponent(url);
-                    }
-
-                    const response = await fetch(proxyUrl, {
-                        method: 'GET',
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                            'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
-                            'Accept-Encoding': 'gzip, deflate',
-                            'Connection': 'keep-alive',
-                            'Upgrade-Insecure-Requests': '1'
-                        }
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                    const html = await response.text();
-                    return html;
-                } catch(e) {
-                    console.log(`Proxy ${i+1}/${maxRetries} failed:`, e.message);
-                    await new Promise(r => setTimeout(r, 500 * i));
-                }
-            }
-            throw new Error('All proxies exhausted');
-        }
-
-        // FALLBACK CARRIER LOOKUP
-        async function fallbackCarrierLookup(phone) {
-            try {
-                const html = await fetchProxy(`https://www.numverify.com/`);
-                showResult({ names: [], whatsapp: false, sources: ['Numverify'], carrier: 'Turkcell (fallback)' }, phone);
-            } catch(e) {
-                showError('❌ Proxy timeout. VPN aç + 1dk bekle');
-            }
-        }
-
-        // UI Functions (aynı)
+        // UI Functions
         function showLoading(phone) {
-            document.getElementById('status').textContent = `🟡 ${phone} taranıyor...`;
+            document.getElementById('status').textContent = `🟡 ${BACKEND_URL} → ${phone}`;
             document.getElementById('results').innerHTML = `
                 <div class="bg-black/70 border-2 border-yellow-500 p-12 rounded-3xl text-center">
                     <div class="loading-spinner w-16 h-16 mx-auto mb-6"></div>
                     <div class="space-y-4">
-                        <p class="text-2xl font-mono">🔍 15+ PROXY ROTASYONU</p>
+                        <p class="text-2xl font-mono">🔥 RENDER BACKEND İSTEK</p>
                         <div class="flex flex-wrap justify-center text-sm space-x-4 text-yellow-400">
-                            <span>TrueCaller</span><span>GetContact</span><span>Sync.ME</span><span>WhatsApp</span><span>Numverify</span>
+                            <span>TrueCaller</span>
+                            <span>GetContact</span>
+                            <span>Sync.ME</span>
+                            <span>WhatsApp</span>
                         </div>
-                        <div class="text-xs mt-4 text-gray-500">Smart regex + mobile UA...</div>
+                        <div class="text-xs mt-4 text-gray-500">Backend scraping aktif...</div>
                     </div>
                 </div>
             `;
         }
 
         function showResult(data, phone) {
-            document.getElementById('status').textContent = `🟢 ${data.names.length} isim + ${data.carrier || 'bilinmiyor'}`;
+            document.getElementById('status').textContent = `🟢 ${data.names?.length || 0} isim bulundu!`;
             
-            const nameSection = data.names.length ? `
+            const nameSection = (data.names && data.names.length) ? `
                 <div class="mb-8">
                     <h3 class="text-2xl font-bold mb-6 flex items-center">
-                        <i class="fas fa-id-card mr-3 text-orange-400"></i>🔍 BULUNAN İSİMLER
+                        <i class="fas fa-id-card mr-3 text-orange-400"></i>✅ GERÇEK İSİMLER
                     </h3>
                     <div class="grid md:grid-cols-2 gap-4">
                         ${data.names.map((name, i) => `
-                            <div class="p-6 bg-gradient-to-r from-orange-900/80 to-red-900/80 rounded-2xl border-l-4 border-orange-400">
+                            <div class="p-6 bg-gradient-to-r from-orange-900/80 to-red-900/80 rounded-2xl border-l-4 border-orange-400 hover:scale-105 transition-all">
                                 <div class="text-xl font-bold text-white mb-2">${name}</div>
                                 <div class="text-orange-300 flex items-center">
-                                    <i class="fas fa-globe mr-2"></i>
-                                    <span>${data.sources[i] || 'Web'}</span>
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <span class="font-mono">${data.sources?.[i] || 'Backend'}</span>
                                 </div>
                             </div>
                         `).join('')}
@@ -299,50 +157,72 @@
             document.getElementById('results').innerHTML = `
                 <div class="bg-black/70 border-2 border-green-500 p-8 rounded-3xl">
                     <div class="text-center mb-8">
+                        <div class="inline-flex w-24 h-24 bg-green-500 rounded-full items-center justify-center mb-4">
+                            <i class="fas fa-check text-3xl text-black"></i>
+                        </div>
                         <h2 class="text-3xl font-bold text-green-400 font-mono">${phone}</h2>
-                        <p class="text-xl text-yellow-400 mt-2">✅ ${data.names.length || 0} isim | ${data.carrier ? `📡 ${data.carrier}` : ''}</p>
+                        <p class="text-xl text-yellow-400 mt-2">✅ ${data.names?.length || 0} İSİM | ${data.carrier || ''}</p>
                     </div>
 
                     ${nameSection}
 
                     ${data.whatsapp ? `
-                    <div class="p-6 bg-green-900/50 rounded-2xl border-2 border-green-400">
-                        <div class="flex items-center">
-                            <i class="fab fa-whatsapp text-2xl text-green-400 mr-4"></i>
-                            <div>
-                                <div class="font-bold text-xl text-green-300">✅ WHATSAPP AKTİF</div>
-                                <a href="https://wa.me/${phone.slice(1)}" target="_blank" class="text-green-200 underline">wa.me/${phone.slice(1)}</a>
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center">
+                            <i class="fab fa-whatsapp mr-3 text-green-400"></i>✅ WHATSAPP AKTİF
+                        </h3>
+                        <a href="https://wa.me/${phone.slice(1)}" target="_blank" 
+                           class="block p-6 bg-gradient-to-r from-green-900/80 to-emerald-900/80 rounded-2xl border-2 border-green-400 hover:border-green-300 hover:scale-105 transition-all">
+                            <div class="flex items-center">
+                                <i class="fab fa-whatsapp text-2xl text-green-400 mr-4"></i>
+                                <div>
+                                    <div class="font-bold text-xl text-green-300">💬 Mesaj Gönder</div>
+                                    <div class="text-sm text-green-200">wa.me/${phone.slice(1)}</div>
+                                </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
                     ` : ''}
 
                     ${data.carrier ? `
-                    <div class="p-4 bg-blue-900/50 rounded-xl mt-4">
+                    <div class="p-6 bg-blue-900/50 rounded-2xl border-2 border-blue-400">
                         <div class="flex items-center">
-                            <i class="fas fa-network-wired text-blue-400 mr-3"></i>
-                            <span class="text-blue-300">${data.carrier}</span>
+                            <i class="fas fa-network-wired text-blue-400 mr-3 text-xl"></i>
+                            <span class="text-blue-300 text-lg font-bold">${data.carrier}</span>
                         </div>
                     </div>
                     ` : ''}
 
-                    <div class="p-4 bg-gray-900/50 rounded-xl mt-6 text-sm">
-                        <div class="text-green-400">🕒 ${new Date().toLocaleString('tr-TR')} | 🔄 ${PROXIES.length} proxy</div>
+                    <div class="p-6 bg-gray-900/50 rounded-2xl border-t-4 border-green-500 mt-6">
+                        <div class="text-sm text-green-400">
+                            🕒 ${new Date().toLocaleString('tr-TR')} | 
+                            📊 ${data.names?.length || 0} isim | 
+                            ${data.whatsapp ? '✅ WhatsApp' : '❌ WhatsApp yok'} | 
+                            🔗 Render Backend
+                        </div>
                     </div>
                 </div>
             `;
         }
 
         function showError(msg) {
-            document.getElementById('status').textContent = '🔴 Bağlantı';
+            document.getElementById('status').textContent = '🔴 Backend Hatası';
             document.getElementById('results').innerHTML = `
                 <div class="bg-black/70 border-2 border-red-500 p-12 rounded-3xl text-center">
                     <i class="fas fa-exclamation-triangle text-6xl text-red-400 mb-6"></i>
-                    <p class="text-2xl text-red-400">${msg}</p>
-                    <p class="text-sm text-red-300 mt-4">** +905551234567 dene - TEST DATA! **</p>
+                    <p class="text-2xl text-red-400 font-bold">${msg}</p>
+                    <div class="mt-6 space-y-2 text-sm text-red-300">
+                        <p>🔧 Render uyuyor olabilir (cold start 30sn)</p>
+                        <p>✅ <a href="https://saskioyunu.onrender.com/" target="_blank" class="underline">Backend test</a></p>
+                    </div>
                 </div>
             `;
         }
+
+        // Sayfa yüklendiğinde backend testi
+        window.onload = () => {
+            testBackend();
+        };
     </script>
 </body>
 </html>
