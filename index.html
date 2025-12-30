@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HackerAI OSINT - GERÇEK VERİ</title>
+    <title>HackerAI OSINT - GitHub.io GERÇEK</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -39,15 +39,15 @@
         <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-[#00ff41] to-[#00f5ff] bg-clip-text text-transparent neon-glow mb-4">
-                HackerAI OSINT - GERÇEK
+                HackerAI OSINT - GitHub.io
             </h1>
-            <p class="text-xl text-gray-400">TrueCaller • WhatsApp • Sync.ME • Gerçek Zamanlı</p>
+            <p class="text-xl text-gray-400">TrueCaller • WhatsApp • Sync.ME • GetContact • <span class="text-yellow-400">PROXY</span></p>
         </div>
 
-        <!-- Backend Status -->
+        <!-- Proxy Status -->
         <div class="bg-black/50 border border-green-500 p-6 rounded-xl mb-8 flex items-center">
             <div class="loading-spinner w-6 h-6 mr-4"></div>
-            <span id="status">🟢 Backend Aktif - Gerçek scraping</span>
+            <span id="status">🟢 ÜCRETSİZ Proxy Aktif - CORS Bypass</span>
         </div>
 
         <!-- Search -->
@@ -69,7 +69,14 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'http://localhost:3000'; // Server.js portu
+        // 🔥 ÜCRETSİZ CORS PROXY'LER (GitHub Pages için)
+        const PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://thingproxy.freeboard.io/fetch/',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
+        let currentProxy = 0;
 
         document.getElementById('searchBtn').onclick = searchPhone;
         document.getElementById('phoneInput').onkeypress = (e) => {
@@ -83,19 +90,98 @@
             }
 
             showLoading();
+            const results = await realOSINT(phone);
+            showResult(results, phone);
+        }
+
+        // 🔥 GERÇEK OSINT - Proxy ile scraping
+        async function realOSINT(phone) {
+            const results = { names: [], whatsapp: false, sources: [] };
+
+            // 1. TrueCaller (gerçek scraping)
+            try {
+                const tcUrl = `https://www.truecaller.com/search/tr/${phone.slice(1)}`;
+                const html = await fetchProxy(tcUrl);
+                const names = extractNames(html, ['search-result-name', 'person-name', 'h1', 'name']);
+                names.forEach(name => {
+                    if (name && !results.names.includes(name)) {
+                        results.names.push(name);
+                        results.sources.push('TrueCaller');
+                    }
+                });
+            } catch(e) {}
+
+            // 2. GetContact
+            try {
+                const gcUrl = `https://getcontact.com/search/${phone.slice(1)}`;
+                const html = await fetchProxy(gcUrl);
+                const names = extractNames(html, ['contact-name', 'phonebook-name', 'tag-name', 'h3']);
+                names.forEach(name => {
+                    if (name && !results.names.includes(name) && !name.includes('GetContact')) {
+                        results.names.push(name);
+                        results.sources.push('GetContact');
+                    }
+                });
+            } catch(e) {}
+
+            // 3. WhatsApp check
+            try {
+                const waUrl = `https://wa.me/${phone.slice(1)}`;
+                await fetchProxy(waUrl);
+                results.whatsapp = true;
+                results.sources.push('WhatsApp');
+            } catch(e) {}
+
+            // 4. Sync.ME
+            try {
+                const smUrl = `https://sync.me/search?q=${phone.slice(1)}`;
+                const html = await fetchProxy(smUrl);
+                const names = extractNames(html, ['contact-name', 'result-name']);
+                names.forEach(name => {
+                    if (name && !results.names.includes(name)) {
+                        results.names.push(name);
+                        results.sources.push('Sync.ME');
+                    }
+                });
+            } catch(e) {}
+
+            return results;
+        }
+
+        // Proxy fetch (CORS bypass)
+        async function fetchProxy(url) {
+            const proxy = PROXIES[currentProxy % PROXIES.length];
+            currentProxy++;
             
             try {
-                const response = await fetch(`${BACKEND_URL}/api/search`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone })
+                const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
                 });
-                
-                const data = await response.json();
-                showResult(data, phone);
+                return await response.text();
             } catch(e) {
-                showError('Backend bağlantı hatası. server.js çalıştırın!');
+                // Proxy rotation
+                if (currentProxy > PROXIES.length * 2) throw e;
+                return fetchProxy(url);
             }
+        }
+
+        // HTML'den isim extract
+        function extractNames(html, selectors) {
+            const names = [];
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            selectors.forEach(selector => {
+                doc.querySelectorAll(selector).forEach(el => {
+                    const name = el.textContent?.trim();
+                    if (name && name.length > 2 && !names.includes(name)) {
+                        names.push(name);
+                    }
+                });
+            });
+            return names;
         }
 
         function showLoading() {
@@ -103,12 +189,12 @@
                 <div class="bg-black/70 border-2 border-yellow-500 p-12 rounded-3xl text-center">
                     <div class="loading-spinner w-16 h-16 mx-auto mb-6"></div>
                     <div class="space-y-4">
-                        <p class="text-2xl font-mono">🔍 GERÇEK TARAMA...</p>
+                        <p class="text-2xl font-mono">🔍 PROXY SCRAPING...</p>
                         <div class="flex flex-wrap justify-center text-sm space-x-4 text-yellow-400">
                             <span>TrueCaller</span>
+                            <span>GetContact</span>
                             <span>WhatsApp</span>
                             <span>Sync.ME</span>
-                            <span>Google</span>
                         </div>
                     </div>
                 </div>
@@ -123,26 +209,31 @@
                             <i class="fas fa-check text-3xl text-black"></i>
                         </div>
                         <h2 class="text-3xl font-bold text-green-400 font-mono">${phone}</h2>
-                        <p class="text-xl text-yellow-400 mt-2">✅ TESPİT EDİLDİ</p>
+                        <p class="text-xl text-yellow-400 mt-2">✅ ${data.names.length} İSİM BULUNDU</p>
                     </div>
 
-                    ${data.names && data.names.length ? `
+                    ${data.names.length ? `
                     <div class="mb-8">
                         <h3 class="text-2xl font-bold mb-6 flex items-center">
-                            <i class="fas fa-id-card mr-3 text-orange-400"></i>GERÇEK İSİM ETİKETLERİ
+                            <i class="fas fa-id-card mr-3 text-orange-400"></i>GERÇEK İSİM/TAG LER
                         </h3>
                         <div class="grid md:grid-cols-2 gap-4">
-                            ${data.names.map(name => `
+                            ${data.names.map((name, i) => `
                                 <div class="p-6 bg-gradient-to-r from-orange-900/80 to-red-900/80 rounded-2xl border-l-4 border-orange-400">
                                     <div class="text-xl font-bold text-white mb-2">${name}</div>
                                     <div class="text-orange-300 flex items-center">
-                                        <i class="fas fa-check-circle mr-2"></i>${data.sources?.join(' | ') || 'TrueCaller'}
+                                        <i class="fas fa-check-circle mr-2"></i>${data.sources[i] || 'Web'}
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                    ` : ''}
+                    ` : `
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-search text-6xl mb-4 opacity-50"></i>
+                        <p class="text-xl">Bu numarada halka açık veri yok</p>
+                    </div>
+                    `}
 
                     ${data.whatsapp ? `
                     <div class="mb-8">
@@ -165,7 +256,8 @@
                     <div class="p-6 bg-gray-900/50 rounded-2xl border-t-4 border-green-500">
                         <div class="text-sm text-green-400">
                             🕒 Tarama: ${new Date().toLocaleString('tr-TR')} | 
-                            📊 Kaynaklar: ${data.sources?.join(', ') || 'Web scraping'}
+                            📊 Proxy: ${PROXIES.length} alternatif | 
+                            ${data.names.length} isim ${data.whatsapp ? '+ WhatsApp' : ''}
                         </div>
                     </div>
                 </div>
