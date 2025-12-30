@@ -13,17 +13,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Bilgilerin
 TOKEN = "2138035413:AAGYaGtgvQ4thyJKW2TXLS5n3wyZ6vVx3I8"
 bot = TeleBot(TOKEN)
 
-def download_audio(query):
-    # Eğer link değilse arama yapmak için 'ytsearch1:' ekliyoruz
-    if not query.startswith(('http://', 'https://')):
-        search_query = f"ytsearch1:{query}"
-    else:
-        search_query = query
+# --- BOT START KOMUTU ---
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, f"Selam {message.from_user.first_name}! Bot aktif. Siteden müzik aratabilirsin.")
 
+def download_audio(query):
+    search_query = f"ytsearch1:{query}" if not query.startswith('http') else query
+    
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -44,20 +44,15 @@ def download_audio(query):
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(search_query, download=True)
-        if 'entries' in info:
-            video_data = info['entries'][0]
-        else:
-            video_data = info
-            
-        video_id = video_data['id']
-        filename = f"{video_id}.mp3"
-        return filename, video_data.get('title', 'Bilinmeyen Şarkı')
+        video_data = info['entries'][0] if 'entries' in info else info
+        filename = f"{video_data['id']}.mp3"
+        return filename, video_data.get('title', 'Müzik')
 
 @app.get("/indir")
 def indir(chat_id: str, music: str):
     try:
-        # Önce bota bilgi ver
-        bot.send_message(chat_id, f"🔍 Aranan: {music}\nLütfen bekleyin, indiriliyor...")
+        # Test mesajı
+        bot.send_message(chat_id, f"📥 '{music}' aranıyor ve indiriliyor...")
         
         file_path, title = download_audio(music)
         
@@ -65,8 +60,15 @@ def indir(chat_id: str, music: str):
             bot.send_audio(chat_id, f, caption=f"✅ {title}\n@Gemini_Partner")
         
         os.remove(file_path)
-        return {"status": "success"}
+        return {"status": "ok"}
     except Exception as e:
-        # Hata olursa bota mesaj at ki nedenini görelim
-        bot.send_message(chat_id, f"❌ Hata oluştu: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        error_msg = str(e)
+        bot.send_message(chat_id, f"❌ Hata: {error_msg[:100]}")
+        return {"status": "error", "message": error_msg}
+
+# Botu arka planda sürekli dinlemede tutmak için (Webhook yerine basit çözüm)
+import threading
+def run_bot():
+    bot.infinity_polling()
+
+threading.Thread(target=run_bot, daemon=True).start()
