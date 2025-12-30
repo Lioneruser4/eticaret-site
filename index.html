@@ -1,51 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>IP OSINT - Real Geo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Müzik İndirici</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: #0b0f19; color: #fff; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;
+        }
+        .container {
+            width: 90%; max-width: 400px; padding: 25px; border-radius: 20px;
+            background: #161b2c; border: 1px solid #2d334a; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: #00d2ff; margin-bottom: 20px; font-size: 24px; }
+        input {
+            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #2d334a;
+            background: #0b0f19; color: #fff; font-size: 16px; outline: none; box-sizing: border-box;
+        }
+        button {
+            width: 100%; margin-top: 20px; padding: 15px; border-radius: 12px; border: none;
+            background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+        button:disabled { background: #444; cursor: not-allowed; }
+        .loader {
+            display: none; margin-top: 15px; font-size: 13px; color: #00d2ff;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
 </head>
-<body class="bg-gray-900 text-white p-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-center mb-8">🌐 IP Intelligence</h1>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <button onclick="myIP()" class="bg-blue-600 p-4 rounded font-bold">My IP</button>
-            <input id="ipinput" placeholder="8.8.8.8" class="p-4 bg-gray-800 border rounded">
-            <button onclick="ipLookup()" class="bg-orange-600 p-4 rounded font-bold">Lookup IP</button>
-        </div>
-        <div id="result"></div>
-    </div>
+<body>
 
-    <script>
-    async function myIP() {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const ip = (await res.json()).ip;
-        document.getElementById('ipinput').value = ip;
-        ipLookup();
-    }
+<div class="container">
+    <h2>🎵 Müzik İndir</h2>
+    <input type="text" id="mInput" placeholder="Şarkı adı veya YouTube linki...">
+    <button onclick="startDownload()" id="btn">HEMEN İNDİR</button>
+    <div id="loader" class="loader">İşlem sıraya alındı, bota gönderilecek...</div>
+</div>
 
-    async function ipLookup() {
-        const ip = document.getElementById('ipinput').value;
-        const [ipinfo, ipapi] = await Promise.allSettled([
-            fetch(`https://ipinfo.io/${ip}/json`),
-            fetch(`http://ip-api.com/json/${ip}`)
-        ]);
-        
-        document.getElementById('result').innerHTML = `
-            <div class="grid grid-cols-2 gap-4 p-6 bg-gray-800 rounded">
-                <div>
-                    <strong>IP:</strong> ${ip}<br>
-                    <strong>City:</strong> ${(await ipinfo.value)?.json()?.city || 'N/A'}<br>
-                    <strong>ISP:</strong> ${(await ipinfo.value)?.json()?.org || 'N/A'}
-                </div>
-                <div>
-                    <strong>Country:</strong> ${(await ipapi.value)?.json()?.country || 'N/A'}<br>
-                    <strong>ASN:</strong> ${(await ipinfo.value)?.json()?.asn || 'N/A'}<br>
-                    <strong>Proxy:</strong> ${(await ipinfo.value)?.json()?.proxy || 'No'}
-                </div>
-            </div>
-        `;
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    async function startDownload() {
+        const music = document.getElementById('mInput').value;
+        const btn = document.getElementById('btn');
+        const loader = document.getElementById('loader');
+        const userId = tg.initDataUnsafe?.user?.id;
+
+        if(!music) { alert("Lütfen bir şey yazın!"); return; }
+        if(!userId) { alert("Lütfen bu sayfayı Telegram içinden açın!"); return; }
+
+        btn.disabled = true;
+        loader.style.display = "block";
+
+        try {
+            // Senin Render Sunucun
+            const url = `https://saskioyunu.onrender.com/indir?chat_id=${userId}&music=${encodeURIComponent(music)}`;
+            await fetch(url);
+            alert("İstek başarıyla alındı! Botu kontrol et.");
+        } catch (e) {
+            alert("Bir hata oluştu. Sunucu uyanıyor olabilir, 30sn sonra tekrar dene.");
+        } finally {
+            btn.disabled = false;
+            loader.style.display = "none";
+        }
     }
-    </script>
+</script>
 </body>
 </html>
