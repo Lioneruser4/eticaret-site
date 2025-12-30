@@ -2,72 +2,63 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Müzik İndirici</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müzik Bot Girişi</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            background: #0b0f19; color: #fff; font-family: 'Inter', sans-serif;
-            display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;
-        }
-        .container {
-            width: 90%; max-width: 400px; padding: 25px; border-radius: 20px;
-            background: #161b2c; border: 1px solid #2d334a; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        h2 { color: #00d2ff; margin-bottom: 20px; font-size: 24px; }
-        input {
-            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #2d334a;
-            background: #0b0f19; color: #fff; font-size: 16px; outline: none; box-sizing: border-box;
-        }
-        button {
-            width: 100%; margin-top: 20px; padding: 15px; border-radius: 12px; border: none;
-            background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
-            color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;
-        }
-        button:disabled { background: #444; cursor: not-allowed; }
-        .loader {
-            display: none; margin-top: 15px; font-size: 13px; color: #00d2ff;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        body { background: #0f172a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 25px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .user-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 15px; }
+        .user-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #38bdf8; }
+        input { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #0f172a; color: white; margin-bottom: 15px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #38bdf8; color: #0f172a; font-weight: bold; cursor: pointer; }
+        #status { font-size: 12px; margin-top: 10px; color: #38bdf8; display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🎵 Müzik İndir</h2>
-    <input type="text" id="mInput" placeholder="Şarkı adı veya YouTube linki...">
-    <button onclick="startDownload()" id="btn">HEMEN İNDİR</button>
-    <div id="loader" class="loader">İşlem sıraya alındı, bota gönderilecek...</div>
+<div class="card">
+    <div id="userHeader" class="user-info">
+        <span id="userName">Giriş yapılıyor...</span>
+    </div>
+    <h2>Müzik Ara</h2>
+    <input type="text" id="mInput" placeholder="Şarkı adı yazın...">
+    <button onclick="sendReq()" id="mainBtn">BOTA GÖNDER</button>
+    <div id="status">İşlem yapılıyor, lütfen bota bakın...</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    async function startDownload() {
+    // Kullanıcı Bilgilerini Göster
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+        document.getElementById('userName').innerText = "Selam, " + user.first_name;
+        if(user.photo_url) {
+            const img = document.createElement('img');
+            img.src = user.photo_url;
+            document.getElementById('userHeader').prepend(img);
+        }
+    }
+
+    async function sendReq() {
         const music = document.getElementById('mInput').value;
-        const btn = document.getElementById('btn');
-        const loader = document.getElementById('loader');
-        const userId = tg.initDataUnsafe?.user?.id;
-
-        if(!music) { alert("Lütfen bir şey yazın!"); return; }
-        if(!userId) { alert("Lütfen bu sayfayı Telegram içinden açın!"); return; }
-
+        const btn = document.getElementById('mainBtn');
+        const status = document.getElementById('status');
+        
+        if(!music) return alert("İsim yaz!");
+        
         btn.disabled = true;
-        loader.style.display = "block";
+        status.style.display = "block";
 
         try {
-            // Senin Render Sunucun
-            const url = `https://saskioyunu.onrender.com/indir?chat_id=${userId}&music=${encodeURIComponent(music)}`;
-            await fetch(url);
-            alert("İstek başarıyla alındı! Botu kontrol et.");
+            const res = await fetch(`https://saskioyunu.onrender.com/indir?chat_id=${user.id}&music=${encodeURIComponent(music)}`);
+            alert("İstek Render'a ulaştı. Botu kontrol et!");
         } catch (e) {
-            alert("Bir hata oluştu. Sunucu uyanıyor olabilir, 30sn sonra tekrar dene.");
+            alert("Bağlantı hatası! Render uyuyor olabilir.");
         } finally {
             btn.disabled = false;
-            loader.style.display = "none";
         }
     }
 </script>
