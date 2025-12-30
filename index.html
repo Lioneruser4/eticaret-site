@@ -1,46 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Username Hunter - Real Sites</title>
+    <title>IP OSINT - Real Geo</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white p-8">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-center mb-8">🕵️ Username Hunter (300+ Sites)</h1>
+        <h1 class="text-4xl font-bold text-center mb-8">🌐 IP Intelligence</h1>
         
-        <input id="username" placeholder="testuser" class="w-full p-4 bg-gray-800 border rounded mb-4">
-        <button onclick="hunt()" class="w-full bg-green-600 p-4 rounded font-bold">HUNT 300+ SITES</button>
-        <div id="result" class="mt-8"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <button onclick="myIP()" class="bg-blue-600 p-4 rounded font-bold">My IP</button>
+            <input id="ipinput" placeholder="8.8.8.8" class="p-4 bg-gray-800 border rounded">
+            <button onclick="ipLookup()" class="bg-orange-600 p-4 rounded font-bold">Lookup IP</button>
+        </div>
+        <div id="result"></div>
     </div>
 
     <script>
-    const sites = [
-        {name:'Instagram', url:'https://www.instagram.com/${user}/'},
-        {name:'Twitter', url:'https://twitter.com/${user}'},
-        {name:'TikTok', url:'https://www.tiktok.com/@${user}'},
-        {name:'YouTube', url:'https://youtube.com/@${user}'},
-        {name:'GitHub', url:'https://github.com/${user}'},
-        // +300 more real sites...
-    ];
+    async function myIP() {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const ip = (await res.json()).ip;
+        document.getElementById('ipinput').value = ip;
+        ipLookup();
+    }
 
-    async function hunt() {
-        const user = document.getElementById('username').value;
-        const result = document.getElementById('result');
-        result.innerHTML = 'Scanning...';
+    async function ipLookup() {
+        const ip = document.getElementById('ipinput').value;
+        const [ipinfo, ipapi] = await Promise.allSettled([
+            fetch(`https://ipinfo.io/${ip}/json`),
+            fetch(`http://ip-api.com/json/${ip}`)
+        ]);
         
-        const found = [];
-        for(let site of sites.slice(0,10)) { // Test first 10
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(site.url.replace('${user}',user))}`);
-                const data = await res.json();
-                if(data.status.http_code === 200) {
-                    found.push(site.name);
-                }
-            } catch(e){}
-        }
-        result.innerHTML = found.length ? 
-            found.map(s => `<div class="bg-green-500 p-2 mb-2 rounded">${s} ✅</div>`).join('') :
-            '<div class="bg-red-500 p-4 rounded">No accounts found</div>';
+        document.getElementById('result').innerHTML = `
+            <div class="grid grid-cols-2 gap-4 p-6 bg-gray-800 rounded">
+                <div>
+                    <strong>IP:</strong> ${ip}<br>
+                    <strong>City:</strong> ${(await ipinfo.value)?.json()?.city || 'N/A'}<br>
+                    <strong>ISP:</strong> ${(await ipinfo.value)?.json()?.org || 'N/A'}
+                </div>
+                <div>
+                    <strong>Country:</strong> ${(await ipapi.value)?.json()?.country || 'N/A'}<br>
+                    <strong>ASN:</strong> ${(await ipinfo.value)?.json()?.asn || 'N/A'}<br>
+                    <strong>Proxy:</strong> ${(await ipinfo.value)?.json()?.proxy || 'No'}
+                </div>
+            </div>
+        `;
     }
     </script>
 </body>
