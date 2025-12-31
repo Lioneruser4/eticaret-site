@@ -3,86 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Premium Earn</title>
+    <title>Video Kazan</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
     <style>
-        :root { --tg-blue: #2481cc; --tg-bg: #0e1621; --tg-card: #17212b; }
-        body { 
-            background-color: var(--tg-bg); color: white; 
-            font-family: -apple-system, sans-serif; 
-            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; 
+        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .card { background: #17212b; border-radius: 20px; padding: 20px; border: 1px solid #2481cc; margin-bottom: 30px; }
+        .balance { font-size: 50px; color: #31b545; font-weight: bold; }
+        .btn-play { 
+            background: #2481cc; color: white; border: none; padding: 20px; border-radius: 15px; 
+            font-size: 20px; font-weight: bold; width: 100%; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-        .user-card {
-            background: var(--tg-card); width: 100%; border-radius: 20px;
-            padding: 20px; border: 1px solid rgba(255,255,255,0.1);
-            text-align: center; margin-bottom: 30px;
-        }
-        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 30px solid var(--tg-blue); border-width: 3px; margin-bottom: 10px; }
-        .balance-value { font-size: 50px; font-weight: 800; color: #31b545; margin: 10px 0; }
-        .btn-main {
-            background: linear-gradient(135deg, #2481cc, #1c639d);
-            color: white; border: none; width: 100%; padding: 20px;
-            border-radius: 16px; font-size: 18px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .btn-main:active { transform: scale(0.97); }
-        #status-msg { margin-top: 15px; font-size: 13px; color: #888; }
+        .btn-play:active { transform: scale(0.96); }
+        #msg { color: #888; margin-top: 15px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div class="user-card">
-        <img id="u-pic" src="https://ui-avatars.com/api/?name=U" class="avatar">
-        <h2 id="u-name" style="margin: 5px 0;">Yükleniyor...</h2>
+    <div class="card">
+        <h3 id="u-name">Kullanıcı</h3>
+        <div class="balance" id="puan">0</div>
+        <p style="color:#888; margin:0;">TOPLAM PUAN</p>
     </div>
 
-    <div style="text-align: center; margin-bottom: 40px;">
-        <div style="color: #888; font-size: 12px; letter-spacing: 1px;">BAKİYENİZ</div>
-        <div class="balance-value" id="puan">0</div>
-        <div style="color: #31b545; font-size: 13px;">Puan Biriktir</div>
-    </div>
-
-    <button class="btn-main" onclick="showAds()">🎬 REKLAMI BAŞLAT</button>
-    <p id="status-msg">Reklam sunucusu kontrol ediliyor...</p>
+    <button class="btn-play" onclick="reklamAc()">🎬 VİDEO İZLE</button>
+    <p id="msg">Sistem Hazır</p>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // 1. Kullanıcı Bilgileri
         const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('u-name').innerText = user.first_name;
-            if(user.photo_url) document.getElementById('u-pic').src = user.photo_url;
-        }
+        const uID = user ? user.id : "guest";
+        document.getElementById('u-name').innerText = user ? user.first_name : "Misafir";
 
-        // 2. Bakiye
-        let savedPuan = localStorage.getItem('puan_' + (user?.id || 'guest')) || "0";
-        document.getElementById('puan').innerText = savedPuan;
+        // Kayıtlı Puanı Yükle
+        let puan = localStorage.getItem('p_' + uID) || "0";
+        document.getElementById('puan').innerText = puan;
 
-        // 3. ADSGRAM AYARI (Yeni ID: int-20355)
-        // Interstitial olduğu için init kısmında bunu belirtiyoruz
+        // ADSGRAM BAĞLANTISI (ID: int-20355)
         const AdController = window.Adsgram.init({ blockId: "int-20355" });
 
-        function showAds() {
-            const status = document.getElementById('status-msg');
-            status.innerText = "Reklam yükleniyor...";
-            tg.HapticFeedback.impactOccurred('light');
+        function reklamAc() {
+            const msg = document.getElementById('msg');
+            msg.innerText = "Video aranıyor...";
+            
+            tg.HapticFeedback.impactOccurred('medium');
 
             AdController.show().then((result) => {
-                // Reklam başarıyla gösterildi ve kapatıldı
+                // Video başarıyla WebView içinde izlendi ve kapatıldı
                 let pElement = document.getElementById('puan');
-                let newPuan = parseInt(pElement.innerText) + 10;
-                pElement.innerText = newPuan;
-                localStorage.setItem('puan_' + (user?.id || 'guest'), newPuan);
+                let yeniPuan = parseInt(pElement.innerText) + 10;
+                pElement.innerText = yeniPuan;
+                localStorage.setItem('p_' + uID, yeniPuan);
                 
-                status.innerText = "Tebrikler! Puan eklendi.";
+                msg.innerText = "Tebrikler! +10 Puan Kazandın.";
                 tg.HapticFeedback.notificationOccurred('success');
             }).catch((err) => {
+                // Video bulunamadıysa veya sistem onaylı değilse
                 console.error(err);
-                status.innerText = "Hata: Reklam henüz hazır değil.";
-                tg.showAlert("Reklam şu an bulunamadı. Lütfen Adsgram panelinden durumun 'Active' olduğundan emin olun.");
+                msg.innerText = "Şu an video yok, sonra tekrar dene.";
+                tg.showAlert("Video şu an yüklenemedi. Adsgram panelinde 'Active' yazısını kontrol et.");
             });
         }
     </script>
