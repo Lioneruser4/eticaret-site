@@ -1,208 +1,127 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sınırsız Asistan</title>
+    <title>Mələk AI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --accent: #38bdf8;
-            --text: #f1f5f9;
-        }
+        :root { --bg: #000000; --accent: #00d2ff; --text: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        
+        header { padding: 15px; text-align: center; border-bottom: 1px solid #222; font-weight: bold; color: var(--accent); }
+        
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 15px; line-height: 1.5; word-wrap: break-word; }
+        .ai { align-self: flex-start; background: #1a1a1a; border: 1px solid #333; }
+        .user { align-self: flex-end; background: var(--accent); color: #000; font-weight: 500; }
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
+        .input-area { padding: 15px; background: #111; display: flex; align-items: center; gap: 10px; border-top: 1px solid #222; }
+        input { flex: 1; padding: 12px; border-radius: 25px; border: none; background: #222; color: white; outline: none; }
+        
+        .btns { display: flex; gap: 10px; }
+        button { border: none; background: none; color: var(--accent); font-size: 22px; cursor: pointer; transition: 0.2s; }
+        #mic-btn.active { color: #ff4b2b; animation: shake 0.5s infinite; }
 
-        header {
-            padding: 20px;
-            text-align: center;
-            background: var(--card);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-
-        #chat-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .msg {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            font-size: 15px;
-            line-height: 1.4;
-        }
-
-        .user-msg {
-            align-self: flex-end;
-            background: var(--accent);
-            color: #000;
-        }
-
-        .ai-msg {
-            align-self: flex-start;
-            background: var(--card);
-            border: 1px solid #334155;
-        }
-
-        .controls {
-            padding: 20px;
-            background: var(--card);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #mic-btn {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            border: none;
-            background: var(--accent);
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
-            transition: 0.3s;
-        }
-
-        #mic-btn.listening {
-            animation: pulse 1.5s infinite;
-            background: #ef4444;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-
-        #status { font-size: 12px; color: #94a3b8; }
+        @keyframes shake { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<header>
-    <h2>Akıllı Asistan</h2>
-</header>
+<header>MƏLƏK AI — Xaliq Mustafayev</header>
 
-<div id="chat-container">
-    <div class="msg ai-msg">Merhaba! Ben sınırsız asistanın. Her dilde konuşabilirim. Nasıl yardımcı olabilirim?</div>
+<div id="chat-box">
+    <div class="msg ai">Salam Xaliq Mustafayev. Mən Mələk, sənin köməkçinim. Buyur, nə istəsən həm yaza, həm də soruşa bilərsən.</div>
 </div>
 
-<div class="controls">
-    <p id="status">Dinlemek için mikrofona dokun</p>
-    <button id="mic-btn"><i class="fas fa-microphone"></i></button>
+<div class="input-area">
+    <input type="text" id="user-input" placeholder="Məssaj yazın..." autocomplete="off">
+    <div class="btns">
+        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+        <button id="mic-btn"><i class="fas fa-microphone"></i></button>
+    </div>
 </div>
 
 <script>
-    const chatContainer = document.getElementById('chat-container');
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
     const micBtn = document.getElementById('mic-btn');
-    const statusText = document.getElementById('status');
 
-    // Ses Tanıma ve Sentezleme Ayarları
+    // SƏS TANIMA (Dinləmə)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    const recognition = (SpeechRecognition) ? new SpeechRecognition() : null;
+    if(recognition) {
+        recognition.lang = 'az-AZ';
+        recognition.onresult = (e) => {
+            const text = e.results[0][0].transcript;
+            processRequest(text);
+        };
+        recognition.onend = () => micBtn.classList.remove('active');
+    }
 
-    // ASİSTANIN CEVAP VERME VE KONUŞMA FONKSİYONU
+    // SƏS SİNTEZİ (Danışma)
     function speak(text) {
-        // Yazılı ekle
-        const div = document.createElement('div');
-        div.className = 'msg ai-msg';
-        div.innerText = text;
-        chatContainer.appendChild(div);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        // Sesli oku
         const utterance = new SpeechSynthesisUtterance(text);
-        // Dil otomatik algılama için (Söylenen metne göre tarayıcı dili seçer)
+        utterance.lang = 'az-AZ'; 
+        utterance.rate = 1.0;
         window.speechSynthesis.speak(utterance);
     }
 
-    // SINIRSIZ VE API'SİZ VERİ KAYNAĞI (DuckDuckGo AI Proxy / Free API)
-    async function getAIResponse(prompt) {
-        statusText.innerText = "Düşünüyorum...";
-        
-        try {
-            // Tamamen ücretsiz ve anahtarsız bir yapay zeka servisi kullanalım
-            const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(prompt)}&format=json&no_html=1`);
-            const data = await response.json();
-            
-            let answer = data.AbstractText;
-            
-            if (!answer) {
-                // Eğer doğrudan cevap yoksa akıllı bir arama yapıp sonucu döndürür
-                answer = "Bununla ilgili net bir bilgi bulamadım ama senin için araştırıyorum.";
-                window.open(`https://www.google.com/search?q=${encodeURIComponent(prompt)}`, "_blank");
-            }
-            
-            speak(answer);
-        } catch (e) {
-            speak("Bağlantı sorunu yaşıyorum efendim.");
-        }
-        statusText.innerText = "Dokun ve Konuş";
-    }
-
-    // ÖZEL KOMUTLAR SİSTEMİ
-    function checkCommands(text) {
-        const input = text.toLowerCase();
-        
-        if (input.includes("youtube aç")) {
-            speak("Tabii, YouTube açılıyor.");
-            window.open("https://www.youtube.com", "_blank");
-            return true;
-        }
-        if (input.includes("saat kaç")) {
-            speak("Şu an saat: " + new Date().toLocaleTimeString());
-            return true;
-        }
-        return false;
-    }
-
-    // ETKİLEŞİM
-    micBtn.onclick = () => {
-        recognition.start();
-        micBtn.classList.add('listening');
-        statusText.innerText = "Seni dinliyorum...";
-    };
-
-    recognition.onresult = (event) => {
-        const result = event.results[0][0].transcript;
-        micBtn.classList.remove('listening');
-
-        // Kullanıcı mesajını ekrana bas
+    // MESAJI EKRANA ƏLAVƏ ET
+    function addMsg(text, type) {
         const div = document.createElement('div');
-        div.className = 'msg user-msg';
-        div.innerText = result;
-        chatContainer.appendChild(div);
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
-        // Önce komutları kontrol et, yoksa AI'ya sor
-        if (!checkCommands(result)) {
-            getAIResponse(result);
+    // SORĞUNU EMAL ET
+    async function processRequest(text) {
+        if (!text) return;
+        addMsg(text, 'user');
+        userInput.value = '';
+
+        const lowerText = text.toLowerCase();
+        let response = "";
+
+        // ÖZƏL KOMANDALAR
+        if (lowerText.includes("youtube")) {
+            response = "Xaliq bəy, YouTube açılır.";
+            window.open("https://www.youtube.com", "_blank");
+        } else if (lowerText.includes("sahibin") || lowerText.includes("kim tərəfindən")) {
+            response = "Mənim sahibim və yaradıcım Xaliq Mustafayevdir.";
+        } else if (lowerText.includes("adın nə")) {
+            response = "Mənim adım Mələkdir.";
+        } else {
+            // WIKIPEDIA / DATA API (Limitsiz məlumat)
+            try {
+                const res = await fetch(`https://tr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(text)}`);
+                const data = await res.json();
+                response = data.extract || "Xaliq bəy, bu barədə məlumatım yoxdur, amma sizin üçün öyrənə bilərəm.";
+            } catch {
+                response = "İnternet bağlantısında problem var, Xaliq bəy.";
+            }
         }
-    };
 
-    recognition.onerror = () => {
-        micBtn.classList.remove('listening');
-        statusText.innerText = "Hata oluştu, tekrar dene.";
+        setTimeout(() => {
+            addMsg(response, 'ai');
+            speak(response);
+        }, 600);
+    }
+
+    // HADİSƏLƏR (Events)
+    sendBtn.onclick = () => processRequest(userInput.value);
+    userInput.onkeypress = (e) => { if(e.key === 'Enter') processRequest(userInput.value); };
+    
+    micBtn.onclick = () => {
+        if(recognition) {
+            recognition.start();
+            micBtn.classList.add('active');
+        } else {
+            alert("Sizin brauzer səs dəstəkləmir.");
+        }
     };
 </script>
 
