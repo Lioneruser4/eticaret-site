@@ -3,34 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mələk AI</title>
+    <title>Mələk AI - Xaliq Mustafayev</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #0d0d0d; --accent: #00e5ff; --text: #e0e0e0; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { padding: 15px; text-align: center; border-bottom: 1px solid #222; background: #111; color: var(--accent); font-weight: bold; letter-spacing: 1px; }
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 15px; font-size: 15px; line-height: 1.4; }
-        .ai { align-self: flex-start; background: #1a1a1a; border: 1px solid #333; }
+        :root { --bg: #0a0a0b; --accent: #00f2ff; --text: #e0e0e0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { padding: 15px; text-align: center; background: #111; border-bottom: 1px solid #222; font-weight: bold; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; font-size: 15px; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .ai { align-self: flex-start; background: #18181b; border: 1px solid #27272a; }
         .user { align-self: flex-end; background: var(--accent); color: #000; font-weight: 500; }
         .input-area { padding: 15px; background: #111; display: flex; align-items: center; gap: 10px; border-top: 1px solid #222; }
-        input { flex: 1; padding: 12px 18px; border-radius: 25px; border: none; background: #222; color: white; outline: none; }
-        .btns { display: flex; gap: 12px; }
+        input { flex: 1; padding: 12px 20px; border-radius: 25px; border: 1px solid #333; background: #000; color: white; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--accent); }
+        .btns { display: flex; gap: 10px; }
         button { border: none; background: none; color: var(--accent); font-size: 22px; cursor: pointer; }
-        #mic-btn.active { color: #ff3d00; animation: pulse 1s infinite; }
+        #mic-btn.active { color: #ff3333; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<header>MƏLƏK AI</header>
+<header>Mələk AI</header>
 
 <div id="chat-box">
-    <div class="msg ai">Salam! Mən Mələk. Xaliq Mustafayev tərəfindən yaradılmışam.</div>
+    <div class="msg ai">Salam! Mən Mələk. Xaliq Mustafayev tərəfindən yaradılmışam. Necə kömək edə bilərəm?</div>
 </div>
 
 <div class="input-area">
-    <input type="text" id="user-input" placeholder="Məssaj yazın..." autocomplete="off">
+    <input type="text" id="user-input" placeholder="Mələyə sual verin..." autocomplete="off">
     <div class="btns">
         <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
         <button id="mic-btn"><i class="fas fa-microphone"></i></button>
@@ -51,19 +53,18 @@
     if(recognition) {
         recognition.lang = 'az-AZ';
         recognition.onresult = (e) => {
-            isVoiceMode = true; // Səslə giriş edildiyini qeyd et
+            isVoiceMode = true;
             processRequest(e.results[0][0].transcript);
         };
         recognition.onend = () => micBtn.classList.remove('active');
     }
 
-    // TƏKMİLLƏŞDİRİLMİŞ SƏS SİNTEZİ
+    // SƏS SİNTEZİ (Daha aydın)
     function speak(text) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'az-AZ'; 
-        utterance.rate = 0.9; // Daha yavaş və anlaşıqlı
-        utterance.pitch = 1.0; 
+        utterance.rate = 0.95;
         window.speechSynthesis.speak(utterance);
     }
 
@@ -75,6 +76,7 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // ƏSAS BEYİN: CHATGPT KİMİ DANIŞMAQ ÜÇÜN (FREE AI PROXY)
     async function processRequest(text) {
         if (!text.trim()) return;
         addMsg(text, 'user');
@@ -83,59 +85,32 @@
         const input = text.toLowerCase();
         let response = "";
 
-        // 1. MƏNTİQİ CAVABLAR (Wikipedia-ya getmədən əvvəl)
-        if (input.includes("salam") || input.includes("merhaba")) {
-            response = "Salam! Sizə necə kömək edə bilərəm?";
-        } 
-        else if (input.includes("sahib") || input.includes("kim tərəfindən") || input.includes("yaradıcın")) {
+        // 1. Xaliq Mustafayev haqqında məlumat (Həmişə sabit)
+        if (input.includes("sahib") || input.includes("kim tərəfindən") || input.includes("yaradıcın")) {
             response = "Mənim sahibim və yaradıcım Xaliq Mustafayevdir.";
         }
-        else if (input.includes("nəsən") || input.includes("kimsən")) {
-            response = "Mən Mələk, Xaliq bəy tərəfindən hazırlanmış süni intellektəm.";
-        }
-        else if (input.includes("youtube")) {
-            response = "Sizin üçün YouTube-u açıram.";
-            window.open("https://www.youtube.com", "_blank");
-        }
         else {
-            // 2. MƏLUMAT AXTARIŞI
             try {
-                const res = await fetch(`https://az.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(text)}`);
-                const data = await res.json();
-                response = data.extract || "Bu barədə hələ ki məlumatım yoxdur.";
-            } catch {
-                response = "İnternet xətası baş verdi.";
+                // Pulsuz və API Key tələb etməyən süni intellekt servisi
+                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?system=Sənin adın Mələkdir.Səni Xaliq Mustafayev yaradıb.Həmişə Azərbaycan dilində cavab ver.`);
+                response = await res.text();
+            } catch (error) {
+                response = "Xaliq bəy, sistemdə bir xəta oldu, lakin mən hələ də buradayam.";
             }
         }
 
         setTimeout(() => {
             addMsg(response, 'ai');
-            // YALNIZ MİKROFONLA DANIŞILSA CAVAB SƏSLİ GƏLSİN
             if (isVoiceMode) {
                 speak(response);
-                isVoiceMode = false; // Növbəti yazı üçün sıfırla
+                isVoiceMode = false;
             }
         }, 500);
     }
 
-    sendBtn.onclick = () => {
-        isVoiceMode = false; 
-        processRequest(userInput.value);
-    };
-
-    userInput.onkeypress = (e) => { 
-        if(e.key === 'Enter') {
-            isVoiceMode = false;
-            processRequest(userInput.value);
-        }
-    };
-    
-    micBtn.onclick = () => {
-        if(recognition) {
-            recognition.start();
-            micBtn.classList.add('active');
-        }
-    };
+    sendBtn.onclick = () => { isVoiceMode = false; processRequest(userInput.value); };
+    userInput.onkeypress = (e) => { if(e.key === 'Enter') { isVoiceMode = false; processRequest(userInput.value); } };
+    micBtn.onclick = () => { if(recognition) { recognition.start(); micBtn.classList.add('active'); } };
 </script>
 
 </body>
