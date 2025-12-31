@@ -7,97 +7,60 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
     <style>
-        :root { --tg-theme-bg: #0e1621; --tg-theme-accent: #2481cc; }
-        body { background: var(--tg-theme-bg); color: white; font-family: 'Segoe UI', Roboto, sans-serif; text-align: center; margin: 0; padding: 20px; overflow: hidden; }
-        
-        /* GİRİŞ ANİMASYONU */
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .user-card { 
-            background: #17212b; padding: 20px; border-radius: 20px; 
-            margin-bottom: 25px; border: 1px solid #2481cc;
-            animation: slideDown 0.5s ease-out;
-        }
-
-        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--tg-theme-accent); margin-bottom: 10px; box-shadow: 0 0 15px rgba(36,129,204,0.3); }
-        
-        .balance-box { margin: 30px 0; animation: slideDown 0.7s ease-out; }
-        .balance-value { font-size: 45px; color: #31b545; font-weight: bold; text-shadow: 0 0 10px rgba(49,181,69,0.2); }
-        
-        .btn-izle { 
-            background: linear-gradient(135deg, #2481cc, #1c639d);
-            color: white; border: none; padding: 20px; border-radius: 18px;
-            font-size: 20px; font-weight: bold; cursor: pointer; width: 100%;
-            transition: all 0.2s; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-        }
-        .btn-izle:active { transform: scale(0.95); opacity: 0.9; }
-
-        #puan-artisi { font-size: 14px; color: #31b545; opacity: 0; }
-        .animate-up { animation: floatUp 1s forwards; }
-        @keyframes floatUp {
-            0% { opacity: 0; transform: translateY(0); }
-            50% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
+        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .user-card { background: #17212b; padding: 20px; border-radius: 15px; border: 1px solid #2481cc; margin-bottom: 20px; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #2481cc; }
+        .balance { font-size: 40px; color: #31b545; font-weight: bold; margin: 15px 0; }
+        .btn-izle { background: #2481cc; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
+        .btn-izle:active { background: #1c639d; }
     </style>
 </head>
 <body>
 
     <div class="user-card">
-        <img id="u-photo" src="https://ui-avatars.com/api/?name=User" class="avatar">
-        <h3 id="u-name" style="margin: 5px 0;">...</h3>
-        <p id="u-id" style="font-size: 12px; color: #6c7883; margin: 0;"></p>
+        <img id="u-photo" src="" class="avatar">
+        <h3 id="u-name">Yükleniyor...</h3>
     </div>
 
-    <div class="balance-box">
-        <div style="color: #888; font-size: 14px;">BAKİYENİZ</div>
-        <div class="balance-value"><span id="bakiye">0</span> <small style="font-size: 16px;">PUAN</small></div>
-        <div id="puan-artisi">+10 Puan!</div>
-    </div>
+    <div class="balance"><span id="bakiye">0</span> <small style="font-size: 14px;">PUAN</small></div>
 
-    <button class="btn-izle" onclick="reklamGoster()">🎬 VİDEO İZLE KAZAN</button>
+    <button class="btn-izle" onclick="reklamGoster()">🎬 REKLAM İZLE KAZAN</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.ready();
 
+        // Kullanıcı Bilgileri
         const user = tg.initDataUnsafe?.user;
         const uID = user ? user.id : "guest";
-
-        // BİLGİLERİ DOLDUR
         if (user) {
             document.getElementById('u-name').innerText = user.first_name;
-            document.getElementById('u-id').innerText = "ID: " + user.id;
-            if(user.photo_url) document.getElementById('u-photo').src = user.photo_url;
+            document.getElementById('u-photo').src = user.photo_url || "https://ui-avatars.com/api/?name=" + user.first_name;
         }
 
-        // BAKİYE YÜKLE
-        let currentBal = localStorage.getItem('bal_' + uID) || "0";
-        document.getElementById('bakiye').innerText = currentBal;
+        // Bakiye Yükle
+        let kayıtlı = localStorage.getItem('puan_' + uID) || "0";
+        document.getElementById('bakiye').innerText = kayıtlı;
 
-        const AdController = window.Adsgram.init({ blockId: "20353" });
+        // ADSGRAM BAĞLANTISI (ID: 20353)
+        // debug: true ekledik ki hata varsa ekrana yazsın
+        const AdController = window.Adsgram.init({ blockId: "20353", debug: true });
 
         function reklamGoster() {
-            AdController.show().then((result) => {
-                let balEl = document.getElementById('bakiye');
-                let artisiEl = document.getElementById('puan-artisi');
-                
-                let newBal = parseInt(balEl.innerText) + 10;
-                balEl.innerText = newBal;
-                localStorage.setItem('bal_' + uID, newBal);
+            // TIKLAMA TESTİ: Butona basıldığını anlamak için mesaj veriyoruz
+            tg.showAlert("Reklam aranıyor... Lütfen bekleyin.");
 
-                // ANİMASYON TETİKLE
-                artisiEl.classList.remove('animate-up');
-                void artisiEl.offsetWidth; // Reset animation
-                artisiEl.classList.add('animate-up');
-                
-                tg.HapticFeedback.notificationOccurred('success');
-            }).catch(() => {
-                tg.showAlert("Ödül için videoyu izlemelisin!");
+            AdController.show().then((result) => {
+                // BAŞARILI
+                let b = document.getElementById('bakiye');
+                let yeni = parseInt(b.innerText) + 10;
+                b.innerText = yeni;
+                localStorage.setItem('puan_' + uID, yeni);
+                tg.showAlert("Tebrikler! +10 Puan.");
+            }).catch((err) => {
+                // HATA VARSA BURASI ÇALIŞIR
+                console.error(err);
+                tg.showAlert("Hata oluştu veya reklam bulunamadı. Detay: " + JSON.stringify(err));
             });
         }
     </script>
