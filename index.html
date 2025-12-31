@@ -3,102 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Earn Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
     <style>
-        :root { --tg-blue: #2481cc; --tg-bg: #0e1621; --tg-card: #17212b; --success: #31b545; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            background: var(--tg-bg); color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-        }
-
-        /* PREMIUM CARD */
-        .profile-card {
-            background: var(--tg-card); width: 100%; border-radius: 24px; padding: 25px;
-            text-align: center; border: 1px solid rgba(255,255,255,0.08);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-            animation: slideIn 0.6s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-        }
-        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        .avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--tg-blue); margin-bottom: 12px; }
-        
-        /* BALANCE SECTION */
-        .balance-container { margin: 45px 0; text-align: center; }
-        .balance-value { font-size: 64px; font-weight: 900; color: var(--success); margin: 0; line-height: 1; }
-        .balance-label { color: #88929b; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; }
-
-        /* ACTION BUTTON */
-        .btn-premium {
-            background: linear-gradient(135deg, #2481cc 0%, #165b91 100%);
-            color: white; border: none; width: 100%; padding: 22px; border-radius: 20px;
-            font-size: 20px; font-weight: 800; cursor: pointer; transition: 0.2s;
-            box-shadow: 0 8px 25px rgba(36, 129, 204, 0.3); margin-top: auto;
-        }
-        .btn-premium:active { transform: scale(0.96); opacity: 0.9; }
-
-        #status-bar { margin-top: 15px; font-size: 12px; color: #555; }
+        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .card { background: #17212b; border-radius: 20px; padding: 30px; border: 1px solid #2481cc; }
+        .btn { background: #2481cc; color: white; border: none; padding: 20px; border-radius: 15px; width: 100%; font-weight: bold; font-size: 18px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="profile-card">
-        <img id="user-img" src="https://ui-avatars.com/api/?name=U&background=2481cc&color=fff" class="avatar">
-        <h2 id="user-name" style="margin: 0; font-size: 22px;">...</h2>
-        <div style="font-size: 12px; color: var(--tg-blue); margin-top: 4px;">Kullanıcı Seviyesi: Gold</div>
+    <div class="card">
+        <h2>PREMIUM KAZANÇ</h2>
+        <div id="puan" style="font-size: 50px; color: #31b545;">0</div>
+        <p>TOPLAM PUAN</p>
     </div>
 
-    <div class="balance-container">
-        <div class="balance-value" id="balance-txt">0</div>
-        <div class="balance-label">TOPLAM PUANINIZ</div>
-    </div>
-
-    <button class="btn-premium" onclick="triggerAd()">🎬 REKLAMI İZLE VE KAZAN</button>
-    <div id="status-bar">Bağlantı kararlı.</div>
+    <button class="btn" onclick="reklamBaslat()">🎬 VİDEO İZLE</button>
+    <p id="durum" style="color: #6c7883; margin-top: 20px;">Sistem kontrol ediliyor...</p>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.ready();
 
-        const user = tg.initDataUnsafe?.user;
-        const uID = user ? user.id : "guest";
+        // PUAN YÜKLE
+        let bakiye = localStorage.getItem('puan') || "0";
+        document.getElementById('puan').innerText = bakiye;
 
-        // Profil bilgilerini yükle
-        if (user) {
-            document.getElementById('user-name').innerText = user.first_name;
-            if(user.photo_url) document.getElementById('user-img').src = user.photo_url;
-        }
-
-        // Kayıtlı bakiyeyi getir
-        let savedPoints = localStorage.getItem('points_' + uID) || "0";
-        document.getElementById('balance-txt').innerText = savedPoints;
-
-        // ADSGRAM BAŞLAT (Tam ID: int-20355)
+        // ADSGRAM BAĞLANTISI (int-20355)
         const AdController = window.Adsgram.init({ blockId: "int-20355" });
 
-        function triggerAd() {
-            const status = document.getElementById('status-bar');
-            status.innerText = "Reklam sunucusundan yanıt bekleniyor...";
-            tg.HapticFeedback.impactOccurred('medium');
-
-            // WebView içinde reklamı patlatan ana komut
+        function reklamBaslat() {
+            document.getElementById('durum').innerText = "Reklam aranıyor...";
+            
             AdController.show().then((result) => {
-                // Reklam başarıyla bitti
-                let balanceEl = document.getElementById('balance-txt');
-                let updated = parseInt(balanceEl.innerText) + 10;
-                balanceEl.innerText = updated;
-                localStorage.setItem('points_' + uID, updated);
-                
-                status.innerText = "İşlem başarılı. +10 Puan eklendi.";
-                tg.HapticFeedback.notificationOccurred('success');
+                // BAŞARILI
+                let p = document.getElementById('puan');
+                let yeni = parseInt(p.innerText) + 10;
+                p.innerText = yeni;
+                localStorage.setItem('puan', yeni);
+                document.getElementById('durum').innerText = "Tebrikler!";
+                tg.showAlert("Ödül başarıyla eklendi!");
             }).catch((err) => {
-                // Reklam yüklenemediğinde çalışır
+                // HATA OLDUĞUNDA BURASI ÇALIŞIR
                 console.error(err);
-                status.innerText = "Reklam şu an hazır değil.";
-                tg.showAlert("Hata: " + (err.error || "Şu an video yok."));
+                let hataMesaji = JSON.stringify(err);
+                document.getElementById('durum').innerText = "Hata oluştu!";
+                
+                // Hatayı kullanıcıya gösterelim ki sorunu anlayalım
+                tg.showPopup({
+                    title: "Reklam Yüklenemedi",
+                    message: "Hata Kodu: " + hataMesaji,
+                    buttons: [{type: "ok"}]
+                });
             });
         }
     </script>
