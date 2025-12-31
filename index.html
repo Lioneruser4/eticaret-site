@@ -1,72 +1,42 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Video Kazan</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
-    <style>
-        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .card { background: #17212b; border-radius: 20px; padding: 20px; border: 1px solid #2481cc; margin-bottom: 30px; }
-        .balance { font-size: 50px; color: #31b545; font-weight: bold; }
-        .btn-play { 
-            background: #2481cc; color: white; border: none; padding: 20px; border-radius: 15px; 
-            font-size: 20px; font-weight: bold; width: 100%; cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .btn-play:active { transform: scale(0.96); }
-        #msg { color: #888; margin-top: 15px; font-size: 14px; }
-    </style>
 </head>
-<body>
+<body style="background: #0e1621; color: white; text-align: center;">
 
-    <div class="card">
-        <h3 id="u-name">Kullanıcı</h3>
-        <div class="balance" id="puan">0</div>
-        <p style="color:#888; margin:0;">TOPLAM PUAN</p>
-    </div>
+    <h2>REKLAM TEST SİSTEMİ</h2>
+    <p>ID: 20355 / int-20355</p>
 
-    <button class="btn-play" onclick="reklamAc()">🎬 VİDEO İZLE</button>
-    <p id="msg">Sistem Hazır</p>
+    <button id="reklamButonu" style="padding: 20px; font-size: 20px; background: #2481cc; color: white; border-radius: 10px;">
+        VİDEOYU BAŞLAT
+    </button>
+
+    <div id="hataMesaji" style="color: #ff4444; margin-top: 20px; font-family: monospace;"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const user = tg.initDataUnsafe?.user;
-        const uID = user ? user.id : "guest";
-        document.getElementById('u-name').innerText = user ? user.first_name : "Misafir";
+        // 3. Bağlantı Ayarı: Paneldeki ID'ni buraya yaz
+        const AdController = window.Adsgram.init({ blockId: "20355" }); 
 
-        // Kayıtlı Puanı Yükle
-        let puan = localStorage.getItem('p_' + uID) || "0";
-        document.getElementById('puan').innerText = puan;
+        // Butona tıklandığında ne olacağını söylüyoruz
+        document.getElementById('reklamButonu').onclick = function() {
+            document.getElementById('hataMesaji').innerText = "Reklam aranıyor...";
 
-        // ADSGRAM BAĞLANTISI (ID: int-20355)
-        const AdController = window.Adsgram.init({ blockId: "int-20355" });
-
-        function reklamAc() {
-            const msg = document.getElementById('msg');
-            msg.innerText = "Video aranıyor...";
-            
-            tg.HapticFeedback.impactOccurred('medium');
-
+            // 4. Tetikleme: Adsgram'dan reklamı istiyoruz
             AdController.show().then((result) => {
-                // Video başarıyla WebView içinde izlendi ve kapatıldı
-                let pElement = document.getElementById('puan');
-                let yeniPuan = parseInt(pElement.innerText) + 10;
-                pElement.innerText = yeniPuan;
-                localStorage.setItem('p_' + uID, yeniPuan);
-                
-                msg.innerText = "Tebrikler! +10 Puan Kazandın.";
-                tg.HapticFeedback.notificationOccurred('success');
+                document.getElementById('hataMesaji').innerText = "BAŞARILI: Reklam gösterildi.";
+                tg.showAlert("Ödül Kazandınız!");
             }).catch((err) => {
-                // Video bulunamadıysa veya sistem onaylı değilse
+                // Eğer reklam gelmezse, hata burada yazar
                 console.error(err);
-                msg.innerText = "Şu an video yok, sonra tekrar dene.";
-                tg.showAlert("Video şu an yüklenemedi. Adsgram panelinde 'Active' yazısını kontrol et.");
+                document.getElementById('hataMesaji').innerText = "HATA: " + JSON.stringify(err);
             });
-        }
+        };
     </script>
 </body>
 </html>
