@@ -3,76 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Para Kazan - Video İzle</title>
+    <title>Para Kazan</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
     <style>
-        body { background: #0e1621; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .user-card { background: #17212b; padding: 20px; border-radius: 20px; margin-bottom: 25px; border: 1px solid #2481cc; }
-        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #2481cc; margin-bottom: 10px; }
-        .balance-title { color: #888; font-size: 14px; margin-bottom: 5px; }
-        .balance-value { font-size: 40px; color: #31b545; font-weight: bold; margin-bottom: 20px; }
-        .btn-izle { background: #2481cc; color: white; border: none; padding: 18px 30px; border-radius: 15px; font-size: 20px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(36, 129, 204, 0.3); }
-        .btn-izle:active { transform: scale(0.97); }
-        .footer-text { margin-top: 20px; font-size: 12px; color: #546675; }
+        :root { --tg-theme-bg: #0e1621; --tg-theme-accent: #2481cc; }
+        body { background: var(--tg-theme-bg); color: white; font-family: 'Segoe UI', Roboto, sans-serif; text-align: center; margin: 0; padding: 20px; overflow: hidden; }
+        
+        /* GİRİŞ ANİMASYONU */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-card { 
+            background: #17212b; padding: 20px; border-radius: 20px; 
+            margin-bottom: 25px; border: 1px solid #2481cc;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--tg-theme-accent); margin-bottom: 10px; box-shadow: 0 0 15px rgba(36,129,204,0.3); }
+        
+        .balance-box { margin: 30px 0; animation: slideDown 0.7s ease-out; }
+        .balance-value { font-size: 45px; color: #31b545; font-weight: bold; text-shadow: 0 0 10px rgba(49,181,69,0.2); }
+        
+        .btn-izle { 
+            background: linear-gradient(135deg, #2481cc, #1c639d);
+            color: white; border: none; padding: 20px; border-radius: 18px;
+            font-size: 20px; font-weight: bold; cursor: pointer; width: 100%;
+            transition: all 0.2s; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        .btn-izle:active { transform: scale(0.95); opacity: 0.9; }
+
+        #puan-artisi { font-size: 14px; color: #31b545; opacity: 0; }
+        .animate-up { animation: floatUp 1s forwards; }
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translateY(0); }
+            50% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
     </style>
 </head>
 <body>
 
     <div class="user-card">
-        <img id="user-photo" src="https://ui-avatars.com/api/?name=User" class="avatar">
-        <h3 id="user-name" style="margin: 5px 0;">Yükleniyor...</h3>
-        <p id="user-id" style="font-size: 11px; color: #6c7883; margin: 0;"></p>
+        <img id="u-photo" src="https://ui-avatars.com/api/?name=User" class="avatar">
+        <h3 id="u-name" style="margin: 5px 0;">...</h3>
+        <p id="u-id" style="font-size: 12px; color: #6c7883; margin: 0;"></p>
     </div>
 
-    <div class="balance-title">TOPLAM BAKİYEN</div>
-    <div class="balance-value"><span id="bakiye">0</span> <small style="font-size: 15px;">PUAN</small></div>
+    <div class="balance-box">
+        <div style="color: #888; font-size: 14px;">BAKİYENİZ</div>
+        <div class="balance-value"><span id="bakiye">0</span> <small style="font-size: 16px;">PUAN</small></div>
+        <div id="puan-artisi">+10 Puan!</div>
+    </div>
 
-    <button class="btn-izle" onclick="reklamBaslat()">🎬 VİDEO İZLE KAZAN</button>
-
-    <p class="footer-text">Her video izleme size puan kazandırır!</p>
+    <button class="btn-izle" onclick="reklamGoster()">🎬 VİDEO İZLE KAZAN</button>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Ekranı tam boy yap
+        tg.expand();
+        tg.ready();
 
-        // 1. KULLANICI BİLGİLERİNİ OTOMATİK AL (ID, İSİM, RESİM)
         const user = tg.initDataUnsafe?.user;
-        const userID = user ? user.id : "misafir";
+        const uID = user ? user.id : "guest";
 
+        // BİLGİLERİ DOLDUR
         if (user) {
-            document.getElementById('user-name').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
-            document.getElementById('user-id').innerText = "ID: " + user.id;
-            if (user.photo_url) {
-                document.getElementById('user-photo').src = user.photo_url;
-            }
+            document.getElementById('u-name').innerText = user.first_name;
+            document.getElementById('u-id').innerText = "ID: " + user.id;
+            if(user.photo_url) document.getElementById('u-photo').src = user.photo_url;
         }
 
-        // 2. ESKİ BAKİYEYİ TELEFONDAN YÜKLE (GİR ÇIK YAPINCA SIFIRLANMAZ)
-        let kayıtlıBakiye = localStorage.getItem('bakiye_' + userID) || "0";
-        document.getElementById('bakiye').innerText = kayıtlıBakiye;
+        // BAKİYE YÜKLE
+        let currentBal = localStorage.getItem('bal_' + uID) || "0";
+        document.getElementById('bakiye').innerText = currentBal;
 
-        // 3. ADSGRAM REKLAM AYARI (SENİN ID'N EKLENDİ)
         const AdController = window.Adsgram.init({ blockId: "20352" });
 
-        function reklamBaslat() {
-            // Reklamı açar
+        function reklamGoster() {
             AdController.show().then((result) => {
-                // REKLAM BAŞARIYLA İZLENDİ
-                let bakiyeElement = document.getElementById('bakiye');
+                let balEl = document.getElementById('bakiye');
+                let artisiEl = document.getElementById('puan-artisi');
                 
-                // Kullanıcıya vereceğin puan (Yarısı sana dolar olarak, yarısı ona puan olarak)
-                let mevcutPuan = parseInt(bakiyeElement.innerText);
-                let yeniPuan = mevcutPuan + 10; // Her video için 10 puan
+                let newBal = parseInt(balEl.innerText) + 10;
+                balEl.innerText = newBal;
+                localStorage.setItem('bal_' + uID, newBal);
+
+                // ANİMASYON TETİKLE
+                artisiEl.classList.remove('animate-up');
+                void artisiEl.offsetWidth; // Reset animation
+                artisiEl.classList.add('animate-up');
                 
-                // Ekranda göster ve telefona kaydet
-                bakiyeElement.innerText = yeniPuan;
-                localStorage.setItem('bakiye_' + userID, yeniPuan);
-                
-                tg.showAlert("Tebrikler! 10 puan kazandın. Bakiyen: " + yeniPuan);
-            }).catch((result) => {
-                // REKLAM İZLENMEDİ VEYA HATA OLDU
-                tg.showAlert("Ödül almak için reklamı sonuna kadar izlemelisin!");
+                tg.HapticFeedback.notificationOccurred('success');
+            }).catch(() => {
+                tg.showAlert("Ödül için videoyu izlemelisin!");
             });
         }
     </script>
