@@ -3,65 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Para Kazan</title>
+    <title>Premium Earn</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
     <style>
-        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .user-card { background: #17212b; padding: 20px; border-radius: 15px; border: 1px solid #2481cc; margin-bottom: 20px; }
-        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #2481cc; }
-        .balance { font-size: 40px; color: #31b545; font-weight: bold; margin: 15px 0; }
-        .btn-izle { background: #2481cc; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
-        .btn-izle:active { background: #1c639d; }
+        :root {
+            --tg-blue: #2481cc;
+            --tg-bg: #0e1621;
+            --tg-card: #17212b;
+            --tg-text: #ffffff;
+            --tg-hint: #6c7883;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: var(--tg-bg); color: var(--tg-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* PROFİL KARTI */
+        .profile-card {
+            background: var(--tg-card); width: 100%; border-radius: 20px;
+            padding: 20px; border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .avatar-container { position: relative; display: inline-block; }
+        .avatar { width: 85px; height: 85px; border-radius: 50%; border: 3px solid var(--tg-blue); padding: 3px; }
+
+        /* BAKİYE ALANI */
+        .balance-section { margin: 40px 0; text-align: center; }
+        .balance-label { color: var(--tg-hint); font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; }
+        .balance-value { font-size: 54px; font-weight: 800; color: #31b545; margin: 5px 0; }
+
+        /* BUTON */
+        .btn-main {
+            background: linear-gradient(135deg, #2481cc 0%, #1c639d 100%);
+            color: white; border: none; width: 100%; padding: 20px;
+            border-radius: 16px; font-size: 19px; font-weight: 700;
+            cursor: pointer; transition: transform 0.1s;
+            box-shadow: 0 8px 20px rgba(36, 129, 204, 0.3);
+        }
+        .btn-main:active { transform: scale(0.96); opacity: 0.9; }
+
+        /* YÜKLENİYOR EKRANI */
+        #loader { display: none; margin-top: 15px; color: var(--tg-blue); font-size: 14px; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="user-card">
-        <img id="u-photo" src="" class="avatar">
-        <h3 id="u-name">Yükleniyor...</h3>
+    <div class="profile-card">
+        <div class="avatar-container">
+            <img id="user-pic" src="https://ui-avatars.com/api/?name=U&background=2481cc&color=fff" class="avatar">
+        </div>
+        <h2 id="user-name" style="margin: 10px 0 5px 0; font-size: 22px;">...</h2>
+        <div id="user-id" style="color: var(--tg-hint); font-size: 12px;">ID: 00000000</div>
     </div>
 
-    <div class="balance"><span id="bakiye">0</span> <small style="font-size: 14px;">PUAN</small></div>
+    <div class="balance-section">
+        <div class="balance-label">Kazanılan Puan</div>
+        <div class="balance-value" id="puan-text">0</div>
+        <div style="font-size: 12px; color: #31b545;">● Reklam Başına +10</div>
+    </div>
 
-    <button class="btn-izle" onclick="reklamGoster()">🎬 REKLAM İZLE KAZAN</button>
+    <button class="btn-main" onclick="startAd()">🎬 VİDEO İZLE KAZAN</button>
+    <div id="loader">Reklam hazırlanıyor...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.ready();
 
-        // Kullanıcı Bilgileri
+        // 1. Kullanıcıyı Tanı
         const user = tg.initDataUnsafe?.user;
-        const uID = user ? user.id : "guest";
+        const storageKey = user ? "bal_" + user.id : "bal_guest";
+
         if (user) {
-            document.getElementById('u-name').innerText = user.first_name;
-            document.getElementById('u-photo').src = user.photo_url || "https://ui-avatars.com/api/?name=" + user.first_name;
+            document.getElementById('user-name').innerText = user.first_name;
+            document.getElementById('user-id').innerText = "ID: " + user.id;
+            if(user.photo_url) document.getElementById('user-pic').src = user.photo_url;
         }
 
-        // Bakiye Yükle
-        let kayıtlı = localStorage.getItem('puan_' + uID) || "0";
-        document.getElementById('bakiye').innerText = kayıtlı;
+        // 2. Bakiyeyi Yükle
+        let currentPuan = localStorage.getItem(storageKey) || "0";
+        document.getElementById('puan-text').innerText = currentPuan;
 
-        // ADSGRAM BAĞLANTISI (ID: 20353)
-        // debug: true ekledik ki hata varsa ekrana yazsın
-        const AdController = window.Adsgram.init({ blockId: "20353", debug: true });
+        // 3. Adsgram Başlat (Senin ID'n: 20353)
+        const AdController = window.Adsgram.init({ blockId: "20353" });
 
-        function reklamGoster() {
-            // TIKLAMA TESTİ: Butona basıldığını anlamak için mesaj veriyoruz
-            tg.showAlert("Reklam aranıyor... Lütfen bekleyin.");
+        function startAd() {
+            const loader = document.getElementById('loader');
+            loader.style.display = "block";
+            tg.HapticFeedback.impactOccurred('medium');
 
             AdController.show().then((result) => {
-                // BAŞARILI
-                let b = document.getElementById('bakiye');
-                let yeni = parseInt(b.innerText) + 10;
-                b.innerText = yeni;
-                localStorage.setItem('puan_' + uID, yeni);
-                tg.showAlert("Tebrikler! +10 Puan.");
+                loader.style.display = "none";
+                updateBalance(10);
+                tg.showPopup({
+                    title: "Tebrikler!",
+                    message: "10 puan bakiyene eklendi.",
+                    buttons: [{type: "ok"}]
+                });
             }).catch((err) => {
-                // HATA VARSA BURASI ÇALIŞIR
+                loader.style.display = "none";
                 console.error(err);
-                tg.showAlert("Hata oluştu veya reklam bulunamadı. Detay: " + JSON.stringify(err));
+                tg.showAlert("Reklam şu an hazır değil (No Ads). Lütfen 30 saniye sonra tekrar deneyin.");
             });
+        }
+
+        function updateBalance(amount) {
+            let pText = document.getElementById('puan-text');
+            let newTotal = parseInt(pText.innerText) + amount;
+            pText.innerText = newTotal;
+            localStorage.setItem(storageKey, newTotal);
+            tg.HapticFeedback.notificationOccurred('success');
         }
     </script>
 </body>
