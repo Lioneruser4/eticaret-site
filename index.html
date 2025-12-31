@@ -2,114 +2,247 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mələk AI - Xaliq Mustafayev</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mələk AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #0a0a0b; --accent: #00f2ff; --text: #e0e0e0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { padding: 15px; text-align: center; background: #111; border-bottom: 1px solid #222; font-weight: bold; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; font-size: 15px; animation: slideUp 0.3s ease; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .ai { align-self: flex-start; background: #18181b; border: 1px solid #27272a; }
-        .user { align-self: flex-end; background: var(--accent); color: #000; font-weight: 500; }
-        .input-area { padding: 15px; background: #111; display: flex; align-items: center; gap: 10px; border-top: 1px solid #222; }
-        input { flex: 1; padding: 12px 20px; border-radius: 25px; border: 1px solid #333; background: #000; color: white; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--accent); }
-        .btns { display: flex; gap: 10px; }
-        button { border: none; background: none; color: var(--accent); font-size: 22px; cursor: pointer; }
-        #mic-btn.active { color: #ff3333; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        :root {
+            --bg-color: #131314;
+            --sidebar-color: #1e1f20;
+            --text-color: #e3e3e3;
+            --accent-color: #4ea2ff;
+            --user-msg-bg: #2b2c2f;
+        }
+
+        body {
+            font-family: 'Google Sans', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Gemini Style Sidebar (Mobil üçün gizli) */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) { .sidebar { display: none; } }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 10%;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .chat-bubble {
+            display: flex;
+            gap: 15px;
+            max-width: 100%;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ai-avatar { background: linear-gradient(45deg, #4285f4, #9b72cb); }
+        .user-avatar { background: #5f6368; }
+
+        .message-text {
+            line-height: 1.6;
+            font-size: 16px;
+            white-space: pre-wrap;
+        }
+
+        .user-message-container {
+            background-color: var(--user-msg-bg);
+            padding: 12px 20px;
+            border-radius: 20px;
+            align-self: flex-end;
+        }
+
+        /* Input Area */
+        .input-container {
+            padding: 20px 10% 40px;
+            background: linear-gradient(transparent, var(--bg-color) 30%);
+        }
+
+        .input-wrapper {
+            background-color: var(--sidebar-color);
+            border-radius: 30px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid transparent;
+            transition: border 0.3s;
+        }
+
+        .input-wrapper:focus-within { border-color: #4ea2ff; }
+
+        input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: white;
+            padding: 10px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .icon-btn {
+            color: #c4c7c5;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .icon-btn:hover { color: white; }
+        #mic-btn.active { color: #ea4335; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-<header>Mələk AI</header>
-
-<div id="chat-box">
-    <div class="msg ai">Salam! Mən Mələk. Xaliq Mustafayev tərəfindən yaradılmışam. Necə kömək edə bilərəm?</div>
+<div class="sidebar">
+    <div style="font-weight: bold; font-size: 1.2rem; margin-bottom: 30px;">Mələk AI</div>
+    <div style="font-size: 0.9rem; color: #9aa0a6;">Yaradıcı: Xaliq Mustafayev</div>
 </div>
 
-<div class="input-area">
-    <input type="text" id="user-input" placeholder="Mələyə sual verin..." autocomplete="off">
-    <div class="btns">
-        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
-        <button id="mic-btn"><i class="fas fa-microphone"></i></button>
+<div class="main-content">
+    <header>
+        <div>Mələk <i class="fas fa-chevron-down" style="font-size: 12px;"></i></div>
+        <div class="avatar ai-avatar"><i class="fas fa-robot"></i></div>
+    </header>
+
+    <div id="chat-window">
+        <div class="chat-bubble">
+            <div class="avatar ai-avatar"><i class="fas fa-magic"></i></div>
+            <div class="message-text">Salam Xaliq Mustafayev tərəfindən yaradılmış Mələk AI-ya xoş gəldiniz. Necə kömək edə bilərəm?</div>
+        </div>
+    </div>
+
+    <div class="input-container">
+        <div class="input-wrapper">
+            <input type="text" id="user-input" placeholder="Bura yazın..." autocomplete="off">
+            <i class="fas fa-microphone icon-btn" id="mic-btn"></i>
+            <i class="fas fa-paper-plane icon-btn" id="send-btn"></i>
+        </div>
+        <p style="text-align: center; font-size: 12px; color: #9aa0a6; margin-top: 10px;">
+            Mələk səhv məlumat verə bilər. Xaliq Mustafayev tərəfindən hazırlanmışdır.
+        </p>
     </div>
 </div>
 
 <script>
-    const chatBox = document.getElementById('chat-box');
+    const chatWindow = document.getElementById('chat-window');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const micBtn = document.getElementById('mic-btn');
 
     let isVoiceMode = false;
 
-    // SƏS TANIMA
+    // Ses Tanıma
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = (SpeechRecognition) ? new SpeechRecognition() : null;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
     if(recognition) {
         recognition.lang = 'az-AZ';
         recognition.onresult = (e) => {
             isVoiceMode = true;
-            processRequest(e.results[0][0].transcript);
+            handleAction(e.results[0][0].transcript);
         };
         recognition.onend = () => micBtn.classList.remove('active');
     }
 
-    // SƏS SİNTEZİ (Daha aydın)
     function speak(text) {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'az-AZ'; 
-        utterance.rate = 0.95;
-        window.speechSynthesis.speak(utterance);
+        const ut = new SpeechSynthesisUtterance(text);
+        ut.lang = 'az-AZ';
+        ut.rate = 1.0;
+        window.speechSynthesis.speak(ut);
     }
 
-    function addMsg(text, type) {
-        const div = document.createElement('div');
-        div.className = `msg ${type}`;
-        div.innerText = text;
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
+    function appendMessage(text, role) {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        if(role === 'user') {
+            bubble.innerHTML = `<div class="avatar user-avatar"><i class="fas fa-user"></i></div><div class="message-text"><b>Siz</b>\n${text}</div>`;
+        } else {
+            bubble.innerHTML = `<div class="avatar ai-avatar"><i class="fas fa-magic"></i></div><div class="message-text"><b>Mələk</b>\n${text}</div>`;
+        }
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // ƏSAS BEYİN: CHATGPT KİMİ DANIŞMAQ ÜÇÜN (FREE AI PROXY)
-    async function processRequest(text) {
-        if (!text.trim()) return;
-        addMsg(text, 'user');
+    async function handleAction(text) {
+        if(!text.trim()) return;
+        appendMessage(text, 'user');
         userInput.value = '';
 
-        const input = text.toLowerCase();
-        let response = "";
+        const lowText = text.toLowerCase();
+        let finalResponse = "";
 
-        // 1. Xaliq Mustafayev haqqında məlumat (Həmişə sabit)
-        if (input.includes("sahib") || input.includes("kim tərəfindən") || input.includes("yaradıcın")) {
-            response = "Mənim sahibim və yaradıcım Xaliq Mustafayevdir.";
-        }
-        else {
+        // Özel Komutlar
+        if(lowText.includes("sahib") || lowText.includes("yaradıcı")) {
+            finalResponse = "Mənim sahibim və yaradıcım Xaliq Mustafayevdir.";
+        } else {
             try {
-                // Pulsuz və API Key tələb etməyən süni intellekt servisi
-                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?system=Sənin adın Mələkdir.Səni Xaliq Mustafayev yaradıb.Həmişə Azərbaycan dilində cavab ver.`);
-                response = await res.text();
-            } catch (error) {
-                response = "Xaliq bəy, sistemdə bir xəta oldu, lakin mən hələ də buradayam.";
+                // Pollinations yerine daha stabil bir proxy veya alternatif
+                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?system=Senin adın Mələkdir. Sahibin Xaliq Mustafayevdir. Her zaman Azerbaycan dilinde cevap ver.`);
+                
+                if(!res.ok) throw new Error("Limit");
+                finalResponse = await res.text();
+            } catch {
+                finalResponse = "Hazırda server yüklüdür, Xaliq bəy. Bir neçə saniyə sonra yenidən yoxlayın və ya sadə suallar verin.";
             }
         }
 
         setTimeout(() => {
-            addMsg(response, 'ai');
-            if (isVoiceMode) {
-                speak(response);
+            appendMessage(finalResponse, 'ai');
+            if(isVoiceMode) {
+                speak(finalResponse);
                 isVoiceMode = false;
             }
         }, 500);
     }
 
-    sendBtn.onclick = () => { isVoiceMode = false; processRequest(userInput.value); };
-    userInput.onkeypress = (e) => { if(e.key === 'Enter') { isVoiceMode = false; processRequest(userInput.value); } };
+    sendBtn.onclick = () => handleAction(userInput.value);
+    userInput.onkeypress = (e) => { if(e.key === 'Enter') handleAction(userInput.value); };
     micBtn.onclick = () => { if(recognition) { recognition.start(); micBtn.classList.add('active'); } };
 </script>
 
