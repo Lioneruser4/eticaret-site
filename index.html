@@ -1,42 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Earn Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://app.adsgram.ai/js/adstg.js"></script>
+    <style>
+        :root { --tg-blue: #2481cc; --tg-bg: #0e1621; --tg-card: #17212b; --success: #31b545; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: var(--tg-bg); color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+
+        /* PREMIUM CARD */
+        .profile-card {
+            background: var(--tg-card); width: 100%; border-radius: 24px; padding: 25px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            animation: slideIn 0.6s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+        }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--tg-blue); margin-bottom: 12px; }
+        
+        /* BALANCE SECTION */
+        .balance-container { margin: 45px 0; text-align: center; }
+        .balance-value { font-size: 64px; font-weight: 900; color: var(--success); margin: 0; line-height: 1; }
+        .balance-label { color: #88929b; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; }
+
+        /* ACTION BUTTON */
+        .btn-premium {
+            background: linear-gradient(135deg, #2481cc 0%, #165b91 100%);
+            color: white; border: none; width: 100%; padding: 22px; border-radius: 20px;
+            font-size: 20px; font-weight: 800; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 8px 25px rgba(36, 129, 204, 0.3); margin-top: auto;
+        }
+        .btn-premium:active { transform: scale(0.96); opacity: 0.9; }
+
+        #status-bar { margin-top: 15px; font-size: 12px; color: #555; }
+    </style>
 </head>
-<body style="background: #0e1621; color: white; text-align: center;">
+<body>
 
-    <h2>REKLAM TEST SİSTEMİ</h2>
-    <p>ID: 20355 / int-20355</p>
+    <div class="profile-card">
+        <img id="user-img" src="https://ui-avatars.com/api/?name=U&background=2481cc&color=fff" class="avatar">
+        <h2 id="user-name" style="margin: 0; font-size: 22px;">...</h2>
+        <div style="font-size: 12px; color: var(--tg-blue); margin-top: 4px;">Kullanıcı Seviyesi: Gold</div>
+    </div>
 
-    <button id="reklamButonu" style="padding: 20px; font-size: 20px; background: #2481cc; color: white; border-radius: 10px;">
-        VİDEOYU BAŞLAT
-    </button>
+    <div class="balance-container">
+        <div class="balance-value" id="balance-txt">0</div>
+        <div class="balance-label">TOPLAM PUANINIZ</div>
+    </div>
 
-    <div id="hataMesaji" style="color: #ff4444; margin-top: 20px; font-family: monospace;"></div>
+    <button class="btn-premium" onclick="triggerAd()">🎬 REKLAMI İZLE VE KAZAN</button>
+    <div id="status-bar">Bağlantı kararlı.</div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.ready();
 
-        // 3. Bağlantı Ayarı: Paneldeki ID'ni buraya yaz
-        const AdController = window.Adsgram.init({ blockId: "20355" }); 
+        const user = tg.initDataUnsafe?.user;
+        const uID = user ? user.id : "guest";
 
-        // Butona tıklandığında ne olacağını söylüyoruz
-        document.getElementById('reklamButonu').onclick = function() {
-            document.getElementById('hataMesaji').innerText = "Reklam aranıyor...";
+        // Profil bilgilerini yükle
+        if (user) {
+            document.getElementById('user-name').innerText = user.first_name;
+            if(user.photo_url) document.getElementById('user-img').src = user.photo_url;
+        }
 
-            // 4. Tetikleme: Adsgram'dan reklamı istiyoruz
+        // Kayıtlı bakiyeyi getir
+        let savedPoints = localStorage.getItem('points_' + uID) || "0";
+        document.getElementById('balance-txt').innerText = savedPoints;
+
+        // ADSGRAM BAŞLAT (Tam ID: int-20355)
+        const AdController = window.Adsgram.init({ blockId: "int-20355" });
+
+        function triggerAd() {
+            const status = document.getElementById('status-bar');
+            status.innerText = "Reklam sunucusundan yanıt bekleniyor...";
+            tg.HapticFeedback.impactOccurred('medium');
+
+            // WebView içinde reklamı patlatan ana komut
             AdController.show().then((result) => {
-                document.getElementById('hataMesaji').innerText = "BAŞARILI: Reklam gösterildi.";
-                tg.showAlert("Ödül Kazandınız!");
+                // Reklam başarıyla bitti
+                let balanceEl = document.getElementById('balance-txt');
+                let updated = parseInt(balanceEl.innerText) + 10;
+                balanceEl.innerText = updated;
+                localStorage.setItem('points_' + uID, updated);
+                
+                status.innerText = "İşlem başarılı. +10 Puan eklendi.";
+                tg.HapticFeedback.notificationOccurred('success');
             }).catch((err) => {
-                // Eğer reklam gelmezse, hata burada yazar
+                // Reklam yüklenemediğinde çalışır
                 console.error(err);
-                document.getElementById('hataMesaji').innerText = "HATA: " + JSON.stringify(err);
+                status.innerText = "Reklam şu an hazır değil.";
+                tg.showAlert("Hata: " + (err.error || "Şu an video yok."));
             });
-        };
+        }
     </script>
 </body>
 </html>
