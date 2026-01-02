@@ -2,8 +2,11 @@
 <html lang="az">
 <head>
 <meta charset="UTF-8">
-<title>Mələk Chat</title>
+<title>Mələk</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<!-- Telegram WebApp -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto}
@@ -11,19 +14,13 @@ body{
   margin:0;
   background:#0e1621;
   color:#fff;
+  height:100vh;
   display:flex;
   flex-direction:column;
-  height:100vh;
 }
 header{
   background:#17212b;
   padding:14px 16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-header h1{
-  margin:0;
   font-size:18px;
   font-weight:600;
 }
@@ -40,31 +37,19 @@ header h1{
   border-radius:16px;
   margin-bottom:10px;
   line-height:1.4;
-  word-wrap:break-word;
 }
-.in{
-  background:#1f2c3a;
-  align-self:flex-start;
-}
-.out{
-  background:#4da3ff;
-  color:#000;
-  align-self:flex-end;
-}
+.in{background:#1f2c3a;align-self:flex-start}
+.out{background:#4da3ff;color:#000;align-self:flex-end}
+
 #typing{
   display:none;
   text-align:center;
-  font-size:22px;
+  font-size:20px;
   color:#00eaff;
-  text-shadow:0 0 18px #00eaff;
   animation:pulse 1.2s infinite;
-  margin-bottom:10px;
 }
-@keyframes pulse{
-  0%{opacity:.2}
-  50%{opacity:1}
-  100%{opacity:.2}
-}
+@keyframes pulse{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+
 footer{
   background:#17212b;
   padding:10px;
@@ -84,16 +69,13 @@ button{
   padding:0 18px;
   border-radius:10px;
   font-size:16px;
-  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <h1>Mələk</h1>
-</header>
+<header id="title">Mələk</header>
 
 <div id="chat"></div>
 <div id="typing">Mələk yazır…</div>
@@ -104,81 +86,98 @@ button{
 </footer>
 
 <script>
+/* ================= TELEGRAM FULLSCREEN ================= */
+if(window.Telegram && Telegram.WebApp){
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();          // full screen
+  Telegram.WebApp.enableClosingConfirmation();
+  Telegram.WebApp.setHeaderColor("#17212b");
+  Telegram.WebApp.setBackgroundColor("#0e1621");
+}
+
+/* ================= USER DETECTION ================= */
+let tgUser = Telegram?.WebApp?.initDataUnsafe?.user || {};
+let userName = tgUser.first_name || localStorage.getItem("userName") || "Dost";
+
+localStorage.setItem("userName", userName);
+
+/* ================= UI ================= */
 const chat = document.getElementById("chat");
 const typing = document.getElementById("typing");
 const input = document.getElementById("input");
+const title = document.getElementById("title");
 
-let queue = [];
-let busy = false;
+title.innerText = "Mələk • " + userName;
 
-/* UI helpers */
-function addMessage(text,type){
+function add(text,type){
   const d=document.createElement("div");
   d.className="msg "+type;
   d.innerText=text;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
-function showTyping(v){
-  typing.style.display = v ? "block" : "none";
+function showTyping(v){typing.style.display=v?"block":"none"}
+
+/* ================= GREETING (ONCE) ================= */
+if(!localStorage.getItem("greeted")){
+  add(`Salam ${userName} 👋 Mən Mələyəm. Dost kimi danışacağıq.`,"in");
+  localStorage.setItem("greeted","1");
 }
 
-/* Input */
+/* ================= QUEUE SYSTEM ================= */
+let queue=[], busy=false;
+
 function send(){
-  const text=input.value.trim();
-  if(!text) return;
+  const t=input.value.trim();
+  if(!t) return;
   input.value="";
-  addMessage(text,"out");
-  enqueue(text);
+  add(t,"out");
+  queue.push(t);
+  process();
 }
 
-/* Queue system (anti-crash) */
-function enqueue(text){
-  queue.push(text);
-  processQueue();
-}
-
-async function processQueue(){
-  if(busy || queue.length===0) return;
+async function process(){
+  if(busy||!queue.length) return;
   busy=true;
-
-  const msg=queue.shift();
   showTyping(true);
 
-  const reply = await askAI(msg);
+  const msg=queue.shift();
+  const reply=await askAI(msg);
 
   showTyping(false);
-  addMessage(reply,"in");
-
+  add(reply,"in");
   busy=false;
-  setTimeout(processQueue,300); // nəfəs intervalı
+  setTimeout(process,300);
 }
 
-/* AI request – error NEVER shown */
-async function askAI(userText){
-  const prompt = `
-Sən Mələk adlı virtual asistentsən.
-Sakit, mədəni və aydın cavab ver.
-İstifadəçi sərt danışa bilər, sən nəzakətli ol.
+/* ================= AI ================= */
+async function askAI(text){
+  const systemPrompt = `
+Sən Mələk adlı dostca AI-san.
+İstifadəçinin adı: ${userName}
+Çox uzun yazma.
+Səmimi danış.
+Sahibin Xaliq Mustafayevdir.
+Soruşulsa de:
+"Məni kodlayan və sahibim Xaliq Mustafayevdir.
+Telegram və Instagram: @xaliqmustafayev"
 Sual:
-${userText}
+${text}
 `;
 
   try{
-    const r = await fetch(
-      "https://text.pollinations.ai/" + encodeURIComponent(prompt),
-      { cache:"no-store" }
+    const r=await fetch(
+      "https://text.pollinations.ai/"+encodeURIComponent(systemPrompt),
+      {cache:"no-store"}
     );
-    if(!r.ok) throw "fail";
-    const t = await r.text();
-    if(!t || t.length<2) throw "empty";
-    return t;
+    if(!r.ok) throw 1;
+    return await r.text();
   }catch{
-    return "Bir anlıq gecikmə var, davam edə bilərsən.";
+    return "Buradayam, davam edə bilərik 🙂";
   }
 }
 
-/* Enter key support */
+/* Enter */
 input.addEventListener("keydown",e=>{
   if(e.key==="Enter") send();
 });
