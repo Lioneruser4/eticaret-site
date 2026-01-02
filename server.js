@@ -1,474 +1,396 @@
-const WebSocket = require('ws');
+const express = require('express');
 const http = require('http');
-const fs = require('fs');
-const path = require('path');
+const socketIo = require('socket.io');
+const cors = require('cors');
 
-const server = http.createServer((req, res) => {
-    if (req.url === '/' || req.url === '/index.html') {
-        fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-            if (err) {
-                res.writeHead(500);
-                res.end('Error loading index.html');
-            } else {
-                res.writeHead(200, {'Content-Type': 'text/html'});
-                res.end(data);
-            }
-        });
-    } else {
-        res.writeHead(404);
-        res.end('Not found');
+const app = express();
+app.use(cors());
+app.use(express.static('.'));
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
-const wss = new WebSocket.Server({ server });
+// Oda yapısı
+const rooms = {};
+const players = {};
 
-const rooms = new Map();
-const players = new Map();
+// Oyun durumları
+const GameState = {
+    WAITING: 'waiting',
+    PLAYING: 'playing',
+    ENDED: 'ended'
+};
 
-wss.on('connection', (ws) => {
-    console.log('New client connected');
-    
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            handleMessage(ws, data);
-        } catch (error) {
-            console.error('Error parsing message:', error);
-        }
-    });
-    
-    ws.on('close', () => {
-        console.log('Client disconnected');
-        handleDisconnect(ws);
-    });
-});
-
-function handleMessage(ws, data) {
-    switch (data.type) {
-        case 'join':
-            handleJoin(ws, data);
-            break;
-        case 'createRoom':
-            handleCreateRoom(ws, data);
-            break;
-        case 'joinRoom':
-            handleJoinRoom(ws, data);
-            break;
-        case 'switchTeam':
-            handleSwitchTeam(ws, data);
-            break;
-        case 'startGame':
-            handleStartGame(ws, data);
-            break;
-        case 'playerMove':
-            handlePlayerMove(ws, data);
-            break;
-        case 'shoot':
-            handleShoot(ws, data);
-            break;
-        case 'jump':
-            handleJump(ws, data);
-            break;
-    }
-}
-
-function handleJoin(ws, data) {
-    const player = {
-        id: data.userId,
-        username: data.username,
-        photo: data.photo,
-        ws: ws,
-        team: null,
-        room: null,
-        position: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 }
-    };
-    
-    players.set(ws, player);
-    
-    ws.send(JSON.stringify({
-        type: 'joined',
-        playerId: player.id
-    }));
-}
-
-function handleCreateRoom(ws, data) {
-    const player = players.get(ws);
-    if (!player) return;
-    
-    const roomId = generateRoomId();
-    const room = {
-        id: roomId,
-        host: player.id,
-        players: [player],
-        maxPlayers: data.maxPlayers || 22,
-        duration: data.duration || 10,
-        blueTeam: [],
-        redTeam: [],
-        gameState: {
-            ball: { x: 0, y: 0.5, z: 0, vx: 0, vy: 0, vz: 0 },
-            blueScore: 0,
-            redScore: 0,
-            startTime: null,
-            isPlaying: false
-        }
-    };
-    
-    player.room = roomId;
-    player.team = 'blue';
-    room.blueTeam.push(player);
-    
-    rooms.set(roomId, room);
-    
-    ws.send(JSON.stringify({
-        type: 'roomCreated',
-        room: serializeRoom(room)
-    }));
-}
-
-function handleJoinRoom(ws, data) {
-    const player = players.get(ws);
-    const room = rooms.get(data.roomId);
-    
-    if (!player || !room) return;
-    
-    if (room.players.length >= room.maxPlayers) {
-        ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Oda dolu'
-        }));
-        return;
+class Room {
+    constructor(id, hostId, gameTime) {
+        this.id = id;
+        this.hostId = hostId;
+        this.gameTime = gameTime;
+        this.state = GameState.WAITING;
+        this.players = {};
+        this.teams = {
+            blue: [],
+            red: []
+        };
+        this.scores = {
+            blue: 0,
+            red: 0
+        };
+        this.startTime = null;
+        this.ball = {
+            x: 0,
+            y: 0.5,
+            z: 0,
+            vx: 0,
+            vy: 0,
+            vz: 0
+        };
+        this.lastUpdate = Date.now();
     }
     
-    player.room = data.roomId;
-    player.team = room.blueTeam.length <= room.redTeam.length ? 'blue' : 'red';
-    
-    if (player.team === 'blue') {
-        room.blueTeam.push(player);
-        player.position = { x: -5, y: 0, z: -10 - room.blueTeam.length * 2 };
-    } else {
-        room.redTeam.push(player);
-        player.position = { x: 5, y: 0, z: 10 + room.redTeam.length * 2 };
-    }
-    
-    room.players.push(player);
-    
-    broadcastToRoom(room, {
-        type: 'playerJoined',
-        player: serializePlayer(player)
-    });
-}
-
-function handleSwitchTeam(ws, data) {
-    const player = players.get(ws);
-    if (!player || !player.room) return;
-    
-    const room = rooms.get(player.room);
-    if (!room || room.gameState.isPlaying) return;
-    
-    if (player.team === 'blue') {
-        const index = room.blueTeam.indexOf(player);
-        if (index > -1) {
-            room.blueTeam.splice(index, 1);
-            room.redTeam.push(player);
-            player.team = 'red';
-            player.position = { x: 5, y: 0, z: 10 + room.redTeam.length * 2 };
-        }
-    } else {
-        const index = room.redTeam.indexOf(player);
-        if (index > -1) {
-            room.redTeam.splice(index, 1);
-            room.blueTeam.push(player);
-            player.team = 'blue';
-            player.position = { x: -5, y: 0, z: -10 - room.blueTeam.length * 2 };
-        }
-    }
-    
-    broadcastToRoom(room, {
-        type: 'teamSwitched',
-        playerId: player.id,
-        newTeam: player.team,
-        position: player.position
-    });
-}
-
-function handleStartGame(ws, data) {
-    const player = players.get(ws);
-    if (!player || !player.room) return;
-    
-    const room = rooms.get(player.room);
-    if (!room || player.id !== room.host) return;
-    
-    room.gameState.isPlaying = true;
-    room.gameState.startTime = Date.now();
-    room.gameState.blueScore = 0;
-    room.gameState.redScore = 0;
-    room.gameState.ball = { x: 0, y: 0.5, z: 0, vx: 0, vy: 0, vz: 0 };
-    
-    broadcastToRoom(room, {
-        type: 'gameStarted',
-        gameState: room.gameState
-    });
-    
-    startGameLoop(room);
-}
-
-function handlePlayerMove(ws, data) {
-    const player = players.get(ws);
-    if (!player || !player.room) return;
-    
-    const room = rooms.get(player.room);
-    if (!room || !room.gameState.isPlaying) return;
-    
-    player.position.x = Math.max(-19, Math.min(19, data.x));
-    player.position.y = Math.max(0, data.y);
-    player.position.z = Math.max(-29, Math.min(29, data.z));
-    player.velocity = data.velocity || { x: 0, y: 0, z: 0 };
-    
-    broadcastToRoom(room, {
-        type: 'playerMoved',
-        playerId: player.id,
-        position: player.position,
-        velocity: player.velocity
-    }, ws);
-}
-
-function handleShoot(ws, data) {
-    const player = players.get(ws);
-    if (!player || !player.room) return;
-    
-    const room = rooms.get(player.room);
-    if (!room || !room.gameState.isPlaying) return;
-    
-    const ball = room.gameState.ball;
-    const dx = ball.x - player.position.x;
-    const dy = ball.y - player.position.y;
-    const dz = ball.z - player.position.z;
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    
-    if (dist < 2) {
-        const power = data.power || 1.5;
-        const len = Math.sqrt(dx * dx + dz * dz);
-        if (len > 0) {
-            ball.vx = (dx / len) * power;
-            ball.vz = (dz / len) * power;
-            ball.vy = 0.3;
+    addPlayer(playerId, playerName, team) {
+        if (this.teams[team].length >= 11) {
+            return false; // Takım dolu
         }
         
-        broadcastToRoom(room, {
-            type: 'ballKicked',
-            playerId: player.id,
-            ball: ball
-        });
-    }
-}
-
-function handleJump(ws, data) {
-    const player = players.get(ws);
-    if (!player || !player.room) return;
-    
-    const room = rooms.get(player.room);
-    if (!room || !room.gameState.isPlaying) return;
-    
-    if (player.position.y === 0) {
-        player.velocity.y = 0.4;
+        const player = {
+            id: playerId,
+            name: playerName,
+            team: team,
+            x: team === 'blue' ? -20 : 20,
+            y: 1,
+            z: 0,
+            rotation: 0,
+            score: 0
+        };
         
-        broadcastToRoom(room, {
-            type: 'playerJumped',
-            playerId: player.id
-        });
+        this.players[playerId] = player;
+        this.teams[team].push(playerId);
+        
+        return true;
     }
-}
-
-function handleDisconnect(ws) {
-    const player = players.get(ws);
-    if (!player) return;
     
-    if (player.room) {
-        const room = rooms.get(player.room);
-        if (room) {
-            const index = room.players.indexOf(player);
-            if (index > -1) {
-                room.players.splice(index, 1);
-            }
-            
-            if (player.team === 'blue') {
-                const idx = room.blueTeam.indexOf(player);
-                if (idx > -1) room.blueTeam.splice(idx, 1);
-            } else {
-                const idx = room.redTeam.indexOf(player);
-                if (idx > -1) room.redTeam.splice(idx, 1);
-            }
-            
-            broadcastToRoom(room, {
-                type: 'playerLeft',
-                playerId: player.id
-            });
-            
-            if (room.players.length === 0) {
-                rooms.delete(player.room);
-            }
+    removePlayer(playerId) {
+        const player = this.players[playerId];
+        if (!player) return;
+        
+        // Takımdan çıkar
+        const teamIndex = this.teams[player.team].indexOf(playerId);
+        if (teamIndex > -1) {
+            this.teams[player.team].splice(teamIndex, 1);
+        }
+        
+        // Oyuncuyu sil
+        delete this.players[playerId];
+        
+        // Eğer host çıktıysa yeni host belirle
+        if (playerId === this.hostId && Object.keys(this.players).length > 0) {
+            this.hostId = Object.keys(this.players)[0];
         }
     }
     
-    players.delete(ws);
-}
-
-function startGameLoop(room) {
-    const gameInterval = setInterval(() => {
-        if (!room.gameState.isPlaying) {
-            clearInterval(gameInterval);
-            return;
+    updatePlayer(playerId, data) {
+        const player = this.players[playerId];
+        if (player) {
+            player.x = data.x;
+            player.y = data.y;
+            player.z = data.z;
+            player.rotation = data.rotation;
+            this.lastUpdate = Date.now();
+        }
+    }
+    
+    updateBall(data) {
+        this.ball = data;
+        this.lastUpdate = Date.now();
+        
+        // Gol kontrolü
+        this.checkGoals();
+    }
+    
+    checkGoals() {
+        const goalZ = 59;
+        const goalWidth = 7.32;
+        
+        // Mavi kale (solda)
+        if (this.ball.z < -goalZ && Math.abs(this.ball.x) < goalWidth/2 && this.ball.y < 2.44) {
+            this.scores.red++;
+            this.resetBall();
+            return 'red';
         }
         
-        const elapsed = Date.now() - room.gameState.startTime;
-        const duration = room.duration * 60 * 1000;
-        
-        if (elapsed >= duration) {
-            room.gameState.isPlaying = false;
-            broadcastToRoom(room, {
-                type: 'gameEnded',
-                blueScore: room.gameState.blueScore,
-                redScore: room.gameState.redScore
-            });
-            clearInterval(gameInterval);
-            return;
+        // Kırmızı kale (sağda)
+        if (this.ball.z > goalZ && Math.abs(this.ball.x) < goalWidth/2 && this.ball.y < 2.44) {
+            this.scores.blue++;
+            this.resetBall();
+            return 'blue';
         }
         
-        updateBallPhysics(room);
-        checkGoals(room);
+        return null;
+    }
+    
+    resetBall() {
+        this.ball = {
+            x: 0,
+            y: 0.5,
+            z: 0,
+            vx: 0,
+            vy: 0,
+            vz: 0
+        };
+    }
+    
+    getGameData() {
+        return {
+            roomId: this.id,
+            state: this.state,
+            players: Object.values(this.players),
+            teams: this.teams,
+            scores: this.scores,
+            ball: this.ball,
+            gameTime: this.gameTime,
+            elapsedTime: this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0
+        };
+    }
+    
+    startGame() {
+        this.state = GameState.PLAYING;
+        this.startTime = Date.now();
+        this.resetBall();
+    }
+    
+    checkGameEnd() {
+        if (this.state !== GameState.PLAYING) return false;
         
-        broadcastToRoom(room, {
-            type: 'gameState',
-            ball: room.gameState.ball,
-            players: room.players.map(p => ({
-                id: p.id,
-                position: p.position,
-                velocity: p.velocity,
-                team: p.team
-            }))
-        });
-    }, 1000 / 30);
-}
-
-function updateBallPhysics(room) {
-    const ball = room.gameState.ball;
-    
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    ball.z += ball.vz;
-    
-    ball.vx *= 0.98;
-    ball.vz *= 0.98;
-    ball.vy -= 0.02;
-    
-    if (ball.y <= 0.5) {
-        ball.y = 0.5;
-        ball.vy *= -0.6;
-    }
-    
-    if (Math.abs(ball.x) > 19) {
-        ball.vx *= -0.8;
-        ball.x = Math.sign(ball.x) * 19;
-    }
-    
-    if (Math.abs(ball.z) > 29) {
-        ball.vz *= -0.8;
-        ball.z = Math.sign(ball.z) * 29;
-    }
-    
-    room.players.forEach(player => {
-        const dx = ball.x - player.position.x;
-        const dy = ball.y - player.position.y;
-        const dz = ball.z - player.position.z;
-        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+        const remaining = this.gameTime * 60 - elapsed;
         
-        if (dist < 1) {
-            const len = Math.sqrt(dx * dx + dz * dz);
-            if (len > 0) {
-                ball.vx = (dx / len) * 0.3;
-                ball.vz = (dz / len) * 0.3;
-            }
+        if (remaining <= 0) {
+            this.state = GameState.ENDED;
+            return true;
         }
-    });
-}
-
-function checkGoals(room) {
-    const ball = room.gameState.ball;
-    
-    if (ball.z < -29 && Math.abs(ball.x) < 4 && ball.y < 3) {
-        room.gameState.redScore++;
-        resetBall(room);
         
-        broadcastToRoom(room, {
-            type: 'goal',
-            team: 'red',
-            blueScore: room.gameState.blueScore,
-            redScore: room.gameState.redScore
-        });
+        return false;
     }
     
-    if (ball.z > 29 && Math.abs(ball.x) < 4 && ball.y < 3) {
-        room.gameState.blueScore++;
-        resetBall(room);
-        
-        broadcastToRoom(room, {
-            type: 'goal',
-            team: 'blue',
-            blueScore: room.gameState.blueScore,
-            redScore: room.gameState.redScore
-        });
+    getWinner() {
+        if (this.scores.blue > this.scores.red) return 'Mavi';
+        if (this.scores.red > this.scores.blue) return 'Kırmızı';
+        return 'Berabere';
     }
 }
 
-function resetBall(room) {
-    room.gameState.ball = {
-        x: 0,
-        y: 0.5,
-        z: 0,
-        vx: 0,
-        vy: 0,
-        vz: 0
-    };
-}
-
-function broadcastToRoom(room, message, excludeWs = null) {
-    room.players.forEach(player => {
-        if (player.ws !== excludeWs && player.ws.readyState === WebSocket.OPEN) {
-            player.ws.send(JSON.stringify(message));
-        }
-    });
-}
-
-function serializeRoom(room) {
-    return {
-        id: room.id,
-        host: room.host,
-        maxPlayers: room.maxPlayers,
-        duration: room.duration,
-        playerCount: room.players.length,
-        blueTeam: room.blueTeam.map(p => serializePlayer(p)),
-        redTeam: room.redTeam.map(p => serializePlayer(p)),
-        gameState: room.gameState
-    };
-}
-
-function serializePlayer(player) {
-    return {
-        id: player.id,
-        username: player.username,
-        photo: player.photo,
-        team: player.team,
-        position: player.position,
-        velocity: player.velocity
-    };
-}
-
+// Oda ID oluşturma
 function generateRoomId() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
+// Socket.io bağlantıları
+io.on('connection', (socket) => {
+    console.log('Yeni bağlantı:', socket.id);
+    
+    players[socket.id] = {
+        id: socket.id,
+        roomId: null,
+        name: 'Oyuncu'
+    };
+    
+    // Oda kurma
+    socket.on('createRoom', (data) => {
+        const roomId = generateRoomId();
+        const room = new Room(roomId, socket.id, data.time);
+        
+        rooms[roomId] = room;
+        players[socket.id].roomId = roomId;
+        players[socket.id].name = data.playerName;
+        
+        socket.join(roomId);
+        socket.emit('roomCreated', {
+            roomId: roomId,
+            teams: room.teams
+        });
+        
+        console.log(`Oda oluşturuldu: ${roomId}`);
+    });
+    
+    // Takıma katılma
+    socket.on('joinTeam', (data) => {
+        const room = rooms[data.roomId];
+        if (!room) return;
+        
+        const playerName = players[socket.id].name;
+        const success = room.addPlayer(socket.id, playerName, data.team);
+        
+        if (success) {
+            players[socket.id].roomId = data.roomId;
+            socket.join(data.roomId);
+            
+            // Odaya katılan oyuncuya oyun bilgilerini gönder
+            socket.emit('gameStarted', room.getGameData());
+            
+            // Diğer oyunculara yeni oyuncuyu bildir
+            socket.to(data.roomId).emit('playerJoined', {
+                playerId: socket.id,
+                playerName: playerName,
+                team: data.team,
+                teams: room.teams
+            });
+            
+            // Oyun başlatma kontrolü
+            if (room.teams.blue.length >= 1 && room.teams.red.length >= 1) {
+                setTimeout(() => {
+                    room.startGame();
+                    io.to(data.roomId).emit('gameStarted', room.getGameData());
+                }, 3000);
+            }
+        }
+    });
+    
+    // Hızlı oyun
+    socket.on('quickPlay', (data) => {
+        // Boş oda bul veya yeni oda oluştur
+        let availableRoom = null;
+        
+        for (const roomId in rooms) {
+            const room = rooms[roomId];
+            if (room.state === GameState.WAITING && 
+                (room.teams.blue.length < 11 || room.teams.red.length < 11)) {
+                availableRoom = room;
+                break;
+            }
+        }
+        
+        if (!availableRoom) {
+            const roomId = generateRoomId();
+            const room = new Room(roomId, socket.id, 10);
+            rooms[roomId] = room;
+            availableRoom = room;
+        }
+        
+        players[socket.id].name = data.playerName;
+        players[socket.id].roomId = availableRoom.id;
+        
+        // Rastgele takım seç
+        const team = availableRoom.teams.blue.length <= availableRoom.teams.red.length ? 'blue' : 'red';
+        availableRoom.addPlayer(socket.id, data.playerName, team);
+        
+        socket.join(availableRoom.id);
+        socket.emit('gameStarted', availableRoom.getGameData());
+        
+        // Diğer oyunculara bildir
+        socket.to(availableRoom.id).emit('playerJoined', {
+            playerId: socket.id,
+            playerName: data.playerName,
+            team: team,
+            teams: availableRoom.teams
+        });
+        
+        // Oyun başlatma kontrolü
+        if (availableRoom.teams.blue.length >= 1 && availableRoom.teams.red.length >= 1) {
+            setTimeout(() => {
+                availableRoom.startGame();
+                io.to(availableRoom.id).emit('gameStarted', availableRoom.getGameData());
+            }, 3000);
+        }
+    });
+    
+    // Oyuncu hareketi
+    socket.on('playerMove', (data) => {
+        const player = players[socket.id];
+        if (!player || !player.roomId) return;
+        
+        const room = rooms[player.roomId];
+        if (!room) return;
+        
+        room.updatePlayer(socket.id, data);
+        
+        // Diğer oyunculara gönder
+        socket.to(player.roomId).emit('playerMoved', {
+            id: socket.id,
+            ...data
+        });
+    });
+    
+    // Şut atma
+    socket.on('shoot', (data) => {
+        const player = players[socket.id];
+        if (!player || !player.roomId) return;
+        
+        const room = rooms[player.roomId];
+        if (!room) return;
+        
+        const ballData = {
+            x: room.ball.x,
+            y: room.ball.y,
+            z: room.ball.z,
+            vx: data.direction.x * data.power,
+            vy: data.direction.y * data.power + 5,
+            vz: data.direction.z * data.power
+        };
+        
+        room.updateBall(ballData);
+        
+        // Gol kontrolü
+        const goalTeam = room.checkGoals();
+        if (goalTeam) {
+            io.to(player.roomId).emit('goalScored', {
+                team: goalTeam,
+                score: room.scores[goalTeam]
+            });
+        }
+        
+        // Top hareketini gönder
+        io.to(player.roomId).emit('ballMoved', ballData);
+    });
+    
+    // Oyun durumu güncelleme
+    setInterval(() => {
+        for (const roomId in rooms) {
+            const room = rooms[roomId];
+            
+            if (room.state === GameState.PLAYING) {
+                // Oyun süresi kontrolü
+                if (room.checkGameEnd()) {
+                    const winner = room.getWinner();
+                    io.to(roomId).emit('gameEnded', { winner: winner });
+                }
+                
+                // Periyodik oyun durumu güncelleme
+                io.to(roomId).emit('gameUpdate', room.getGameData());
+            }
+        }
+    }, 1000);
+    
+    // Bağlantı kesildiğinde
+    socket.on('disconnect', () => {
+        const player = players[socket.id];
+        if (player && player.roomId) {
+            const room = rooms[player.roomId];
+            if (room) {
+                room.removePlayer(socket.id);
+                
+                // Odadaki diğer oyunculara bildir
+                socket.to(player.roomId).emit('playerLeft', { playerId: socket.id });
+                
+                // Oda boşsa sil
+                if (Object.keys(room.players).length === 0) {
+                    delete rooms[player.roomId];
+                }
+            }
+        }
+        
+        delete players[socket.id];
+        console.log('Bağlantı kesildi:', socket.id);
+    });
+});
+
+// Sunucuyu başlat
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Sunucu ${PORT} portunda çalışıyor`);
 });
