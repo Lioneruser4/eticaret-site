@@ -3,93 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mələk Chat</title>
+<title>Mələk</title>
+
 <style>
-body {margin:0;font-family:'Segoe UI',sans-serif;background:#0e1621;color:#fff;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-#chat{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;}
-.message{max-width:80%;margin:5px 0;padding:10px 15px;border-radius:20px;word-wrap:break-word;}
-.user{background:#70a1ff;align-self:flex-end;color:#000;}
-.ai{background:#1a2b4c;align-self:flex-start;}
-#inputArea{display:flex;padding:10px;background:#121c2d;}
-#inputArea input{flex:1;padding:10px;border-radius:20px;border:none;outline:none;font-size:16px;}
-#inputArea button{margin-left:10px;padding:10px 15px;border-radius:20px;border:none;background:#70a1ff;color:#000;font-weight:bold;cursor:pointer;}
-#typing{font-size:18px;color:#0ff;font-weight:bold;padding-left:10px;display:none;}
+body {
+  margin:0;
+  background:#0e1621;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
+#chat {
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+}
+.msg {
+  max-width:80%;
+  padding:10px 14px;
+  margin:4px 0;
+  border-radius:18px;
+  font-size:15px;
+  line-height:1.35;
+}
+.user {
+  align-self:flex-end;
+  background:#6ea4ff;
+  color:#000;
+}
+.ai {
+  align-self:flex-start;
+  background:#1a2b4c;
+}
+#typing {
+  padding:6px 14px;
+  color:#00ffff;
+  font-size:18px;
+  display:none;
+}
+#input {
+  display:flex;
+  padding:10px;
+  background:#111b2a;
+}
+#input input {
+  flex:1;
+  border:none;
+  outline:none;
+  border-radius:20px;
+  padding:10px 14px;
+  font-size:16px;
+}
+#input button {
+  margin-left:8px;
+  background:#6ea4ff;
+  border:none;
+  border-radius:50%;
+  width:42px;
+  height:42px;
+  font-size:18px;
+  cursor:pointer;
+}
 </style>
 </head>
+
 <body>
 
 <div id="chat"></div>
-<div id="typing">Yazır...</div>
+<div id="typing">Mələk yazır…</div>
 
-<div id="inputArea">
-  <input id="userInput" placeholder="Mesaj yaz..." />
-  <button id="sendBtn">Göndər</button>
+<div id="input">
+  <input id="text" placeholder="Mesaj yaz…" />
+  <button onclick="send()">➤</button>
 </div>
 
 <script>
-// Chat elementi
-const chat = document.getElementById('chat');
-const input = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const typing = document.getElementById('typing');
+const chat = document.getElementById("chat");
+const typing = document.getElementById("typing");
+const input = document.getElementById("text");
 
-// Telegram istifadəçi adı (WebView simulasiya)
-let telegramUser = localStorage.getItem('telegramUser') || 'Xaliq';
-localStorage.setItem('telegramUser', telegramUser);
+let memory = JSON.parse(localStorage.getItem("melek_memory") || "[]");
+let sending = false;
 
-// Mesaj əlavə funksiyası
-function addMessage(text, cls){
-  const msg = document.createElement('div');
-  msg.className = 'message ' + cls;
-  msg.textContent = text;
-  chat.appendChild(msg);
+// Telegram user
+let tgName = "dostum";
+if (window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) {
+  tgName = Telegram.WebApp.initDataUnsafe.user.first_name;
+}
+
+// mesaj göstər
+function add(text, cls){
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  chat.appendChild(d);
   chat.scrollTop = chat.scrollHeight;
 }
 
-// Pulsuz AI cavab generator (JS simulasiya)
-async function getAIResponse(userMsg){
-  typing.style.display='block';
-  await new Promise(r=>setTimeout(r,1000)); // gecikmə
-  typing.style.display='none';
-  
-  userMsg = userMsg.toLowerCase();
-  
-  if(userMsg.includes('sahibin kimdir')){
-    return `Məni kodlayan və sahibim Xaliq Mustafayevdir. Telegram və Instagram: @xaliqmustafayev`;
-  } else if(userMsg.includes('salam') || userMsg.includes('hi')){
-    return `Salam ${telegramUser}! Mən Mələk, dostca AI-san. Necə kömək edə bilərəm?`;
-  } else if(userMsg.includes('necəsən')){
-    return `Mən yaxşıyam ${telegramUser}, sən necəsən? 😊`;
-  } else {
-    // Random dostca cavablar
-    const responses = [
-      `Hmm, maraqlı sualdır!`,
-      `Bunu düşündüm, amma sən nə fikirləşirsən?`,
-      `Heç bir problem yoxdur, davam edək!`,
-      `Haha, maraqlı dedin!`,
-      `Əlbəttə, sənə kömək edə bilərəm.`
-    ];
-    return responses[Math.floor(Math.random()*responses.length)];
-  }
+// AI çağırışı (REAL)
+async function askAI(prompt){
+  const system =
+`Sən Mələk adlı dostca AI-san.
+Sahibin və səni kodlayan: Xaliq Mustafayev.
+Telegram və Instagram: @xaliqmustafayev.
+İstifadəçinin adı: ${tgName}.
+Qısa, səmimi və GPT kimi cavab ver.
+Çox uzun yazma.`;
+
+  const fullPrompt = system + "\n\nƏvvəlki mesajlar:\n" +
+    memory.slice(-6).join("\n") +
+    "\n\nİstifadəçi: " + prompt + "\nMələk:";
+
+  const url =
+    "https://text.pollinations.ai/" +
+    encodeURIComponent(fullPrompt);
+
+  const res = await fetch(url);
+  return await res.text();
 }
 
-// Göndər düyməsi
-sendBtn.addEventListener('click', async ()=>{
-  const msg = input.value.trim();
-  if(!msg) return;
-  addMessage(msg,'user');
-  input.value='';
-  const aiResp = await getAIResponse(msg);
-  addMessage(aiResp,'ai');
+async function send(){
+  if (sending) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sending = true;
+  input.value = "";
+  add(text,"user");
+  memory.push("İstifadəçi: "+text);
+
+  typing.style.display="block";
+
+  try{
+    const ai = await askAI(text);
+    typing.style.display="none";
+    add(ai,"ai");
+    memory.push("Mələk: "+ai);
+    localStorage.setItem("melek_memory", JSON.stringify(memory));
+  }catch{
+    typing.style.display="none";
+    add("Bir az ilişdi, yenə yaz 🙂","ai");
+  }
+
+  setTimeout(()=>sending=false,700);
+}
+
+// Enter
+input.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
 });
 
-// Enter ilə göndər
-input.addEventListener('keydown', e=>{
-  if(e.key==='Enter') sendBtn.click();
-});
-
-// Telegram WebView tam ekran
-if(window.Telegram?.WebApp){
+// Telegram full screen
+if (window.Telegram?.WebApp) {
   Telegram.WebApp.expand();
 }
 </script>
