@@ -1,161 +1,187 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Mələk Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
 <style>
-*{box-sizing:border-box;font-family:Segoe UI,Arial}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto}
 body{
-  margin:0;background:#0e1621;color:#fff;
-  display:flex;flex-direction:column;height:100vh;
+  margin:0;
+  background:#0e1621;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
 }
 header{
-  padding:12px 16px;
   background:#17212b;
-  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
-header h1{font-size:18px;margin:0}
-header button{
-  background:none;border:none;color:#4da3ff;
-  font-size:22px;cursor:pointer;
+header h1{
+  margin:0;
+  font-size:18px;
+  font-weight:600;
 }
 #chat{
-  flex:1;overflow-y:auto;padding:16px;
+  flex:1;
+  overflow-y:auto;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
 }
 .msg{
-  max-width:75%;padding:10px 14px;
-  border-radius:14px;margin-bottom:10px;
+  max-width:78%;
+  padding:10px 14px;
+  border-radius:16px;
+  margin-bottom:10px;
   line-height:1.4;
+  word-wrap:break-word;
 }
 .in{
   background:#1f2c3a;
   align-self:flex-start;
 }
 .out{
-  background:#4da3ff;color:#000;
+  background:#4da3ff;
+  color:#000;
   align-self:flex-end;
 }
 #typing{
-  text-align:center;
-  font-size:26px;
-  color:#00eaff;
-  text-shadow:0 0 15px #00eaff;
-  animation:pulse 1.2s infinite;
   display:none;
+  text-align:center;
+  font-size:22px;
+  color:#00eaff;
+  text-shadow:0 0 18px #00eaff;
+  animation:pulse 1.2s infinite;
+  margin-bottom:10px;
 }
 @keyframes pulse{
-  0%{opacity:.3}
+  0%{opacity:.2}
   50%{opacity:1}
-  100%{opacity:.3}
+  100%{opacity:.2}
 }
 footer{
-  padding:10px;background:#17212b;
-  display:flex;gap:8px;
+  background:#17212b;
+  padding:10px;
+  display:flex;
+  gap:8px;
 }
 input{
-  flex:1;padding:10px;border-radius:8px;
-  border:none;font-size:15px;
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  font-size:15px;
 }
-button.send{
-  background:#4da3ff;border:none;
-  padding:0 18px;border-radius:8px;
-  font-size:16px;cursor:pointer;
-}
-
-/* Voice Lobby */
-#voiceLobby{
-  position:fixed;inset:0;
-  background:#000;display:none;
-  align-items:center;justify-content:center;
-  flex-direction:column;
-}
-#voiceLobby h2{
-  font-size:32px;margin-bottom:20px;
-}
-#voiceLobby button{
-  font-size:18px;padding:12px 26px;
+button{
+  background:#4da3ff;
+  border:none;
+  padding:0 18px;
+  border-radius:10px;
+  font-size:16px;
+  cursor:pointer;
 }
 </style>
 </head>
+
 <body>
 
 <header>
   <h1>Mələk</h1>
-  <button onclick="openVoice()">📞</button>
 </header>
 
 <div id="chat"></div>
-<div id="typing">Mələk yazır...</div>
+<div id="typing">Mələk yazır…</div>
 
 <footer>
-  <input id="text" placeholder="Mesaj yaz..." />
-  <button class="send" onclick="send()">➤</button>
+  <input id="input" placeholder="Mesaj yaz…" autocomplete="off">
+  <button onclick="send()">➤</button>
 </footer>
 
-<div id="voiceLobby">
-  <h2>🎧 Voice Lobby</h2>
-  <p>Canlı səsli danışıq</p>
-  <button onclick="closeVoice()">Bağla</button>
-</div>
-
 <script>
-const chat=document.getElementById("chat");
-const typing=document.getElementById("typing");
-let locked=false;
+const chat = document.getElementById("chat");
+const typing = document.getElementById("typing");
+const input = document.getElementById("input");
 
-function add(text,cls){
+let queue = [];
+let busy = false;
+
+/* UI helpers */
+function addMessage(text,type){
   const d=document.createElement("div");
-  d.className="msg "+cls;
+  d.className="msg "+type;
   d.innerText=text;
   chat.appendChild(d);
   chat.scrollTop=chat.scrollHeight;
 }
+function showTyping(v){
+  typing.style.display = v ? "block" : "none";
+}
 
-async function send(){
-  if(locked) return;
-  const inp=document.getElementById("text");
-  const msg=inp.value.trim();
-  if(!msg) return;
-  inp.value="";
-  add(msg,"out");
-  locked=true;
-  typing.style.display="block";
+/* Input */
+function send(){
+  const text=input.value.trim();
+  if(!text) return;
+  input.value="";
+  addMessage(text,"out");
+  enqueue(text);
+}
+
+/* Queue system (anti-crash) */
+function enqueue(text){
+  queue.push(text);
+  processQueue();
+}
+
+async function processQueue(){
+  if(busy || queue.length===0) return;
+  busy=true;
+
+  const msg=queue.shift();
+  showTyping(true);
+
+  const reply = await askAI(msg);
+
+  showTyping(false);
+  addMessage(reply,"in");
+
+  busy=false;
+  setTimeout(processQueue,300); // nəfəs intervalı
+}
+
+/* AI request – error NEVER shown */
+async function askAI(userText){
+  const prompt = `
+Sən Mələk adlı virtual asistentsən.
+Sakit, mədəni və aydın cavab ver.
+İstifadəçi sərt danışa bilər, sən nəzakətli ol.
+Sual:
+${userText}
+`;
 
   try{
-    const res=await fetch(
-      "https://text.pollinations.ai/"+encodeURIComponent(msg),
-      {method:"GET"}
+    const r = await fetch(
+      "https://text.pollinations.ai/" + encodeURIComponent(prompt),
+      { cache:"no-store" }
     );
-    const text=await res.text();
-    typing.style.display="none";
-    add(text,"in");
-  }catch(e){
-    typing.style.display="none";
-    add("Xəta baş verdi.","in");
+    if(!r.ok) throw "fail";
+    const t = await r.text();
+    if(!t || t.length<2) throw "empty";
+    return t;
+  }catch{
+    return "Bir anlıq gecikmə var, davam edə bilərsən.";
   }
-
-  setTimeout(()=>locked=false,2500); // rate limit
 }
 
-function openVoice(){
-  document.getElementById("voiceLobby").style.display="flex";
-  speak("Salam, mən Mələyəm. Səni eşidirəm.");
-}
-
-function closeVoice(){
-  document.getElementById("voiceLobby").style.display="none";
-  speechSynthesis.cancel();
-}
-
-function speak(t){
-  const u=new SpeechSynthesisUtterance(t);
-  u.lang="az-AZ";
-  const voices=speechSynthesis.getVoices();
-  const female=voices.find(v=>v.name.toLowerCase().includes("female"))||voices[0];
-  u.voice=female;
-  speechSynthesis.speak(u);
-}
+/* Enter key support */
+input.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
+});
 </script>
 
 </body>
