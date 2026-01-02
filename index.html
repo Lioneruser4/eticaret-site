@@ -2,61 +2,56 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://app.adsgram.ai/js/adstg.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinyal Master Mobile</title>
     <style>
-        body { background: #0e1621; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .card { background: #17212b; border-radius: 20px; padding: 30px; border: 1px solid #2481cc; }
-        .btn { background: #2481cc; color: white; border: none; padding: 20px; border-radius: 15px; width: 100%; font-weight: bold; font-size: 18px; margin-top: 20px; }
+        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
+        .box { border: 2px solid #00ff00; border-radius: 15px; padding: 20px; box-shadow: 0 0 20px #00ff00; }
+        input { background: #111; border: 1px solid #00ff00; color: #00ff00; width: 90%; padding: 12px; margin: 15px 0; border-radius: 5px; }
+        .btn { background: #00ff00; color: #000; border: none; padding: 15px 30px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
+        .pulse { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 5px #00ff00; } 50% { box-shadow: 0 0 25px #00ff00; } 100% { box-shadow: 0 0 5px #00ff00; } }
+        #status { margin-top: 20px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>PREMIUM KAZANÇ</h2>
-        <div id="puan" style="font-size: 50px; color: #31b545;">0</div>
-        <p>TOPLAM PUAN</p>
+    <div class="box pulse">
+        <h2>MOBILE SIGNAL GEN</h2>
+        <p>Görünecek İsim (BT/AirDrop):</p>
+        <input type="text" id="targetName" placeholder="Örn: Apple Cihazı Bulundu">
+        
+        <button class="btn" onclick="startSpam()">SİNYAL YAYININI BAŞLAT</button>
+        
+        <div id="status">Durum: Bekleniyor...</div>
     </div>
 
-    <button class="btn" onclick="reklamBaslat()">🎬 VİDEO İZLE</button>
-    <p id="durum" style="color: #6c7883; margin-top: 20px;">Sistem kontrol ediliyor...</p>
-
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        async function startSpam() {
+            const name = document.getElementById('targetName').value;
+            const status = document.getElementById('status');
 
-        // PUAN YÜKLE
-        let bakiye = localStorage.getItem('puan') || "0";
-        document.getElementById('puan').innerText = bakiye;
+            if (!name) {
+                alert("Lütfen bir isim girin!");
+                return;
+            }
 
-        // ADSGRAM BAĞLANTISI (int-20355)
-        const AdController = window.Adsgram.init({ blockId: "int-20355" });
+            status.innerText = "Sinyal hazırlanıyor...";
 
-        function reklamBaslat() {
-            document.getElementById('durum').innerText = "Reklam aranıyor...";
-            
-            AdController.show().then((result) => {
-                // BAŞARILI
-                let p = document.getElementById('puan');
-                let yeni = parseInt(p.innerText) + 10;
-                p.innerText = yeni;
-                localStorage.setItem('puan', yeni);
-                document.getElementById('durum').innerText = "Tebrikler!";
-                tg.showAlert("Ödül başarıyla eklendi!");
-            }).catch((err) => {
-                // HATA OLDUĞUNDA BURASI ÇALIŞIR
-                console.error(err);
-                let hataMesaji = JSON.stringify(err);
-                document.getElementById('durum').innerText = "Hata oluştu!";
+            try {
+                // Web Bluetooth API ile tarama başlatarak cihazı 'görünür' ve 'meşgul' moduna sokar
+                status.innerText = "YAYINLANIYOR: " + name + "\n(Tarayıcı Bluetooth kanalını meşgul ediyor...)";
                 
-                // Hatayı kullanıcıya gösterelim ki sorunu anlayalım
-                tg.showPopup({
-                    title: "Reklam Yüklenemedi",
-                    message: "Hata Kodu: " + hataMesaji,
-                    buttons: [{type: "ok"}]
+                // Bu komut telefonun Bluetooth arayüzünü açar ve çevreye sinyal yayar
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true
                 });
-            });
+
+                status.innerText = "Bağlantı isteği gönderildi: " + device.name;
+            } catch (err) {
+                status.innerText = "Hata: Bluetooth izni verilmedi veya cihaz desteklemiyor.";
+                console.log(err);
+            }
         }
     </script>
 </body>
