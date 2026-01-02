@@ -3,158 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ProNav Azerbaijan | Professional Navigation</title>
-    
+    <title>SpeedPro Mobile</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
-
     <style>
-        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #0e1621; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        
-        /* Waze Stil Paneller */
-        .ui-overlay { position: absolute; z-index: 10; pointer-events: none; width: 100%; height: 100%; }
-        .interactive { pointer-events: auto; }
-        
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
+        body { background-color: #050505; color: white; font-family: sans-serif; overflow: hidden; }
+        /* Neon Efektleri */
+        .speed-glow { text-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        .pip-container { display: none; }
+        canvas { border-radius: 50%; }
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; display: flex;
+            align-items: center; justify-content: center; text-align: center;
         }
-
-        /* Hız Göstergesi Animasyonu */
-        .speed-ring {
-            border: 4px solid #3b82f6;
-            box-shadow: 0 0 15px #3b82f6;
-        }
-
-        /* Radar Uyarı Animasyonu */
-        @keyframes pulse-red {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-        .alert-active { animation: pulse-red 1.5s infinite; border: 2px solid #ef4444; }
     </style>
 </head>
-<body>
+<body class="h-screen flex flex-col items-center justify-around py-10">
 
-    <div class="ui-overlay flex flex-col justify-between p-4">
-        
-        <div class="w-full max-w-md mx-auto interactive">
-            <div id="geocoder" class="w-full shadow-2xl"></div>
-        </div>
-
-        <div id="alert-container" class="hidden w-full max-w-sm mx-auto interactive">
-            <div class="glass-panel alert-active p-5 flex items-center space-x-4">
-                <div class="bg-red-600 p-3 rounded-full">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                </div>
-                <div>
-                    <h3 class="text-white font-bold text-lg">⚠️ TƏHLÜKƏ!</h3>
-                    <p id="alert-text" class="text-gray-300">500 metr sonra radar var.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-end justify-between interactive mb-4">
-            <div class="glass-panel w-24 h-24 flex flex-col items-center justify-center speed-ring">
-                <span id="speed-val" class="text-4xl font-black text-white">0</span>
-                <span class="text-blue-400 text-[10px] font-bold tracking-widest">KM/H</span>
-            </div>
-
-            <div class="flex flex-col space-y-2">
-                <button onclick="reportIssue('Radar')" class="glass-panel p-4 text-white hover:bg-red-600 transition">📸</button>
-                <button onclick="reportIssue('YPX')" class="glass-panel p-4 text-white hover:bg-blue-600 transition">👮</button>
-                <button onclick="reportIssue('Qəza')" class="glass-panel p-4 text-white hover:bg-orange-600 transition">🚗</button>
-            </div>
+    <div id="start-overlay">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold mb-4">SpeedPro Navigasiya</h1>
+            <button onclick="startApp()" class="bg-blue-600 px-10 py-4 rounded-full font-bold text-xl shadow-lg shadow-blue-500/50">BAŞLAT</button>
+            <p class="text-gray-500 mt-4 text-sm">GPS və Video icazəsi tələb olunur.</p>
         </div>
     </div>
 
-    <div id="map"></div>
+    <div class="text-center">
+        <div class="text-blue-500 font-bold tracking-widest mb-2 uppercase">Sürət</div>
+        <div id="speed" class="text-[120px] font-black italic leading-none speed-glow">0</div>
+        <div class="text-2xl font-light text-gray-400">KM/H</div>
+    </div>
+
+    <div class="w-full px-6 space-y-4">
+        <button id="pip-btn" class="w-full bg-white/10 border border-white/20 backdrop-blur-md py-4 rounded-2xl font-semibold flex items-center justify-center gap-2">
+            <span>📺</span> Ekran Üstündə Göstər (PiP)
+        </button>
+        <div id="status" class="text-center text-xs text-gray-600 uppercase tracking-widest italic">GPS Aktiv deyil</div>
+    </div>
+
+    <video id="pip-video" autoplay muted playsinline style="display:none;"></video>
+    <canvas id="pip-canvas" width="512" height="512" style="display:none;"></canvas>
 
     <script>
-        // --- AYARLAR ---
-        mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN'; // Buraya kendi token'ını koy!
-        
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/navigation-night-v1',
-            center: [49.8671, 40.4093], // Bakü koordinatları
-            zoom: 13,
-            pitch: 60,
-            bearing: 0,
-            antialias: true
-        });
+        const speedEl = document.getElementById('speed');
+        const statusEl = document.getElementById('status');
+        const videoEl = document.getElementById('pip-video');
+        const canvas = document.getElementById('pip-canvas');
+        const ctx = canvas.getContext('2d');
+        let currentSpeed = 0;
 
-        // --- RADAR VERİLERİ (Örnek) ---
-        const poiList = [
-            { name: "Bakı Radarı", lat: 40.4100, lng: 49.8700, type: "radar" },
-            { name: "YPX Postu", lat: 40.3800, lng: 49.8200, type: "police" }
-        ];
-
-        // --- SESLİ BİLDİRİM (Azerbaycan/Türkçe) ---
-        function sendVoiceAlert(text) {
-            const synth = window.speechSynthesis;
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = 'tr-TR'; // AZ desteği cihazda yoksa TR çok yakın
-            synth.speak(utter);
+        function startApp() {
+            document.getElementById('start-overlay').style.display = 'none';
+            initGPS();
         }
 
-        // --- KONUM TAKİBİ VE HIZ ---
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition((pos) => {
-                const { latitude, longitude, speed } = pos.coords;
-                const kmh = Math.round((speed || 0) * 3.6);
-                
-                document.getElementById('speed-val').innerText = kmh;
-
-                // Radar kontrolü (500 metre mesafe)
-                checkProximity(latitude, longitude);
-            }, null, { enableHighAccuracy: true });
+        function initGPS() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(pos => {
+                    const s = pos.coords.speed;
+                    currentSpeed = s ? Math.round(s * 3.6) : 0;
+                    speedEl.innerText = currentSpeed;
+                    statusEl.innerText = "Sistem Hazırdır • GPS Aktif";
+                    statusEl.classList.add('text-green-500');
+                    drawToCanvas();
+                }, err => {
+                    statusEl.innerText = "GPS Xətası: İcazə verilməyib";
+                }, { enableHighAccuracy: true });
+            }
         }
 
-        function checkProximity(lat, lng) {
-            poiList.forEach(poi => {
-                const dist = getDistance(lat, lng, poi.lat, poi.lng);
-                if (dist < 500 && dist > 480) { // Sadece bir kez tetiklenmesi için
-                    showAlert(`DİQQƏT: 500 metr sonra ${poi.name} var!`);
+        // PiP üçün Canvas Çizimi
+        function drawToCanvas() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Dairevi Gösterge
+            ctx.strokeStyle = "#3b82f6";
+            ctx.lineWidth = 20;
+            ctx.beginPath();
+            ctx.arc(256, 256, 230, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Sürət Rəqəmi
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 200px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(currentSpeed, 256, 310);
+
+            // KM/H Yazısı
+            ctx.font = "40px Arial";
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillText("KM/H", 256, 380);
+        }
+
+        // PiP Aktiv Etme
+        document.getElementById('pip-btn').addEventListener('click', async () => {
+            try {
+                const stream = canvas.captureStream(30);
+                videoEl.srcObject = stream;
+                await videoEl.play();
+                if (document.pictureInPictureEnabled) {
+                    await videoEl.requestPictureInPicture();
                 }
-            });
-        }
-
-        function showAlert(msg) {
-            const container = document.getElementById('alert-container');
-            document.getElementById('alert-text').innerText = msg;
-            container.classList.remove('hidden');
-            sendVoiceAlert(msg);
-            setTimeout(() => container.classList.add('hidden'), 7000);
-        }
-
-        // --- MATEMATİKSEL MESAFE HESABI ---
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const φ1 = lat1 * Math.PI/180;
-            const φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180;
-            const Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        // --- ARAMA KUTUSU ENTEGRASYONU ---
-        const geocoder = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken,
-            mapboxgl: mapboxgl,
-            placeholder: 'Haritada axtar...',
-            countries: 'az'
+            } catch (e) {
+                alert("Mobil brauzeriniz bu funksiyanı dəstəkləmir.");
+            }
         });
-        document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
 
+        // Hər 100ms-də bir yenilə (axıcılıq üçün)
+        setInterval(drawToCanvas, 100);
     </script>
 </body>
 </html>
