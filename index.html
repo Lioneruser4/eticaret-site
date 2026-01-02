@@ -1,102 +1,381 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SpeedHUD Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>3D Futbol - Multiplayer</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
-        body { background: #000; color: #fff; font-family: 'Orbitron', sans-serif; margin: 0; overflow: hidden; }
-        .speed-text { font-size: 35vw; line-height: 1; filter: drop-shadow(0 0 15px #3b82f6); }
-        @media (orientation: landscape) { .speed-text { font-size: 50vh; } }
-        canvas { display: none; }
-        video { width: 1px; height: 1px; opacity: 0; position: absolute; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #main-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(26, 41, 128, 0.95), rgba(38, 208, 206, 0.95));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 900;
+        }
+        
+        .profile-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid white;
+            margin-bottom: 15px;
+            object-fit: cover;
+        }
+        
+        .username {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .menu-btn {
+            background: linear-gradient(45deg, #FF416C, #FF4B2B);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+        
+        .menu-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        #room-creation-modal, #room-list-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 950;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .time-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .time-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .time-btn.selected {
+            background: #2ecc71;
+        }
+        
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 800;
+        }
+        
+        #score-board {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: none;
+            z-index: 850;
+        }
+        
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            gap: 30px;
+        }
+        
+        #mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 850;
+        }
+        
+        .joystick-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+        
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .joystick-handle {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .action-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FF416C, #FF4B2B);
+            border: none;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        #team-selection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 950;
+        }
+        
+        .team-select {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .team-option {
+            padding: 40px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            text-align: center;
+        }
+        
+        .team-option:hover {
+            transform: scale(1.1);
+        }
+        
+        .team-blue {
+            background: linear-gradient(45deg, #2980b9, #3498db);
+        }
+        
+        .team-red {
+            background: linear-gradient(45deg, #c0392b, #e74c3c);
+        }
     </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center">
-
-    <div id="setup-screen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-10 text-center">
-        <h1 class="text-xl mb-6 text-blue-500 tracking-widest">SİSTEMİ BAŞLAT</h1>
-        <button onclick="activateSystem()" class="bg-blue-600 px-12 py-5 rounded-2xl font-bold text-xl shadow-[0_0_30px_rgba(59,130,246,0.5)]">GPS VƏ EKRANI AKTİV ET</button>
-        <p class="text-gray-500 mt-6 text-xs uppercase italic">Diqqət: GPS icazəsi çıxdıqda "İcazə ver" seçin.</p>
+<body>
+    <!-- Yükleme Ekranı -->
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <h2>Yükleniyor...</h2>
     </div>
 
-    <div class="absolute top-5 left-5 text-[10px] tracking-widest opacity-50">
-        GPS: <span id="gps-status" class="text-red-500">KƏSİLDİ</span>
+    <!-- Ana Menü -->
+    <div id="main-menu">
+        <div class="profile-section">
+            <img id="profile-picture" src="" alt="Profil Resmi" class="profile-pic">
+            <div id="username" class="username"></div>
+        </div>
+        <div class="menu-buttons">
+            <button id="create-room-btn" class="menu-btn">Oda Kur</button>
+            <button id="join-room-btn" class="menu-btn">Odaya Katıl</button>
+            <button id="quick-play-btn" class="menu-btn">Hemen Oyna</button>
+        </div>
     </div>
 
-    <div class="flex flex-col items-center">
-        <div id="speed" class="speed-text italic">0</div>
-        <div class="text-blue-500 text-xl font-bold tracking-[1rem] uppercase">km/h</div>
+    <!-- Oda Kurma Modal -->
+    <div id="room-creation-modal">
+        <div class="modal-content">
+            <h2>Oda Kur</h2>
+            <div class="time-options">
+                <button class="time-btn" data-time="5">5 Dakika</button>
+                <button class="time-btn" data-time="10">10 Dakika</button>
+                <button class="time-btn" data-time="15">15 Dakika</button>
+                <button class="time-btn" data-time="20">20 Dakika</button>
+                <button class="time-btn" data-time="25">25 Dakika</button>
+                <button class="time-btn" data-time="30">30 Dakika</button>
+            </div>
+            <button id="create-room-confirm" class="menu-btn">Odayı Oluştur</button>
+            <button id="cancel-create" class="menu-btn" style="background: #95a5a6; margin-top: 10px;">İptal</button>
+        </div>
     </div>
 
-    <button onclick="togglePiP()" class="absolute bottom-10 bg-white/5 border border-white/10 px-6 py-3 rounded-xl text-xs">
-        🖼️ KÜÇÜK EKRAN REJİMİ
-    </button>
+    <!-- Takım Seçimi -->
+    <div id="team-selection">
+        <div class="team-select">
+            <div class="team-option team-blue" data-team="blue">
+                <h3>Mavi Takım</h3>
+                <p>Oyuncular: <span id="blue-count">0</span>/11</p>
+            </div>
+            <div class="team-option team-red" data-team="red">
+                <h3>Kırmızı Takım</h3>
+                <p>Oyuncular: <span id="red-count">0</span>/11</p>
+            </div>
+        </div>
+    </div>
 
-    <video id="v" autoplay muted playsinline></video>
-    <canvas id="c" width="300" height="300"></canvas>
+    <!-- Oyun Container -->
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+    </div>
 
-    <script>
-        const speedEl = document.getElementById('speed');
-        const gpsStatus = document.getElementById('gps-status');
-        const video = document.getElementById('v');
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('2d');
-        let currentSpeed = 0;
+    <!-- Skor Tablosu -->
+    <div id="score-board">
+        <div class="score">
+            <span id="blue-score" style="color: #3498db;">0</span>
+            <span>VS</span>
+            <span id="red-score" style="color: #e74c3c;">0</span>
+        </div>
+    </div>
 
-        async function activateSystem() {
-            document.getElementById('setup-screen').style.display = 'none';
-            
-            // 1. GPS Başlat
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(pos => {
-                    const s = pos.coords.speed;
-                    currentSpeed = s && s > 0 ? Math.round(s * 3.6) : 0;
-                    speedEl.innerText = currentSpeed;
-                    gpsStatus.innerText = "AKTİV";
-                    gpsStatus.className = "text-green-500";
-                    updateCanvas();
-                }, (err) => {
-                    alert("GPS Xətası: Ayarlardan brauzerə yerləşmə icazəsi verin.");
-                }, { enableHighAccuracy: true });
-            }
+    <!-- Mobil Kontroller -->
+    <div id="mobile-controls">
+        <div class="joystick-container">
+            <div class="joystick-base">
+                <div class="joystick-handle" id="joystick-handle"></div>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="action-btn" id="jump-btn">
+                <span>ZIPLA</span>
+            </button>
+            <button class="action-btn" id="shoot-btn">
+                <span>ŞUT</span>
+            </button>
+            <button class="action-btn" id="pass-btn">
+                <span>PAS</span>
+            </button>
+        </div>
+    </div>
 
-            // 2. Wake Lock (Ekran sönməsin)
-            if ('wakeLock' in navigator) {
-                try { await navigator.wakeLock.request('screen'); } catch (e) {}
-            }
-        }
-
-        // PiP üçün Canvas-a Sürəti Yaz
-        function updateCanvas() {
-            ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, 300, 300);
-            ctx.fillStyle = "#3b82f6";
-            ctx.font = "bold 150px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(currentSpeed, 150, 180);
-            ctx.font = "bold 30px Arial";
-            ctx.fillText("KM/H", 150, 240);
-        }
-
-        async function togglePiP() {
-            try {
-                const stream = canvas.captureStream();
-                video.srcObject = stream;
-                await video.play();
-                if (video.requestPictureInPicture) {
-                    await video.requestPictureInPicture();
-                } else {
-                    alert("Brauzeriniz bu funksiyanı dəstəkləmir.");
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        setInterval(updateCanvas, 200);
-    </script>
+    <!-- Three.js Kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.min.js"></script>
+    
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <!-- Ana JavaScript -->
+    <script type="module" src="game.js"></script>
 </body>
 </html>
