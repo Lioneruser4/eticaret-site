@@ -6,136 +6,97 @@
     <title>SpeedHUD Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        
-        body { 
-            background-color: #000; 
-            color: #fff; 
-            font-family: 'Orbitron', sans-serif; 
-            margin: 0; 
-            overflow: hidden; 
-            transition: all 0.3s ease;
-        }
-
-        .speed-value {
-            font-size: 35vw; /* Ekranın eninə görə avtomatik böyüyür */
-            line-height: 0.8;
-            letter-spacing: -5px;
-            filter: drop-shadow(0 0 20px #3b82f6);
-        }
-
-        /* Ekran yan çevrildikdə daha böyük font */
-        @media (orientation: landscape) {
-            .speed-value { font-size: 45vh; }
-        }
-
-        /* Güzgü rejimi (Şüşəyə əks etdirmək üçün) */
-        .mirror-mode {
-            transform: scaleX(-1);
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
+        body { background: #000; color: #fff; font-family: 'Orbitron', sans-serif; margin: 0; overflow: hidden; }
+        .speed-text { font-size: 35vw; line-height: 1; filter: drop-shadow(0 0 15px #3b82f6); }
+        @media (orientation: landscape) { .speed-text { font-size: 50vh; } }
+        canvas { display: none; }
+        video { width: 1px; height: 1px; opacity: 0; position: absolute; }
     </style>
 </head>
 <body class="h-screen flex flex-col items-center justify-center">
 
-    <div class="absolute top-4 left-0 right-0 px-6 flex justify-between items-center opacity-40 hover:opacity-100 transition">
-        <div class="text-xs tracking-widest">
-            <span id="dot" class="status-dot bg-red-600"></span>
-            <span id="gps-status">GPS GÖZLƏNİLİR</span>
-        </div>
-        <button onclick="toggleMirror()" class="bg-white/10 px-4 py-2 rounded-lg text-[10px] border border-white/20">GÜZGÜ REJİMİ</button>
+    <div id="setup-screen" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-10 text-center">
+        <h1 class="text-xl mb-6 text-blue-500 tracking-widest">SİSTEMİ BAŞLAT</h1>
+        <button onclick="activateSystem()" class="bg-blue-600 px-12 py-5 rounded-2xl font-bold text-xl shadow-[0_0_30px_rgba(59,130,246,0.5)]">GPS VƏ EKRANI AKTİV ET</button>
+        <p class="text-gray-500 mt-6 text-xs uppercase italic">Diqqət: GPS icazəsi çıxdıqda "İcazə ver" seçin.</p>
     </div>
 
-    <div id="display-container" class="flex flex-col items-center justify-center select-none">
-        <div id="speed" class="speed-value font-black italic">0</div>
-        <div class="text-blue-500 text-2xl md:text-4xl font-bold tracking-[1rem] mt-4 uppercase">km/h</div>
+    <div class="absolute top-5 left-5 text-[10px] tracking-widest opacity-50">
+        GPS: <span id="gps-status" class="text-red-500">KƏSİLDİ</span>
     </div>
 
-    <div class="absolute bottom-6 opacity-30">
-        <span class="text-xs uppercase">Max Speed:</span>
-        <span id="max-speed" class="text-lg font-bold">0</span>
+    <div class="flex flex-col items-center">
+        <div id="speed" class="speed-text italic">0</div>
+        <div class="text-blue-500 text-xl font-bold tracking-[1rem] uppercase">km/h</div>
     </div>
+
+    <button onclick="togglePiP()" class="absolute bottom-10 bg-white/5 border border-white/10 px-6 py-3 rounded-xl text-xs">
+        🖼️ KÜÇÜK EKRAN REJİMİ
+    </button>
+
+    <video id="v" autoplay muted playsinline></video>
+    <canvas id="c" width="300" height="300"></canvas>
 
     <script>
         const speedEl = document.getElementById('speed');
-        const maxSpeedEl = document.getElementById('max-speed');
-        const statusText = document.getElementById('gps-status');
-        const dot = document.getElementById('dot');
-        const container = document.getElementById('display-container');
+        const gpsStatus = document.getElementById('gps-status');
+        const video = document.getElementById('v');
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let currentSpeed = 0;
 
-        let maxSpeed = 0;
-
-        // GPS İzləmə funksiyası
-        function initGPS() {
-            if ("geolocation" in navigator) {
+        async function activateSystem() {
+            document.getElementById('setup-screen').style.display = 'none';
+            
+            // 1. GPS Başlat
+            if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(pos => {
-                    // Sürəti anlıq m/s-dən km/h-a çeviririk
-                    const rawSpeed = pos.coords.speed;
-                    const kmh = rawSpeed && rawSpeed > 0.5 ? Math.round(rawSpeed * 3.6) : 0;
-                    
-                    // Ekranı yenilə
-                    speedEl.innerText = kmh;
-                    
-                    // Maksimum sürət rekordu
-                    if (kmh > maxSpeed) {
-                        maxSpeed = kmh;
-                        maxSpeedEl.innerText = maxSpeed;
-                    }
+                    const s = pos.coords.speed;
+                    currentSpeed = s && s > 0 ? Math.round(s * 3.6) : 0;
+                    speedEl.innerText = currentSpeed;
+                    gpsStatus.innerText = "AKTİV";
+                    gpsStatus.className = "text-green-500";
+                    updateCanvas();
+                }, (err) => {
+                    alert("GPS Xətası: Ayarlardan brauzerə yerləşmə icazəsi verin.");
+                }, { enableHighAccuracy: true });
+            }
 
-                    // Statusu yenilə
-                    statusText.innerText = "SİSTEM AKTİV";
-                    dot.classList.replace('bg-red-600', 'bg-green-500');
-                    dot.classList.add('animate-pulse');
-
-                }, err => {
-                    statusText.innerText = "GPS XƏTASI";
-                    console.error(err);
-                }, {
-                    enableHighAccuracy: true, // Ən yüksək dəqiqlik (Avtomobil üçün vacibdir)
-                    maximumAge: 0,            // Keşlənmiş məlumat istifadə etmə
-                    timeout: 5000
-                });
-            } else {
-                statusText.innerText = "GPS DƏSTƏKLƏNMİR";
+            // 2. Wake Lock (Ekran sönməsin)
+            if ('wakeLock' in navigator) {
+                try { await navigator.wakeLock.request('screen'); } catch (e) {}
             }
         }
 
-        // Güzgü rejimi funksiyası (Landscape halında şüşəyə qoymaq üçün)
-        function toggleMirror() {
-            container.classList.toggle('mirror-mode');
+        // PiP üçün Canvas-a Sürəti Yaz
+        function updateCanvas() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, 300, 300);
+            ctx.fillStyle = "#3b82f6";
+            ctx.font = "bold 150px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(currentSpeed, 150, 180);
+            ctx.font = "bold 30px Arial";
+            ctx.fillText("KM/H", 150, 240);
         }
 
-        // Ekranın sönməsini əngəlləmək (Wake Lock API)
-        async function requestWakeLock() {
+        async function togglePiP() {
             try {
-                if ('keepAwake' in screen || 'wakeLock' in navigator) {
-                    await navigator.wakeLock.request('screen');
+                const stream = canvas.captureStream();
+                video.srcObject = stream;
+                await video.play();
+                if (video.requestPictureInPicture) {
+                    await video.requestPictureInPicture();
+                } else {
+                    alert("Brauzeriniz bu funksiyanı dəstəkləmir.");
                 }
-            } catch (err) {
-                console.log("Wake Lock aktivləşdirilə bilmədi.");
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        // Başlat
-        window.onload = () => {
-            initGPS();
-            requestWakeLock();
-        };
-
-        // İstifadədən asılı olaraq ekranın həmişə açıq qalması üçün klikləmə lazımdır
-        document.body.addEventListener('click', () => {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            }
-            requestWakeLock();
-        });
+        setInterval(updateCanvas, 200);
     </script>
 </body>
 </html>
