@@ -2,57 +2,96 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinyal Master Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ProNav - Waze Style</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
-        .box { border: 2px solid #00ff00; border-radius: 15px; padding: 20px; box-shadow: 0 0 20px #00ff00; }
-        input { background: #111; border: 1px solid #00ff00; color: #00ff00; width: 90%; padding: 12px; margin: 15px 0; border-radius: 5px; }
-        .btn { background: #00ff00; color: #000; border: none; padding: 15px 30px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
-        .pulse { animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 5px #00ff00; } 50% { box-shadow: 0 0 25px #00ff00; } 100% { box-shadow: 0 0 5px #00ff00; } }
-        #status { margin-top: 20px; font-size: 14px; color: #aaa; }
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body>
+<body class="bg-gray-100">
 
-    <div class="box pulse">
-        <h2>MOBILE SIGNAL GEN</h2>
-        <p>Görünecek İsim (BT/AirDrop):</p>
-        <input type="text" id="targetName" placeholder="Örn: Apple Cihazı Bulundu">
-        
-        <button class="btn" onclick="startSpam()">SİNYAL YAYININI BAŞLAT</button>
-        
-        <div id="status">Durum: Bekleniyor...</div>
+    <div class="absolute top-4 left-0 right-0 z-10 px-4">
+        <div class="glass flex items-center p-3 rounded-2xl shadow-2xl max-w-lg mx-auto border border-white">
+            <input id="search-input" type="text" placeholder="Nereye gitmek istersin?" class="bg-transparent flex-1 outline-none text-gray-800 font-medium">
+            <button class="bg-blue-600 text-white p-2 rounded-xl px-4 ml-2 hover:bg-blue-700 transition">Git</button>
+        </div>
     </div>
 
+    <div class="absolute bottom-10 left-4 z-10 space-y-3">
+        <div class="glass p-4 rounded-3xl shadow-xl border-2 border-blue-500 w-24 h-24 flex flex-col items-center justify-center">
+            <span id="speed" class="text-3xl font-bold text-gray-800">0</span>
+            <span class="text-xs font-bold text-gray-500 uppercase">km/h</span>
+        </div>
+        
+        <div id="alert-box" class="hidden glass p-4 rounded-2xl shadow-xl border-l-8 border-red-500 w-64 animate-bounce">
+            <p class="font-bold text-red-600">⚠️ RADAR UYARISI!</p>
+            <p class="text-sm text-gray-600">500 metre ileride kontrol var.</p>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
     <script>
-        async function startSpam() {
-            const name = document.getElementById('targetName').value;
-            const status = document.getElementById('status');
+        // BURAYA KENDİ MAPBOX TOKEN'INI YAPIŞTIRMALISIN
+        mapboxgl.accessToken = 'BURAYA_TOKEN_GELECEK';
 
-            if (!name) {
-                alert("Lütfen bir isim girin!");
-                return;
-            }
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/navigation-night-v1', // Waze gece modu tarzı
+            center: [28.9784, 41.0082],
+            zoom: 15,
+            pitch: 60 // 3D görünüm
+        });
 
-            status.innerText = "Sinyal hazırlanıyor...";
-
-            try {
-                // Web Bluetooth API ile tarama başlatarak cihazı 'görünür' ve 'meşgul' moduna sokar
-                status.innerText = "YAYINLANIYOR: " + name + "\n(Tarayıcı Bluetooth kanalını meşgul ediyor...)";
-                
-                // Bu komut telefonun Bluetooth arayüzünü açar ve çevreye sinyal yayar
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true
-                });
-
-                status.innerText = "Bağlantı isteği gönderildi: " + device.name;
-            } catch (err) {
-                status.innerText = "Hata: Bluetooth izni verilmedi veya cihaz desteklemiyor.";
-                console.log(err);
-            }
+        // Sesli Bildirim Fonksiyonu
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'tr-TR';
+            window.speechSynthesis.speak(msg);
         }
+
+        // Örnek Radar Verisi (Enlem, Boylam)
+        const radars = [
+            { id: 1, lng: 28.9800, lat: 41.0100, type: 'Radar' }
+        ];
+
+        // Mesafe Hesaplama (Haversine Formülü)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Dünya yarıçapı (km)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1000; // Metre cinsinden
+        }
+
+        // Kullanıcı Konum Takibi
+        navigator.geolocation.watchPosition((pos) => {
+            const { latitude, longitude, speed } = pos.coords;
+            const userPos = [longitude, latitude];
+            
+            map.setCenter(userPos);
+            document.getElementById('speed').innerText = Math.round(speed * 3.6 || 0);
+
+            // 500 Metre Kontrolü
+            radars.forEach(radar => {
+                const dist = getDistance(latitude, longitude, radar.lat, radar.lng);
+                if (dist < 500 && dist > 450) { // Sadece bir kez uyarması için aralık
+                    document.getElementById('alert-box').classList.remove('hidden');
+                    speak("Dikkat, 500 metre ileride radar kontrolü var.");
+                }
+            });
+        });
+
+        map.addControl(new mapboxgl.NavigationControl());
     </script>
 </body>
 </html>
