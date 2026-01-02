@@ -2,192 +2,191 @@
 <html lang="az">
 <head>
 <meta charset="UTF-8">
-<title>Mələk</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mələk Chat</title>
 <style>
-*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto}
-body{
-  margin:0;
-  background:#0e1621;
-  color:#fff;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-}
-header{
-  background:#17212b;
-  padding:14px;
-  font-weight:600;
-  font-size:17px;
-}
-#chat{
-  flex:1;
-  overflow-y:auto;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-}
-.msg{
-  max-width:76%;
-  padding:10px 14px;
-  border-radius:18px;
-  margin-bottom:8px;
-  line-height:1.35;
-  font-size:15px;
-}
-.in{background:#1f2c3a;align-self:flex-start}
-.out{background:#4da3ff;color:#000;align-self:flex-end}
-
-#typing{
-  display:none;
-  text-align:center;
-  font-size:18px;
-  color:#00eaff;
-  opacity:.8;
-  margin:6px 0;
-}
-
-footer{
-  background:#17212b;
-  padding:10px;
-  display:flex;
-  gap:8px;
-}
-input{
-  flex:1;
-  padding:12px 14px;
-  border:none;
-  border-radius:20px;
-  font-size:15px;
-  outline:none;
-}
-button{
-  background:#4da3ff;
-  border:none;
-  padding:0 18px;
-  border-radius:50%;
-  font-size:16px;
-  cursor:pointer;
-}
+  body {
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0e1621;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+  .message {
+    max-width: 80%;
+    margin: 5px 0;
+    padding: 10px 15px;
+    border-radius: 20px;
+    word-wrap: break-word;
+  }
+  .user { background: #70a1ff; align-self: flex-end; color: #000; }
+  .ai { background: #1a2b4c; align-self: flex-start; }
+  #inputArea {
+    display: flex;
+    padding: 10px;
+    background: #121c2d;
+  }
+  #inputArea input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+  }
+  #inputArea button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    border-radius: 20px;
+    border: none;
+    background: #70a1ff;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #typing {
+    font-size: 18px;
+    color: #0ff;
+    font-weight: bold;
+    padding-left: 10px;
+    display: none;
+  }
+  /* Voice lobby icon */
+  #voiceBtn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #0ff;
+    border-radius: 50%;
+    padding: 12px;
+    cursor: pointer;
+    z-index: 1000;
+  }
+  /* Voice lobby fullscreen */
+  #voiceLobby {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: #0e1621;
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  #voiceLobby h2 {
+    color: #0ff;
+    margin-bottom: 20px;
+  }
+  #closeVoice {
+    background: red;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 15px;
+    cursor: pointer;
+  }
 </style>
 </head>
-
 <body>
 
-<header id="title">Mələk</header>
-
 <div id="chat"></div>
-<div id="typing">yazır…</div>
 
-<footer>
-  <input id="input" placeholder="Mesaj yaz…" autocomplete="off">
-  <button onclick="send()">➤</button>
-</footer>
+<div id="typing">Yazır...</div>
+
+<div id="inputArea">
+  <input id="userInput" placeholder="Mesaj yaz..." />
+  <button id="sendBtn">Göndər</button>
+</div>
+
+<div id="voiceBtn">📞</div>
+
+<div id="voiceLobby">
+  <h2>Voice Lobby</h2>
+  <p>Anlıq səsli danışıq burada olacaq...</p>
+  <button id="closeVoice">Bağla</button>
+</div>
 
 <script>
-/* ===== Telegram fullscreen ===== */
+const chat = document.getElementById('chat');
+const input = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const typing = document.getElementById('typing');
+const voiceBtn = document.getElementById('voiceBtn');
+const voiceLobby = document.getElementById('voiceLobby');
+const closeVoice = document.getElementById('closeVoice');
+
+// İstifadəçi adını Telegram WebView-dən almaq üçün simulasiya
+let telegramUser = localStorage.getItem('telegramUser') || 'Xaliq';
+localStorage.setItem('telegramUser', telegramUser);
+
+function addMessage(text, cls){
+  const msg = document.createElement('div');
+  msg.className = 'message ' + cls;
+  msg.textContent = text;
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// AI cavabını API-dən götürmə simulasiya
+async function getAIResponse(userMsg){
+  typing.style.display = 'block';
+  
+  // API çağırışı simulyasiyası
+  await new Promise(r => setTimeout(r, 1000)); // 1s gecikmə
+  typing.style.display = 'none';
+  
+  // AI cavabı, filtrli / dostca
+  let response = '';
+  if(userMsg.toLowerCase().includes('sahibin kimdir')){
+    response = `Məni kodlayan və sahibim Xaliq Mustafayevdir. Telegram və Instagram: @xaliqmustafayev`;
+  } else {
+    response = `Salam ${telegramUser}! Mən Mələk, dostca AI-san. Necə kömək edə bilərəm?`;
+  }
+  
+  return response;
+}
+
+// Göndər düyməsi
+sendBtn.addEventListener('click', async () => {
+  const msg = input.value.trim();
+  if(!msg) return;
+  
+  addMessage(msg, 'user');
+  input.value = '';
+  
+  const aiResp = await getAIResponse(msg);
+  addMessage(aiResp, 'ai');
+});
+
+// Enter ilə göndər
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') sendBtn.click();
+});
+
+// Voice lobby aç
+voiceBtn.addEventListener('click', ()=>{
+  voiceLobby.style.display = 'flex';
+});
+
+// Voice lobby bağla
+closeVoice.addEventListener('click', ()=>{
+  voiceLobby.style.display = 'none';
+});
+
+// Telegram WebView tam ekran üçün mobil uyğun
 if(window.Telegram?.WebApp){
-  Telegram.WebApp.ready();
   Telegram.WebApp.expand();
 }
-
-/* ===== User ===== */
-const tgUser = Telegram?.WebApp?.initDataUnsafe?.user;
-const userName = tgUser?.first_name || "Dost";
-
-/* ===== Elements ===== */
-const chat=document.getElementById("chat");
-const input=document.getElementById("input");
-const typing=document.getElementById("typing");
-document.getElementById("title").innerText="Mələk • "+userName;
-
-/* ===== Storage ===== */
-let history = JSON.parse(localStorage.getItem("chatHistory")||"[]");
-
-function save(){localStorage.setItem("chatHistory",JSON.stringify(history));}
-
-/* ===== UI ===== */
-function add(text,type,saveIt=true){
-  const d=document.createElement("div");
-  d.className="msg "+type;
-  d.innerText=text;
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-  if(saveIt){
-    history.push({role:type,text});
-    save();
-  }
-}
-
-/* ===== Load history ===== */
-history.forEach(m=>add(m.text,m.role,false));
-
-/* ===== Greeting once ===== */
-if(!localStorage.getItem("greeted")){
-  add(`Salam ${userName}. Buradayam.`,"in");
-  localStorage.setItem("greeted","1");
-}
-
-/* ===== Queue ===== */
-let queue=[],busy=false;
-
-function send(){
-  const t=input.value.trim();
-  if(!t) return;
-  input.value="";
-  add(t,"out");
-  queue.push(t);
-  process();
-}
-
-async function process(){
-  if(busy||!queue.length) return;
-  busy=true;
-  typing.style.display="block";
-
-  const msg=queue.shift();
-  const reply=await askAI(msg);
-
-  typing.style.display="none";
-  add(reply,"in");
-  busy=false;
-  setTimeout(process,250);
-}
-
-/* ===== AI ===== */
-async function askAI(text){
-  const last = history.slice(-6).map(m=>
-    (m.role==="out"?"İstifadəçi: ":"Mələk: ")+m.text
-  ).join("\n");
-
-  const prompt = `
-Sən Mələk-sən.
-Dost kimi danış.
-Qısa və normal cavab ver.
-Özünü təqdim etmə.
-Sahibindən danışma, ancaq soruşulsa de:
-"Sahibim və məni kodlayan Xaliq Mustafayevdir. Telegram/Instagram: @xaliqmustafayev"
-
-SÖHBƏT:
-${last}
-
-İstifadəçi: ${text}
-`;
-
-  try{
-    const r=await fetch("https://text.pollinations.ai/"+encodeURIComponent(prompt),{cache:"no-store"});
-    if(!r.ok) throw 1;
-    return await r.text();
-  }catch{
-    return "Buradayam.";
-  }
-}
-
-input.addEventListener("keydown",e=>{
-  if(e.key==="Enter") send();
-});
 </script>
 
 </body>
