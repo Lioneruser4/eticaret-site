@@ -19,7 +19,6 @@
             --bg: #0b0f19;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --neon-glow: 0 0 15px var(--primary), 0 0 30px rgba(0, 242, 254, 0.3);
         }
 
         * {
@@ -40,13 +39,11 @@
             position: relative;
         }
 
-        /* Lobby UI Background */
         .bg-glow {
             position: absolute;
             width: 100%;
             height: 100%;
-            background:
-                radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.1) 0%, transparent 50%),
+            background: radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%);
             z-index: 0;
             animation: pulseBg 10s infinite alternate;
@@ -68,7 +65,6 @@
             z-index: 1;
         }
 
-        /* UI Overlays */
         #ui-overlay {
             position: fixed;
             top: 0;
@@ -76,7 +72,7 @@
             width: 100%;
             height: 100%;
             z-index: 100;
-            background: rgba(3, 7, 18, 0.9);
+            background: rgba(3, 7, 18, 0.95);
             backdrop-filter: blur(30px);
             display: flex;
             flex-direction: column;
@@ -88,20 +84,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
-            animation: slideDown 0.6s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            margin-bottom: 30px;
         }
 
         .profile-card {
@@ -129,9 +112,10 @@
         }
 
         .profile-info p {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--primary);
             font-weight: 800;
+            text-transform: uppercase;
         }
 
         .main-menu {
@@ -139,69 +123,41 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 25px;
+            gap: 20px;
             max-width: 400px;
             margin: 0 auto;
             width: 100%;
         }
 
         .brand-title {
-            font-size: 52px;
+            font-size: 48px;
             font-weight: 900;
             text-align: center;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
             background: linear-gradient(to bottom, #fff, #94a3b8);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 20px;
-            animation: titleGlow 2s infinite alternate;
-        }
-
-        @keyframes titleGlow {
-            from {
-                filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
-            }
-
-            to {
-                filter: drop-shadow(0 0 15px var(--primary));
-            }
         }
 
         .btn {
             background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
             border: none;
-            padding: 22px;
-            border-radius: 30px;
+            padding: 20px;
+            border-radius: 25px;
             color: white;
             font-size: 18px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             box-shadow: 0 15px 35px rgba(0, 242, 254, 0.3);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: 0.5s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
+            gap: 12px;
         }
 
         .btn:active {
@@ -217,8 +173,8 @@
 
         .leaderboard {
             background: var(--glass);
-            border-radius: 40px;
-            padding: 25px;
+            border-radius: 30px;
+            padding: 20px;
             margin-top: 30px;
             max-height: 250px;
             overflow-y: auto;
@@ -230,40 +186,17 @@
             font-size: 14px;
             color: var(--primary);
             text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 20px;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
         }
 
         .rank-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 15px;
+            padding: 10px 15px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* In-Game HUD */
-        #game-hud {
-            position: fixed;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            z-index: 50;
-            pointer-events: none;
-        }
-
-        .score-box {
-            display: flex;
-            gap: 40px;
-            font-size: 48px;
-            font-weight: 900;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 50px;
-            border-radius: 100px;
-            border: 2px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            font-size: 14px;
         }
 
         #matching-screen {
@@ -282,13 +215,12 @@
         }
 
         .loader {
-            width: 100px;
-            height: 100px;
-            border: 5px solid var(--glass);
-            border-top: 5px solid var(--primary);
+            width: 80px;
+            height: 80px;
+            border: 4px solid var(--glass);
+            border-top: 4px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s infinite linear;
-            box-shadow: 0 0 20px var(--primary);
         }
 
         @keyframes spin {
@@ -307,10 +239,10 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: #0b1120;
-            padding: 40px;
-            border-radius: 40px;
+            padding: 30px;
+            border-radius: 35px;
             width: 90%;
-            max-width: 400px;
+            max-width: 380px;
             border: 1px solid var(--primary);
             box-shadow: 0 0 100px rgba(0, 242, 254, 0.2);
             z-index: 300;
@@ -321,13 +253,35 @@
             width: 100%;
             background: #000;
             border: 1px solid var(--glass-border);
-            padding: 20px;
-            border-radius: 20px;
+            padding: 18px;
+            border-radius: 15px;
             color: #fff;
-            font-size: 24px;
+            font-size: 20px;
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             outline: none;
+        }
+
+        #game-hud {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .score-box {
+            display: flex;
+            gap: 30px;
+            font-size: 40px;
+            font-weight: 900;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 40px;
+            border-radius: 80px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
         }
     </style>
 </head>
@@ -341,25 +295,19 @@
             <div class="profile-card">
                 <img src="https://via.placeholder.com/48" class="profile-img" id="user-photo">
                 <div class="profile-info">
-                    <h3 id="user-name">Yukleniyor...</h3>
-                    <p id="user-elo">ELO: 1000</p>
+                    <h3 id="user-name">Giris Yapiliyor...</h3>
+                    <p id="user-stats">GALIBIYET: 0</p>
                 </div>
             </div>
-            <div style="font-size: 24px;">⚙️</div>
+            <div style="font-size: 20px; opacity:0.5;">V1.0.0</div>
         </div>
 
         <div class="main-menu">
             <h1 class="brand-title">HOCKEY PRO</h1>
-
-            <button class="btn" onclick="joinMatchmaking()">
-                <span>⚡</span> RASTGELE MAC
-            </button>
-            <button class="btn btn-secondary" onclick="showRoomOptions()">
-                <span>🏠</span> OZEL ODA
-            </button>
-
+            <button class="btn" onclick="joinMatchmaking()"><span>⚡</span> RASTGELE MAC</button>
+            <button class="btn btn-secondary" onclick="showRoomOptions()"><span>🏠</span> OZEL ODA</button>
             <div class="leaderboard">
-                <h2>TOP PLAYERS</h2>
+                <h2>🏆 EN IYILER</h2>
                 <div id="leaderboard-list"></div>
             </div>
         </div>
@@ -367,29 +315,32 @@
 
     <div id="matching-screen">
         <div class="loader"></div>
-        <h2 style="letter-spacing: 5px; color: var(--primary);">ARANIYOR...</h2>
-        <button class="btn btn-secondary" onclick="cancelMatchmaking()">VAZGEC</button>
+        <h2 style="letter-spacing: 3px; color: var(--primary);">OYUNCU ARANIYOR...</h2>
+        <button class="btn btn-secondary" onclick="cancelMatchmaking()">IPTAL</button>
     </div>
 
     <div id="room-modal">
-        <h2 style="text-align: center; margin-bottom: 30px;">OZEL ODA</h2>
-        <div id="room-code-display" style="display: none; margin-bottom: 20px;">
-            <p style="text-align: center; color: var(--primary); font-size: 32px; font-weight: 900;"
+        <h2 style="text-align: center; margin-bottom: 20px;">OZEL ODA</h2>
+        <div id="room-code-display"
+            style="display: none; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+            <p style="text-align: center; color: var(--primary); font-size: 28px; font-weight: 900;"
                 id="room-code-text"></p>
+            <p style="text-align: center; font-size: 10px; opacity:0.5;">ARKADASINLA BU KODU PAYLAS</p>
         </div>
-        <input type="text" id="join-room-id" placeholder="KODU GIR">
-        <div style="display: flex; gap: 15px;">
-            <button class="btn btn-secondary" style="flex: 1;" onclick="createRoom()">ODA KUR</button>
-            <button class="btn" style="flex: 1;" onclick="joinPrivateRoom()">KATIL</button>
+        <input type="text" id="join-room-id" placeholder="ODA KODU">
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex: 1; font-size: 14px;" onclick="createRoom()">ODA KUR</button>
+            <button class="btn" style="flex: 1; font-size: 14px;" onclick="joinPrivateRoom()">KATIL</button>
         </div>
-        <button class="btn btn-secondary" style="margin-top: 20px; width: 100%; border: none;"
+        <button class="btn btn-secondary"
+            style="margin-top: 15px; width: 100%; border: none; background:none; font-size: 14px;"
             onclick="closeRoomModal()">Kapat</button>
     </div>
 
     <div id="game-hud">
         <div class="score-box">
             <span id="score-opponent" style="color: var(--accent)">0</span>
-            <span style="opacity: 0.3">:</span>
+            <span style="opacity: 0.3">|</span>
             <span id="score-player" style="color: var(--primary)">0</span>
         </div>
     </div>
@@ -399,7 +350,8 @@
         tg.expand();
         tg.ready();
 
-        const socket = io('https://saskioyunu.onrender.com');
+        // Connect to Server
+        const socket = io('https://saskioyunu.onrender.com', { transports: ['websocket', 'polling'] });
         let myData = null;
         let currentGame = null;
         let playerSide = 'bottom';
@@ -412,29 +364,36 @@
         };
 
         socket.on('connect', () => {
-            const user = tg.initDataUnsafe.user || { id: "guest_" + Math.random(), first_name: "Misafir" };
+            console.log("Sunucuya baglanildi");
+            const user = tg.initDataUnsafe.user || {
+                id: "test_" + Math.random().toString(36).substr(2, 5),
+                first_name: "Misafir_" + Math.floor(Math.random() * 100)
+            };
             socket.emit('auth', user);
         });
 
         socket.on('auth_success', (user) => {
+            console.log("Giris basarili:", user);
             myData = user;
-            document.getElementById('user-name').innerText = user.username;
-            document.getElementById('user-elo').innerText = `ELO: ${user.elo}`;
+            document.getElementById('user-name').innerText = user.username || user.first_name || 'Misafir';
+            document.getElementById('user-stats').innerText = `GALIBIYET: ${user.wins || 0}`;
             if (user.photoUrl) document.getElementById('user-photo').src = user.photoUrl;
             socket.emit('get_leaderboard');
         });
 
         socket.on('leaderboard_data', (data) => {
             const list = document.getElementById('leaderboard-list');
+            if (!data || data.length === 0) { list.innerHTML = '<p style="text-align:center; opacity:0.3;">Oyuncu yok</p>'; return; }
             list.innerHTML = data.map((u, i) => `
                 <div class="rank-item">
                     <span>#${i + 1} ${u.username}</span>
-                    <span style="color: var(--primary); font-weight: 800;">${u.elo}</span>
+                    <span style="color: var(--primary); font-weight: 800;">${u.wins} Galibiyet</span>
                 </div>
             `).join('');
         });
 
         socket.on('match_found', (data) => {
+            console.log("Mac basliyor:", data);
             document.getElementById('matching-screen').style.display = 'none';
             document.getElementById('ui-overlay').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
@@ -445,27 +404,21 @@
 
         socket.on('opponent_paddle', (data) => currentGame?.updateOpponent(data));
         socket.on('puck_sync', (data) => currentGame?.syncPuck(data));
-
         socket.on('update_scores', (scores) => {
             document.getElementById('score-player').innerText = playerSide === 'bottom' ? scores.bottom : scores.top;
             document.getElementById('score-opponent').innerText = playerSide === 'bottom' ? scores.top : scores.bottom;
             sounds.goal.play();
-            currentGame?.scene?.cameras.main.shake(200, 0.01);
         });
 
         socket.on('opponent_left', () => {
-            tg.showAlert('Rakip oyundan kaçtı! Sen kazandın.');
+            tg.showAlert('Rakip ayrildi! Kazandin.');
             location.reload();
         });
 
         socket.on('game_over', (data) => {
             const win = data.winner === playerSide;
             if (win) sounds.win.play();
-            tg.showPopup({
-                title: win ? 'ZAFER!' : 'MAĞLUBİYET',
-                message: win ? 'Harika bir maç çıkardın!' : 'Daha iyi olmalısın.',
-                buttons: [{ type: 'default', text: 'Lobiye Dön' }]
-            }, () => location.reload());
+            tg.showPopup({ title: win ? 'TEBRIKLER' : 'KAYBETTIN', message: 'Lobiye donuluyor...', buttons: [{ type: 'default', text: 'Tamam' }] }, () => location.reload());
         });
 
         socket.on('private_room_created', (code) => {
@@ -473,106 +426,63 @@
             document.getElementById('room-code-text').innerText = code;
         });
 
+        socket.on('error_message', (msg) => { tg.showAlert(msg); });
+
         function joinMatchmaking() {
             document.getElementById('matching-screen').style.display = 'flex';
             socket.emit('join_matchmaking');
         }
-
         function cancelMatchmaking() { location.reload(); }
         function showRoomOptions() { document.getElementById('room-modal').style.display = 'block'; }
         function closeRoomModal() { document.getElementById('room-modal').style.display = 'none'; }
         function createRoom() { socket.emit('create_private_room'); }
         function joinPrivateRoom() {
-            const code = document.getElementById('join-room-id').value.toUpperCase();
+            const code = document.getElementById('join-room-id').value.toUpperCase().trim();
             if (code) socket.emit('join_private_room', code);
         }
 
-        // --- Phaser Game Engine ---
+        // --- Game Engine ---
         function startGame() {
             const config = {
-                type: Phaser.AUTO,
-                parent: 'game-container',
-                width: window.innerWidth,
-                height: window.innerHeight,
-                backgroundColor: '#0b0f19',
-                physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+                type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
+                backgroundColor: '#0b0f19', physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
                 scene: { preload: preload, create: create, update: update }
             };
-
             const game = new Phaser.Game(config);
 
             function preload() {
-                // Glow Sprites
                 drawCircle(this, 's_me', 40, '#00f2fe');
                 drawCircle(this, 's_op', 40, '#f093fb');
-                drawCircle(this, 'puck_tex', 20, '#ffffff');
-                this.load.image('particle', 'https://labs.phaser.io/assets/particles/white-flare.png');
+                drawCircle(this, 'puck', 20, '#ffffff');
             }
 
             function drawCircle(scene, key, radius, color) {
                 const g = scene.make.graphics({ x: 0, y: 0, add: false });
-                const c = Phaser.Display.Color.HexStringToColor(color).color;
-                g.fillStyle(c, 1);
-                g.fillCircle(radius + 10, radius + 10, radius);
-                g.lineStyle(2, 0xffffff, 0.5);
-                g.strokeCircle(radius + 10, radius + 10, radius);
-                g.generateTexture(key, (radius + 10) * 2, (radius + 10) * 2);
+                g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
+                g.fillCircle(radius, radius, radius);
+                g.lineStyle(2, 0xffffff, 0.5); g.strokeCircle(radius, radius, radius);
+                g.generateTexture(key, radius * 2, radius * 2);
             }
 
             function create() {
-                const scene = this;
-                currentGame = { scene };
-
-                // Rink Graphics
-                const rink = scene.add.graphics();
-                rink.lineStyle(4, 0x1e293b, 1);
-                rink.strokeRect(10, 10, config.width - 20, config.height - 20);
-                rink.lineStyle(2, 0x1e293b, 0.5);
-                rink.strokeCircle(config.width / 2, config.height / 2, 100);
-                rink.moveTo(10, config.height / 2); rink.lineTo(config.width - 10, config.height / 2);
-                rink.strokePath();
-
-                // Particle for impacts
-                const emitter = scene.add.particles(0, 0, 'particle', {
-                    speed: 200, scale: { start: 0.1, end: 0 },
-                    blendMode: 'ADD', lifespan: 300, emitting: false
-                });
-
-                // Sprites
-                const puck = scene.physics.add.sprite(config.width / 2, config.height / 2, 'puck_tex');
-                puck.setCircle(20, 10, 10).setBounce(1).setCollideWorldBounds(true).setDamping(true).setDrag(0.99);
+                const scene = this; currentGame = { scene };
+                const puck = scene.physics.add.sprite(config.width / 2, config.height / 2, 'puck').setCircle(20).setBounce(1).setCollideWorldBounds(true).setDamping(true).setDrag(0.99);
                 currentGame.puck = puck;
-
-                const paddle = scene.physics.add.sprite(config.width / 2, config.height * 0.8, 's_me');
-                paddle.setCircle(40, 10, 10).setCollideWorldBounds(true).setImmovable(true);
+                const paddle = scene.physics.add.sprite(config.width / 2, config.height * 0.8, 's_me').setCircle(40).setCollideWorldBounds(true).setImmovable(true);
                 currentGame.paddle = paddle;
-
-                const opponent = scene.physics.add.sprite(config.width / 2, config.height * 0.2, 's_op');
-                opponent.setCircle(40, 10, 10).setImmovable(true);
+                const opponent = scene.physics.add.sprite(config.width / 2, config.height * 0.2, 's_op').setCircle(40).setImmovable(true);
                 currentGame.opponent = opponent;
 
-                // Goals
                 const goalW = config.width * 0.45;
-                const topG = scene.add.rectangle(config.width / 2, 10, goalW, 10, 0xf093fb, 0.4);
-                const botG = scene.add.rectangle(config.width / 2, config.height - 10, goalW, 10, 0x00f2fe, 0.4);
-                scene.physics.add.existing(topG, true);
-                scene.physics.add.existing(botG, true);
+                const topG = scene.add.rectangle(config.width / 2, 5, goalW, 10, 0xf093fb, 0.5);
+                const botG = scene.add.rectangle(config.width / 2, config.height - 5, goalW, 10, 0x00f2fe, 0.5);
+                scene.physics.add.existing(topG, true); scene.physics.add.existing(botG, true);
 
-                // Collisions
-                scene.physics.add.collider(puck, paddle, () => {
-                    sounds.hit.play();
-                    emitter.emitParticleAt(puck.x, puck.y, 10);
-                });
+                scene.physics.add.collider(puck, paddle, () => sounds.hit.play());
                 scene.physics.add.collider(puck, opponent);
+                scene.physics.add.overlap(puck, topG, () => { if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'bottom' }); });
+                scene.physics.add.overlap(puck, botG, () => { if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'top' }); });
 
-                scene.physics.add.overlap(puck, topG, () => {
-                    if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'bottom' });
-                });
-                scene.physics.add.overlap(puck, botG, () => {
-                    if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'top' });
-                });
-
-                // Movement (BY TOUCH / PARMAK İLE)
                 scene.input.on('pointermove', (p) => {
                     const minY = playerSide === 'bottom' ? config.height / 2 + 50 : 50;
                     const maxY = playerSide === 'bottom' ? config.height - 50 : config.height / 2 - 50;
@@ -581,29 +491,13 @@
                     socket.emit('update_paddle', { roomId, x: paddle.x / config.width, y: paddle.y / config.height });
                 });
 
-                currentGame.updateOpponent = (d) => {
-                    opponent.x = config.width - (d.x * config.width);
-                    opponent.y = config.height - (d.y * config.height);
-                };
-
-                currentGame.syncPuck = (d) => {
-                    if (playerSide === 'top') {
-                        puck.x = config.width - (d.x * config.width);
-                        puck.y = config.height - (d.y * config.height);
-                        puck.setVelocity(-d.vx * config.width, -d.vy * config.height);
-                    }
-                };
+                currentGame.updateOpponent = (d) => { opponent.x = config.width - (d.x * config.width); opponent.y = config.height - (d.y * config.height); };
+                currentGame.syncPuck = (d) => { if (playerSide === 'top') { puck.x = config.width - (d.x * config.width); puck.y = config.height - (d.y * config.height); puck.setVelocity(-d.vx * config.width, -d.vy * config.height); } };
             }
 
             function update() {
                 if (playerSide === 'bottom' && currentGame.puck) {
-                    socket.emit('update_puck', {
-                        roomId,
-                        x: currentGame.puck.x / config.width,
-                        y: currentGame.puck.y / config.height,
-                        vx: currentGame.puck.body.velocity.x / config.width,
-                        vy: currentGame.puck.body.velocity.y / config.height
-                    });
+                    socket.emit('update_puck', { roomId, x: currentGame.puck.x / config.width, y: currentGame.puck.y / config.height, vx: currentGame.puck.body.velocity.x / config.width, vy: currentGame.puck.body.velocity.y / config.height });
                 }
             }
         }
