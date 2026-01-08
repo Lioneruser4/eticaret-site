@@ -1,183 +1,622 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mələk Chat</title>
-<style>
-/* Bədən və əsas layout */
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0e1621;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pro Hockey 1vs1 Online</title>
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #f093fb;
+            --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
 
-/* Chat container */
-#chat {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-/* Mesaj balonları */
-.message {
-  max-width: 80%;
-  padding: 10px 15px;
-  border-radius: 20px;
-  word-wrap: break-word;
-  line-height: 1.4;
-  font-size: 16px;
-}
-.user {
-  background: #70a1ff;
-  color: #000;
-  align-self: flex-end;
-  border-bottom-right-radius: 0;
-}
-.ai {
-  background: #1a2b4c;
-  align-self: flex-start;
-  border-bottom-left-radius: 0;
-}
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
 
-/* Input area */
-#inputArea {
-  display: flex;
-  padding: 10px;
-  background: #121c2d;
-}
-#inputArea input {
-  flex: 1;
-  padding: 10px 15px;
-  border-radius: 25px;
-  border: none;
-  outline: none;
-  font-size: 16px;
-}
-#inputArea button {
-  margin-left: 10px;
-  padding: 10px 15px;
-  border-radius: 25px;
-  border: none;
-  background: #70a1ff;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-}
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-/* Yazır animasiyası */
-#typing {
-  font-size: 18px;
-  color: #0ff;
-  font-weight: bold;
-  padding-left: 10px;
-  display: none;
-}
+        /* Lobby UI */
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top);
+        }
 
-/* Scrollbar minimal */
-#chat::-webkit-scrollbar {width: 6px;}
-#chat::-webkit-scrollbar-thumb {background: #70a1ff; border-radius: 3px;}
-#chat::-webkit-scrollbar-track {background: transparent;}
-</style>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass);
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            object-fit: cover;
+        }
+
+        .profile-info h3 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .profile-info p {
+            font-size: 12px;
+            color: var(--primary);
+        }
+
+        .main-menu {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            border: none;
+            padding: 18px;
+            border-radius: 20px;
+            color: white;
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            box-shadow: none;
+        }
+
+        .leaderboard {
+            background: var(--glass);
+            border-radius: 25px;
+            padding: 20px;
+            margin-top: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+        }
+
+        .leaderboard h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .rank-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .rank-item:last-child {
+            border: none;
+        }
+
+        /* Game Over / HUD */
+        #game-hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+        }
+
+        .score-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            font-size: 40px;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #matching-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 8px solid var(--glass);
+            border-top: 8px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #room-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 350px;
+            z-index: 300;
+            display: none;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            font-family: inherit;
+        }
+    </style>
 </head>
+
 <body>
 
-<div id="chat"></div>
-<div id="typing">Yazır...</div>
+    <div id="game-container"></div>
 
-<div id="inputArea">
-  <input id="userInput" placeholder="Mesaj yaz..." autocomplete="off" />
-  <button id="sendBtn">Göndər</button>
-</div>
+    <div id="ui-overlay">
+        <div class="header">
+            <div class="profile-card">
+                <img src="https://via.placeholder.com/40" class="profile-img" id="user-photo">
+                <div class="profile-info">
+                    <h3 id="user-name">Yukleniyor...</h3>
+                    <p id="user-elo">ELO: 1000</p>
+                </div>
+            </div>
+            <div class="btn-icon"
+                style="background: var(--glass); padding: 10px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                ⚙️
+            </div>
+        </div>
 
-<script>
-// Elementlər
-const chat = document.getElementById('chat');
-const input = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const typing = document.getElementById('typing');
+        <div class="main-menu">
+            <h1
+                style="font-size: 42px; font-weight: 900; text-align: center; margin-bottom: 20px; background: linear-gradient(to bottom, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                HOCKEY PRO</h1>
 
-// Telegram istifadəçi adı
-let telegramUser = localStorage.getItem('telegramUser') || 'Xaliq';
-localStorage.setItem('telegramUser', telegramUser);
+            <button class="btn" onclick="joinMatchmaking()">
+                <span>⚡</span> RASTGELE MAC
+            </button>
+            <button class="btn btn-secondary" onclick="showRoomOptions()">
+                <span>🏠</span> OZEL ODA
+            </button>
 
-// Mesajları localStorage-də saxla
-let messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-function saveMessages(){
-  localStorage.setItem('chatMessages', JSON.stringify(messages));
-}
+            <div class="leaderboard">
+                <h2>🏆 TOP 10</h2>
+                <div id="leaderboard-list">
+                    <!-- Items injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
 
-// Mesaj əlavə funksiyası
-function addMessage(text, cls, save=true){
-  const msg = document.createElement('div');
-  msg.className = 'message ' + cls;
-  msg.textContent = text;
-  chat.appendChild(msg);
-  chat.scrollTop = chat.scrollHeight;
-  
-  if(save) {
-    messages.push({text, cls});
-    saveMessages();
-  }
-}
+    <div id="matching-screen">
+        <div class="loader"></div>
+        <h2 id="match-status">Oyuncu Bekleniyor...</h2>
+        <button class="btn btn-secondary" onclick="cancelMatchmaking()">IPTAL</button>
+    </div>
 
-// Səhifə yüklənəndə əvvəlki mesajları göstər
-messages.forEach(m=>addMessage(m.text, m.cls, false));
+    <div id="room-modal">
+        <h2 style="text-align: center; margin-bottom: 15px;">OZEL ODA</h2>
+        <div class="input-group" id="room-code-display" style="display: none;">
+            <p style="text-align: center; color: var(--primary); font-size: 24px; font-weight: 800;"
+                id="room-code-text"></p>
+            <p style="text-align: center; font-size: 12px; margin-top: 5px;">Arkadasina bu kodu gonder</p>
+        </div>
+        <div class="input-group" id="room-input-area">
+            <input type="text" id="join-room-id" placeholder="ODA KODU GIR">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex: 1; font-size: 14px;" onclick="createRoom()">ODA KUR</button>
+            <button class="btn" style="flex: 1; font-size: 14px;" onclick="joinPrivateRoom()">KATIL</button>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 15px; width: 100%; border: none; background: none;"
+            onclick="closeRoomModal()">Kapat</button>
+    </div>
 
-// Pulsuz AI cavab generator (simulyasiya)
-async function getAIResponse(userMsg){
-  typing.style.display='block';
-  await new Promise(r=>setTimeout(r,1000));
-  typing.style.display='none';
+    <div id="game-hud">
+        <div class="score-container">
+            <span id="score-opponent">0</span>
+            <span style="color: var(--primary)">:</span>
+            <span id="score-player">0</span>
+        </div>
+    </div>
 
-  userMsg = userMsg.toLowerCase();
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
 
-  if(userMsg.includes('sahibin kimdir')){
-    return `Məni kodlayan və sahibim Xaliq Mustafayevdir. Telegram və Instagram: @xaliqmustafayev`;
-  } else if(userMsg.includes('salam') || userMsg.includes('hi')){
-    return `Salam ${telegramUser}! Mən Mələk, dostca AI-san. Necə kömək edə bilərəm?`;
-  } else if(userMsg.includes('necəsən')){
-    return `Mən yaxşıyam ${telegramUser}, sən necəsən? 😊`;
-  } else {
-    const responses = [
-      `Hmm, maraqlı sualdır!`,
-      `Bunu düşündüm, amma sən nə fikirləşirsən?`,
-      `Heç bir problem yoxdur, davam edək!`,
-      `Haha, maraqlı dedin!`,
-      `Əlbəttə, sənə kömək edə bilərəm.`
-    ];
-    return responses[Math.floor(Math.random()*responses.length)];
-  }
-}
+        const socket = io('https://saskioyunu.onrender.com');
+        let myData = null;
+        let currentGame = null;
+        let playerSide = 'bottom';
+        let roomId = null;
 
-// Göndər funksiyası
-async function sendMessage(){
-  const msg = input.value.trim();
-  if(!msg) return;
-  addMessage(msg,'user');
-  input.value='';
+        // Sound Effects (Placeholders)
+        const sounds = {
+            goal: new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'),
+            hit: new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3')
+        };
 
-  // Klaviaturanı bağlama
-  input.focus();
+        // --- Socket Logic ---
+        socket.on('connect', () => {
+            const user = tg.initDataUnsafe.user || { id: "test_" + Math.random(), first_name: "Misafir", photo_url: "" };
+            socket.emit('auth', user);
+        });
 
-  const aiResp = await getAIResponse(msg);
-  addMessage(aiResp,'ai');
-}
+        socket.on('auth_success', (user) => {
+            myData = user;
+            document.getElementById('user-name').innerText = user.username;
+            document.getElementById('user-elo').innerText = `ELO: ${user.elo}`;
+            if (user.photoUrl) document.getElementById('user-photo').src = user.photoUrl;
+            socket.emit('get_leaderboard');
+        });
 
-// Send düyməsi
-sendBtn.addEventListener('click', sendMessage);
-input.addEventListener('keydown', e=>{if(e.key==='Enter') sendMessage();});
+        socket.on('leaderboard_data', (data) => {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = data.map((u, i) => `
+                <div class="rank-item">
+                    <span>#${i + 1} ${u.username}</span>
+                    <span style="color: var(--primary)">${u.elo}</span>
+                </div>
+            `).join('');
+        });
 
-// Telegram WebView tam ekran
-if(window.Telegram?.WebApp){ Telegram.WebApp.expand(); }
-</script>
+        socket.on('match_found', (data) => {
+            document.getElementById('matching-screen').style.display = 'none';
+            document.getElementById('ui-overlay').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'block';
 
+            roomId = data.roomId;
+            const me = data.players.find(p => p.id === socket.id);
+            playerSide = me.side;
+
+            startGame(data);
+        });
+
+        socket.on('opponent_paddle', (data) => {
+            if (currentGame) currentGame.updateOpponent(data);
+        });
+
+        socket.on('puck_sync', (data) => {
+            if (currentGame) currentGame.syncPuck(data);
+        });
+
+        socket.on('update_scores', (scores) => {
+            document.getElementById('score-player').innerText = playerSide === 'bottom' ? scores.bottom : scores.top;
+            document.getElementById('score-opponent').innerText = playerSide === 'bottom' ? scores.top : scores.bottom;
+            sounds.goal.play();
+        });
+
+        socket.on('opponent_left', () => {
+            alert('Rakip oyundan ayrildi! Galip sensin.');
+            location.reload();
+        });
+
+        socket.on('game_over', (data) => {
+            const win = data.winner === playerSide;
+            tg.showPopup({
+                title: win ? 'TEBRIKLER!' : 'KAYBETTIN',
+                message: win ? 'Harika bir galibiyet!' : 'Daha sonra tekrar dene.',
+                buttons: [{ type: 'default', text: 'Lobuye Don' }]
+            }, () => location.reload());
+        });
+
+        socket.on('private_room_created', (code) => {
+            document.getElementById('room-code-display').style.display = 'block';
+            document.getElementById('room-code-text').innerText = code;
+        });
+
+        // --- UI Actions ---
+        function joinMatchmaking() {
+            document.getElementById('matching-screen').style.display = 'flex';
+            socket.emit('join_matchmaking');
+        }
+
+        function cancelMatchmaking() {
+            document.getElementById('matching-screen').style.display = 'none';
+            socket.emit('cancel_matchmaking');
+            location.reload(); // Simple way to reset state
+        }
+
+        function showRoomOptions() {
+            document.getElementById('room-modal').style.display = 'block';
+        }
+
+        function closeRoomModal() {
+            document.getElementById('room-modal').style.display = 'none';
+        }
+
+        function createRoom() {
+            socket.emit('create_private_room');
+        }
+
+        function joinPrivateRoom() {
+            const code = document.getElementById('join-room-id').value.toUpperCase();
+            if (code) socket.emit('join_private_room', code);
+        }
+
+        // --- Game Engine (Phaser) ---
+        function startGame(data) {
+            const config = {
+                type: Phaser.AUTO,
+                parent: 'game-container',
+                width: window.innerWidth,
+                height: window.innerHeight,
+                backgroundColor: '#0f172a',
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 0 },
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
+
+            const game = new Phaser.Game(config);
+            currentGame = {
+                scene: null,
+                paddle: null,
+                opponent: null,
+                puck: null,
+                updateOpponent: function (data) {
+                    // Logic to update opponent striker position (inverted for perspective)
+                    if (this.opponent) {
+                        this.opponent.x = config.width - (data.x * config.width);
+                        this.opponent.y = config.height - (data.y * config.height);
+                    }
+                },
+                syncPuck: function (data) {
+                    // Only non-master (top player) syncs puck from server
+                    if (playerSide === 'top' && this.puck) {
+                        this.puck.x = config.width - (data.x * config.width);
+                        this.puck.y = config.height - (data.y * config.height);
+                        this.puck.setVelocity(-data.vx * config.width, -data.vy * config.height);
+                    }
+                }
+            };
+
+            function preload() {
+                this.load.image('ice', 'https://i.ibb.co/vzX875p/ice-rink.png'); // Needs a real hockey asset
+                // Generating textures on the fly for circles
+                drawCircle(this, 'striker_blue', 40, 0x00f2fe);
+                drawCircle(this, 'striker_red', 40, 0xf093fb);
+                drawCircle(this, 'puck', 20, 0xffffff);
+            }
+
+            function drawCircle(scene, key, radius, color) {
+                const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+                graphics.fillStyle(color, 1);
+                graphics.lineStyle(2, 0xffffff, 1);
+                graphics.fillCircle(radius, radius, radius);
+                graphics.strokeCircle(radius, radius, radius);
+                graphics.generateTexture(key, radius * 2, radius * 2);
+            }
+
+            function create() {
+                currentGame.scene = this;
+
+                // Scale ice background
+                const ice = this.add.graphics();
+                ice.lineStyle(4, 0x1e293b, 1);
+                ice.strokeRect(10, 10, config.width - 20, config.height - 20);
+
+                // Center Line
+                ice.lineStyle(2, 0x334155, 1);
+                ice.moveTo(10, config.height / 2);
+                ice.lineTo(config.width - 10, config.height / 2);
+                ice.strokePath();
+
+                // Build Rink
+                this.physics.world.setBounds(0, 0, config.width, config.height);
+
+                // Puck
+                const puck = this.physics.add.sprite(config.width / 2, config.height / 2, 'puck');
+                puck.setCircle(20);
+                puck.setBounce(1);
+                puck.setCollideWorldBounds(true);
+                puck.setDamping(true);
+                puck.setDrag(0.99);
+                currentGame.puck = puck;
+
+                // Striker (My Player)
+                const paddle = this.physics.add.sprite(config.width / 2, config.height * 0.8, playerSide === 'bottom' ? 'striker_blue' : 'striker_red');
+                paddle.setCircle(40);
+                paddle.setCollideWorldBounds(true);
+                paddle.setImmovable(true);
+                currentGame.paddle = paddle;
+
+                // Opponent Striker
+                const opponent = this.physics.add.sprite(config.width / 2, config.height * 0.2, playerSide === 'bottom' ? 'striker_red' : 'striker_blue');
+                opponent.setCircle(40);
+                opponent.setImmovable(true);
+                currentGame.opponent = opponent;
+
+                // Goal Areas
+                const goalHeight = 5;
+                const goalWidth = config.width * 0.4;
+                const topGoal = this.add.rectangle(config.width / 2, 5, goalWidth, goalHeight, 0x00f2fe, 0.5);
+                const bottomGoal = this.add.rectangle(config.width / 2, config.height - 5, goalWidth, goalHeight, 0xf093fb, 0.5);
+
+                this.physics.add.existing(topGoal, true);
+                this.physics.add.existing(bottomGoal, true);
+
+                // Collisions
+                this.physics.add.collider(puck, paddle, () => sounds.hit.play());
+                this.physics.add.collider(puck, opponent);
+
+                this.physics.add.overlap(puck, topGoal, () => {
+                    handleGoal('bottom');
+                });
+                this.physics.add.overlap(puck, bottomGoal, () => {
+                    handleGoal('top');
+                });
+
+                // Input handling
+                this.input.on('pointermove', (pointer) => {
+                    // Restrict movement to own half
+                    const minY = playerSide === 'bottom' ? config.height / 2 + 50 : 50;
+                    const maxY = playerSide === 'bottom' ? config.height - 50 : config.height / 2 - 50;
+
+                    paddle.x = Phaser.Math.Clamp(pointer.x, 50, config.width - 50);
+                    paddle.y = Phaser.Math.Clamp(pointer.y, minY, maxY);
+
+                    // Sync with server
+                    socket.emit('update_paddle', {
+                        roomId,
+                        x: paddle.x / config.width,
+                        y: paddle.y / config.height
+                    });
+                });
+
+                function handleGoal(side) {
+                    if (playerSide === 'bottom') { // Only one player reports goal to prevent double counting
+                        socket.emit('goal', { roomId, side });
+                        resetPuck();
+                    }
+                }
+
+                function resetPuck() {
+                    puck.setPosition(config.width / 2, config.height / 2);
+                    puck.setVelocity(0, 0);
+                }
+            }
+
+            function update() {
+                // Puck master sync (Bottom player manages physics and sends to Top)
+                if (playerSide === 'bottom' && currentGame.puck) {
+                    socket.emit('update_puck', {
+                        roomId,
+                        x: currentGame.puck.x / config.width,
+                        y: currentGame.puck.y / config.height,
+                        vx: currentGame.puck.body.velocity.x / config.width,
+                        vy: currentGame.puck.body.velocity.y / config.height
+                    });
+                }
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (currentGame && currentGame.scene) {
+                currentGame.scene.game.scale.resize(window.innerWidth, window.innerHeight);
+            }
+        });
+    </script>
 </body>
+
 </html>
