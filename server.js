@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema({
     userId: { type: String, unique: true },
     username: String,
     photoUrl: String,
-    elo: { type: Number, default: 1000 },
     wins: { type: Number, default: 0 },
     losses: { type: Number, default: 0 },
     lastLogin: { type: Date, default: Date.now }
@@ -36,43 +35,60 @@ let rooms = new Map();
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
+    // Initial default userData
+    socket.userData = { userId: socket.id, username: 'Misafir', photoUrl: '' };
+
     socket.on('auth', async (userData) => {
         if (!userData || !userData.id) return;
 
-        let user = await User.findOne({ userId: userData.id.toString() });
-        if (!user) {
-            user = new User({
+        try {
+            let user = await User.findOne({ userId: userData.id.toString() });
+            if (!user) {
+                user = new User({
+                    userId: userData.id.toString(),
+                    username: userData.username || userData.first_name || 'Misafir',
+                    photoUrl: userData.photo_url || '',
+                });
+                await user.save();
+            } else {
+                user.username = userData.username || userData.first_name || user.username;
+                user.photoUrl = userData.photo_url || user.photoUrl;
+                user.lastLogin = Date.now();
+                await user.save();
+            }
+            socket.userData = user;
+        } catch (e) {
+            console.error('Auth DB error:', e);
+            socket.userData = {
                 userId: userData.id.toString(),
-                username: userData.first_name || userData.username || 'Anonim',
-                photoUrl: userData.photo_url || '',
-            });
-            await user.save();
-        } else {
-            user.username = userData.first_name || userData.username || user.username;
-            user.photoUrl = userData.photo_url || user.photoUrl;
-            user.lastLogin = Date.now();
-            await user.save();
+                username: userData.username || userData.first_name || 'Misafir',
+                photoUrl: userData.photo_url || ''
+            };
         }
-
-        socket.userData = user;
-        socket.emit('auth_success', user);
+        socket.emit('auth_success', socket.userData);
     });
 
     socket.on('get_leaderboard', async () => {
-        const topPlayers = await User.find().sort({ elo: -1 }).limit(10);
-        socket.emit('leaderboard_data', topPlayers);
+        try {
+            const topPlayers = await User.find().sort({ wins: -1 }).limit(10);
+            socket.emit('leaderboard_data', topPlayers);
+        } catch (e) {
+            socket.emit('leaderboard_data', []);
+        }
     });
 
     socket.on('join_matchmaking', () => {
-        if (!socket.userData) return;
-
-        // Remove from queue if already in
+        // Clear previous queue entry for this socket
         matchmakingQueue = matchmakingQueue.filter(s => s.id !== socket.id);
 
         if (matchmakingQueue.length > 0) {
             const opponent = matchmakingQueue.shift();
-            const roomId = `room_${socket.id}_${opponent.id}`;
+            if (opponent.id === socket.id) {
+                matchmakingQueue.push(socket);
+                return;
+            }
 
+            const roomId = `room_${socket.id}_${opponent.id}`;
             socket.join(roomId);
             opponent.join(roomId);
 
@@ -93,7 +109,6 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('match_found', gameData);
         } else {
             matchmakingQueue.push(socket);
-            socket.emit('waiting_for_opponent');
         }
     });
 
@@ -102,17 +117,13 @@ io.on('connection', (socket) => {
     });
 
     socket.on('create_private_room', () => {
-        if (!socket.userData) return;
         const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         socket.join(roomCode);
-        socket.roomCode = roomCode;
         socket.emit('private_room_created', roomCode);
     });
 
     socket.on('join_private_room', (roomCode) => {
-        if (!socket.userData) return;
         const room = io.sockets.adapter.rooms.get(roomCode);
-
         if (room && room.size === 1) {
             socket.join(roomCode);
             const clients = Array.from(room);
