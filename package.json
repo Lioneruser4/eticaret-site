@@ -1,11 +1,15 @@
 {
-  "name": "blockcraft",
+  "name": "hockey-pro-online",
   "version": "1.0.0",
+  "description": "1vs1 Hockey Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.0",
+    "socket.io": "^4.7.2"
   }
 }
