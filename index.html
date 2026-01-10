@@ -1,507 +1,403 @@
 <!DOCTYPE html>
-<html lang="tr">
-
+<html lang="az">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pro Hockey 1vs1 Online</title>
-    <!-- Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cəngavər Döyüşü PRO</title>
     <style>
-        :root {
-            --primary: #00f2fe;
-            --secondary: #4facfe;
-            --accent: #f093fb;
-            --bg: #0b0f19;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
+        :root { --elixir-color: #f062ff; --ui-bg: rgba(20, 20, 20, 0.9); }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Trebuchet MS', sans-serif; user-select: none; }
+        
+        /* Oyun Sahəsi */
+        #game-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        canvas { background: #355e3b; box-shadow: inset 0 0 100px rgba(0,0,0,0.5); cursor: crosshair; }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
+        /* UI Elementləri */
+        #ui-top { position: absolute; top: 10px; width: 90%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
+        .stat-box { background: var(--ui-bg); padding: 5px 15px; border-radius: 20px; border: 2px solid #ffd700; color: white; font-weight: bold; }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg);
-            color: white;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-            position: relative;
-        }
+        #ui-bottom { position: absolute; bottom: 0; width: 100%; height: 160px; background: linear-gradient(to top, #1a1a1a, transparent); display: flex; flex-direction: column; align-items: center; z-index: 100; }
+        
+        /* Eliksir Barı */
+        .elixir-container { width: 80%; height: 15px; background: #333; border-radius: 10px; margin-bottom: 10px; border: 2px solid #555; position: relative; }
+        #elixir-progress { height: 100%; width: 0%; background: var(--elixir-color); box-shadow: 0 0 10px var(--elixir-color); transition: width 0.3s; }
+        #elixir-text { position: absolute; width: 100%; text-align: center; color: white; font-size: 12px; font-weight: bold; top: -2px; }
 
-        .bg-glow {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%);
-            z-index: 0;
-            animation: pulseBg 10s infinite alternate;
-        }
-
-        @keyframes pulseBg {
-            0% {
-                opacity: 0.5;
-            }
-
-            100% {
-                opacity: 1;
-            }
-        }
-
-        #game-container {
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        #ui-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 100;
-            background: rgba(3, 7, 18, 0.95);
-            backdrop-filter: blur(30px);
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            padding-top: env(safe-area-inset-top);
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .profile-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--glass);
-            padding: 10px 20px;
-            border-radius: 60px;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        .profile-img {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 15px var(--primary);
-        }
-
-        .profile-info h3 {
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .profile-info p {
-            font-size: 11px;
-            color: var(--primary);
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        .main-menu {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 20px;
-            max-width: 400px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .brand-title {
-            font-size: 48px;
-            font-weight: 900;
-            text-align: center;
-            letter-spacing: -1px;
-            background: linear-gradient(to bottom, #fff, #94a3b8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
-            border: none;
-            padding: 20px;
-            border-radius: 25px;
-            color: white;
-            font-size: 18px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 15px 35px rgba(0, 242, 254, 0.3);
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-        }
-
-        .btn-secondary {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            box-shadow: none;
-            backdrop-filter: blur(10px);
-        }
-
-        .leaderboard {
-            background: var(--glass);
-            border-radius: 30px;
-            padding: 20px;
-            margin-top: 30px;
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid var(--glass-border);
-        }
-
-        .leaderboard h2 {
-            text-align: center;
-            font-size: 14px;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-        }
-
-        .rank-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 14px;
-        }
-
-        #matching-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #030712;
-            z-index: 200;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .loader {
-            width: 80px;
-            height: 80px;
-            border: 4px solid var(--glass);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s infinite linear;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg)
-            }
-
-            to {
-                transform: rotate(360deg)
-            }
-        }
-
-        #room-modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #0b1120;
-            padding: 30px;
-            border-radius: 35px;
-            width: 90%;
-            max-width: 380px;
-            border: 1px solid var(--primary);
-            box-shadow: 0 0 100px rgba(0, 242, 254, 0.2);
-            z-index: 300;
-            display: none;
-        }
-
-        input {
-            width: 100%;
-            background: #000;
-            border: 1px solid var(--glass-border);
-            padding: 18px;
-            border-radius: 15px;
-            color: #fff;
-            font-size: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            outline: none;
-        }
-
-        #game-hud {
-            position: fixed;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            z-index: 50;
-            pointer-events: none;
-        }
-
-        .score-box {
-            display: flex;
-            gap: 30px;
-            font-size: 40px;
-            font-weight: 900;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 40px;
-            border-radius: 80px;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-        }
+        /* Kartlar */
+        .hand { display: flex; gap: 10px; padding: 10px; }
+        .card { width: 70px; height: 95px; background: #444; border-radius: 8px; border: 3px solid #777; position: relative; transition: 0.2s; overflow: hidden; }
+        .card.active { border-color: #ffd700; transform: translateY(-10px); cursor: pointer; }
+        .card.selected { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+        .card-cost { position: absolute; top: -2px; right: -2px; background: var(--elixir-color); color: white; padding: 2px 6px; border-radius: 0 0 0 8px; font-size: 12px; }
+        .card-name { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.7); color: white; font-size: 10px; text-align: center; padding: 2px 0; }
+        
+        /* Animasiyalar */
+        @keyframes damage { 0% { filter: brightness(1); } 50% { filter: brightness(3) sepia(1); } 100% { filter: brightness(1); } }
+        .hit { animation: damage 0.2s; }
     </style>
 </head>
-
 <body>
-    <div class="bg-glow"></div>
-    <div id="game-container"></div>
 
-    <div id="ui-overlay">
-        <div class="header">
-            <div class="profile-card">
-                <img src="https://via.placeholder.com/48" class="profile-img" id="user-photo">
-                <div class="profile-info">
-                    <h3 id="user-name">Giris Yapiliyor...</h3>
-                    <p id="user-stats">GALIBIYET: 0</p>
-                </div>
+<div id="game-wrapper">
+    <div id="ui-top">
+        <div class="stat-box">Düşmən: <span id="bot-score">3</span></div>
+        <div class="stat-box">Sən: <span id="player-score">3</span></div>
+    </div>
+
+    <canvas id="arena"></canvas>
+
+    <div id="ui-bottom">
+        <div class="elixir-container">
+            <div id="elixir-progress"></div>
+            <div id="elixir-text">ELİKSİR: 0</div>
+        </div>
+        <div class="hand">
+            <div class="card" data-id="knight" data-cost="3">
+                <div class="card-cost">3</div>
+                <div class="card-name">CƏNGAVƏR</div>
             </div>
-            <div style="font-size: 20px; opacity:0.5;">V1.0.0</div>
-        </div>
-
-        <div class="main-menu">
-            <h1 class="brand-title">HOCKEY PRO</h1>
-            <button class="btn" onclick="joinMatchmaking()"><span>⚡</span> RASTGELE MAC</button>
-            <button class="btn btn-secondary" onclick="showRoomOptions()"><span>🏠</span> OZEL ODA</button>
-            <div class="leaderboard">
-                <h2>🏆 EN IYILER</h2>
-                <div id="leaderboard-list"></div>
+            <div class="card" data-id="archer" data-cost="2">
+                <div class="card-cost">2</div>
+                <div class="card-name">OXÇU</div>
+            </div>
+            <div class="card" data-id="giant" data-cost="5">
+                <div class="card-cost">5</div>
+                <div class="card-name">DİV</div>
+            </div>
+            <div class="card" data-id="spell" data-cost="4">
+                <div class="card-cost">4</div>
+                <div class="card-name">OD TOPU</div>
             </div>
         </div>
     </div>
+</div>
 
-    <div id="matching-screen">
-        <div class="loader"></div>
-        <h2 style="letter-spacing: 3px; color: var(--primary);">OYUNCU ARANIYOR...</h2>
-        <button class="btn btn-secondary" onclick="cancelMatchmaking()">IPTAL</button>
-    </div>
+<script>
+/** * PRO STRATEGİYA MÜHƏRRİKİ v2.0
+ * Bütün məntiq OOP (Obyekt Yönümlü Proqramlaşdırma) ilə qurulub.
+ */
 
-    <div id="room-modal">
-        <h2 style="text-align: center; margin-bottom: 20px;">OZEL ODA</h2>
-        <div id="room-code-display"
-            style="display: none; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-            <p style="text-align: center; color: var(--primary); font-size: 28px; font-weight: 900;"
-                id="room-code-text"></p>
-            <p style="text-align: center; font-size: 10px; opacity:0.5;">ARKADASINLA BU KODU PAYLAS</p>
-        </div>
-        <input type="text" id="join-room-id" placeholder="ODA KODU">
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-secondary" style="flex: 1; font-size: 14px;" onclick="createRoom()">ODA KUR</button>
-            <button class="btn" style="flex: 1; font-size: 14px;" onclick="joinPrivateRoom()">KATIL</button>
-        </div>
-        <button class="btn btn-secondary"
-            style="margin-top: 15px; width: 100%; border: none; background:none; font-size: 14px;"
-            onclick="closeRoomModal()">Kapat</button>
-    </div>
+const CONFIG = {
+    LANE_L: 0.25,
+    LANE_R: 0.75,
+    START_ELIXIR: 5,
+    MAX_ELIXIR: 10,
+    ELIXIR_SPEED: 0.015, // Saniyədə artım
+    TOWER_HP: 1500,
+    KING_HP: 3000
+};
 
-    <div id="game-hud">
-        <div class="score-box">
-            <span id="score-opponent" style="color: var(--accent)">0</span>
-            <span style="opacity: 0.3">|</span>
-            <span id="score-player" style="color: var(--primary)">0</span>
-        </div>
-    </div>
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('arena');
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        
+        this.entities = [];
+        this.particles = [];
+        this.elixir = CONFIG.START_ELIXIR;
+        this.selectedCard = null;
+        this.isGameOver = false;
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
+        this.initEventListeners();
+        this.setupMap();
+        this.spawnInitialTowers();
+        this.loop();
+    }
 
-        // Connect to Server
-        const socket = io('https://saskioyunu.onrender.com', { transports: ['websocket', 'polling'] });
-        let myData = null;
-        let currentGame = null;
-        let playerSide = 'bottom';
-        let roomId = null;
+    resize() {
+        this.canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.scale = this.canvas.width / 400;
+    }
 
-        const sounds = {
-            goal: new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'),
-            hit: new Audio('https://assets.mixkit.co/active_storage/sfx/2014/2014-preview.mp3'),
-            win: new Audio('https://assets.mixkit.co/active_storage/sfx/2011/2011-preview.mp3')
+    setupMap() {
+        // Çay və körpü koordinatları
+        this.riverY = this.canvas.height / 2;
+    }
+
+    spawnInitialTowers() {
+        const createTower = (x, y, hp, team, type) => {
+            this.entities.push(new Tower(x * this.canvas.width, y * this.canvas.height, hp, team, type));
         };
 
-        socket.on('connect', () => {
-            console.log("Sunucuya baglanildi");
-            const user = tg.initDataUnsafe.user || {
-                id: "test_" + Math.random().toString(36).substr(2, 5),
-                first_name: "Misafir_" + Math.floor(Math.random() * 100)
-            };
-            socket.emit('auth', user);
-        });
+        // Player towers (Göy)
+        createTower(0.2, 0.8, CONFIG.TOWER_HP, 'player', 'side');
+        createTower(0.8, 0.8, CONFIG.TOWER_HP, 'player', 'side');
+        createTower(0.5, 0.9, CONFIG.KING_HP, 'player', 'king');
 
-        socket.on('auth_success', (user) => {
-            console.log("Giris basarili:", user);
-            myData = user;
-            document.getElementById('user-name').innerText = user.username || user.first_name || 'Misafir';
-            document.getElementById('user-stats').innerText = `GALIBIYET: ${user.wins || 0}`;
-            if (user.photoUrl) document.getElementById('user-photo').src = user.photoUrl;
-            socket.emit('get_leaderboard');
-        });
+        // Bot towers (Qırmızı)
+        createTower(0.2, 0.2, CONFIG.TOWER_HP, 'bot', 'side');
+        createTower(0.8, 0.2, CONFIG.TOWER_HP, 'bot', 'side');
+        createTower(0.5, 0.1, CONFIG.KING_HP, 'bot', 'king');
+    }
 
-        socket.on('leaderboard_data', (data) => {
-            const list = document.getElementById('leaderboard-list');
-            if (!data || data.length === 0) { list.innerHTML = '<p style="text-align:center; opacity:0.3;">Oyuncu yok</p>'; return; }
-            list.innerHTML = data.map((u, i) => `
-                <div class="rank-item">
-                    <span>#${i + 1} ${u.username}</span>
-                    <span style="color: var(--primary); font-weight: 800;">${u.wins} Galibiyet</span>
-                </div>
-            `).join('');
-        });
-
-        socket.on('match_found', (data) => {
-            console.log("Mac basliyor:", data);
-            document.getElementById('matching-screen').style.display = 'none';
-            document.getElementById('ui-overlay').style.display = 'none';
-            document.getElementById('game-hud').style.display = 'block';
-            roomId = data.roomId;
-            playerSide = data.players.find(p => p.id === socket.id).side;
-            startGame();
-        });
-
-        socket.on('opponent_paddle', (data) => currentGame?.updateOpponent(data));
-        socket.on('puck_sync', (data) => currentGame?.syncPuck(data));
-        socket.on('update_scores', (scores) => {
-            document.getElementById('score-player').innerText = playerSide === 'bottom' ? scores.bottom : scores.top;
-            document.getElementById('score-opponent').innerText = playerSide === 'bottom' ? scores.top : scores.bottom;
-            sounds.goal.play();
-        });
-
-        socket.on('opponent_left', () => {
-            tg.showAlert('Rakip ayrildi! Kazandin.');
-            location.reload();
-        });
-
-        socket.on('game_over', (data) => {
-            const win = data.winner === playerSide;
-            if (win) sounds.win.play();
-            tg.showPopup({ title: win ? 'TEBRIKLER' : 'KAYBETTIN', message: 'Lobiye donuluyor...', buttons: [{ type: 'default', text: 'Tamam' }] }, () => location.reload());
-        });
-
-        socket.on('private_room_created', (code) => {
-            document.getElementById('room-code-display').style.display = 'block';
-            document.getElementById('room-code-text').innerText = code;
-        });
-
-        socket.on('error_message', (msg) => { tg.showAlert(msg); });
-
-        function joinMatchmaking() {
-            document.getElementById('matching-screen').style.display = 'flex';
-            socket.emit('join_matchmaking');
-        }
-        function cancelMatchmaking() { location.reload(); }
-        function showRoomOptions() { document.getElementById('room-modal').style.display = 'block'; }
-        function closeRoomModal() { document.getElementById('room-modal').style.display = 'none'; }
-        function createRoom() { socket.emit('create_private_room'); }
-        function joinPrivateRoom() {
-            const code = document.getElementById('join-room-id').value.toUpperCase().trim();
-            if (code) socket.emit('join_private_room', code);
-        }
-
-        // --- Game Engine ---
-        function startGame() {
-            const config = {
-                type: Phaser.AUTO, parent: 'game-container', width: window.innerWidth, height: window.innerHeight,
-                backgroundColor: '#0b0f19', physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
-                scene: { preload: preload, create: create, update: update }
-            };
-            const game = new Phaser.Game(config);
-
-            function preload() {
-                drawCircle(this, 's_me', 40, '#00f2fe');
-                drawCircle(this, 's_op', 40, '#f093fb');
-                drawCircle(this, 'puck', 20, '#ffffff');
-            }
-
-            function drawCircle(scene, key, radius, color) {
-                const g = scene.make.graphics({ x: 0, y: 0, add: false });
-                g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
-                g.fillCircle(radius, radius, radius);
-                g.lineStyle(2, 0xffffff, 0.5); g.strokeCircle(radius, radius, radius);
-                g.generateTexture(key, radius * 2, radius * 2);
-            }
-
-            function create() {
-                const scene = this; currentGame = { scene };
-                const puck = scene.physics.add.sprite(config.width / 2, config.height / 2, 'puck').setCircle(20).setBounce(1).setCollideWorldBounds(true).setDamping(true).setDrag(0.99);
-                currentGame.puck = puck;
-                const paddle = scene.physics.add.sprite(config.width / 2, config.height * 0.8, 's_me').setCircle(40).setCollideWorldBounds(true).setImmovable(true);
-                currentGame.paddle = paddle;
-                const opponent = scene.physics.add.sprite(config.width / 2, config.height * 0.2, 's_op').setCircle(40).setImmovable(true);
-                currentGame.opponent = opponent;
-
-                const goalW = config.width * 0.45;
-                const topG = scene.add.rectangle(config.width / 2, 5, goalW, 10, 0xf093fb, 0.5);
-                const botG = scene.add.rectangle(config.width / 2, config.height - 5, goalW, 10, 0x00f2fe, 0.5);
-                scene.physics.add.existing(topG, true); scene.physics.add.existing(botG, true);
-
-                scene.physics.add.collider(puck, paddle, () => sounds.hit.play());
-                scene.physics.add.collider(puck, opponent);
-                scene.physics.add.overlap(puck, topG, () => { if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'bottom' }); });
-                scene.physics.add.overlap(puck, botG, () => { if (playerSide === 'bottom') socket.emit('goal', { roomId, side: 'top' }); });
-
-                scene.input.on('pointermove', (p) => {
-                    const minY = playerSide === 'bottom' ? config.height / 2 + 50 : 50;
-                    const maxY = playerSide === 'bottom' ? config.height - 50 : config.height / 2 - 50;
-                    paddle.x = Phaser.Math.Clamp(p.x, 50, config.width - 50);
-                    paddle.y = Phaser.Math.Clamp(p.y, minY, maxY);
-                    socket.emit('update_paddle', { roomId, x: paddle.x / config.width, y: paddle.y / config.height });
-                });
-
-                currentGame.updateOpponent = (d) => { opponent.x = config.width - (d.x * config.width); opponent.y = config.height - (d.y * config.height); };
-                currentGame.syncPuck = (d) => { if (playerSide === 'top') { puck.x = config.width - (d.x * config.width); puck.y = config.height - (d.y * config.height); puck.setVelocity(-d.vx * config.width, -d.vy * config.height); } };
-            }
-
-            function update() {
-                if (playerSide === 'bottom' && currentGame.puck) {
-                    socket.emit('update_puck', { roomId, x: currentGame.puck.x / config.width, y: currentGame.puck.y / config.height, vx: currentGame.puck.body.velocity.x / config.width, vy: currentGame.puck.body.velocity.y / config.height });
+    initEventListeners() {
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const cost = parseInt(card.dataset.cost);
+                if (this.elixir >= cost) {
+                    this.selectedCard = { id: card.dataset.id, cost: cost };
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
                 }
+            });
+        });
+
+        this.canvas.addEventListener('mousedown', (e) => this.handleInput(e.clientX, e.clientY));
+        this.canvas.addEventListener('touchstart', (e) => this.handleInput(e.touches[0].clientX, e.touches[0].clientY));
+    }
+
+    handleInput(rawX, rawY) {
+        if (!this.selectedCard) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const x = rawX - rect.left;
+        const y = rawY - rect.top;
+
+        // Yerləşdirmə qaydası (Məsələn: Sən ancaq öz tərəfinə qoya bilərsən)
+        if (y < this.riverY && this.selectedCard.id !== 'spell') return;
+
+        this.spawnUnit(x, y, 'player', this.selectedCard.id);
+        this.elixir -= this.selectedCard.cost;
+        this.selectedCard = null;
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+    }
+
+    spawnUnit(x, y, team, type) {
+        let unit;
+        switch(type) {
+            case 'knight': unit = new Knight(x, y, team); break;
+            case 'archer': unit = new Archer(x, y, team); break;
+            case 'giant':  unit = new Giant(x, y, team); break;
+            case 'spell':  this.triggerSpell(x, y, team); return;
+        }
+        if(unit) this.entities.push(unit);
+    }
+
+    triggerSpell(x, y, team) {
+        this.particles.push(new Explosion(x, y));
+        this.entities.forEach(ent => {
+            const dist = Math.hypot(ent.x - x, ent.y - y);
+            if (dist < 80 && ent.team !== team) ent.takeDamage(400);
+        });
+    }
+
+    update() {
+        if (this.isGameOver) return;
+
+        this.elixir = Math.min(CONFIG.MAX_ELIXIR, this.elixir + CONFIG.ELIXIR_SPEED);
+        this.updateUI();
+
+        // Entity logic
+        this.entities.forEach(ent => ent.update(this.entities, this.particles));
+        this.entities = this.entities.filter(ent => ent.hp > 0);
+        
+        // Particle logic
+        this.particles.forEach(p => p.update());
+        this.particles = this.particles.filter(p => !p.dead);
+
+        // Simple AI
+        if (Math.random() < 0.01) {
+            const types = ['knight', 'archer', 'giant'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            this.spawnUnit(Math.random() * this.canvas.width, 100, 'bot', type);
+        }
+    }
+
+    updateUI() {
+        document.getElementById('elixir-progress').style.width = (this.elixir / CONFIG.MAX_ELIXIR * 100) + '%';
+        document.getElementById('elixir-text').innerText = `ELİKSİR: ${Math.floor(this.elixir)}`;
+        
+        document.querySelectorAll('.card').forEach(card => {
+            if (parseInt(card.dataset.cost) <= this.elixir) card.classList.add('active');
+            else card.classList.remove('active');
+        });
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.drawMap();
+        this.entities.sort((a,b) => a.y - b.y).forEach(ent => ent.draw(this.ctx));
+        this.particles.forEach(p => p.draw(this.ctx));
+    }
+
+    drawMap() {
+        const ctx = this.ctx;
+        // Ot
+        ctx.fillStyle = '#457b4d';
+        ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
+        
+        // Çay
+        ctx.fillStyle = '#4a90e2';
+        ctx.fillRect(0, this.riverY - 20, this.canvas.width, 40);
+
+        // Körpülər
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(this.canvas.width * 0.2 - 25, this.riverY - 25, 50, 50);
+        ctx.fillRect(this.canvas.width * 0.8 - 25, this.riverY - 25, 50, 50);
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+}
+
+/** * ENTITY CLASSES (Oyun obyektləri)
+ */
+
+class Entity {
+    constructor(x, y, hp, team) {
+        this.x = x; this.y = y; this.hp = hp; this.maxHp = hp;
+        this.team = team;
+        this.size = 20;
+        this.attackTimer = 0;
+    }
+
+    takeDamage(amt) {
+        this.hp -= amt;
+        this.isHit = true;
+        setTimeout(() => this.isHit = false, 150);
+    }
+
+    drawHP(ctx) {
+        const w = 30;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(this.x - w/2, this.y - this.size - 10, w, 5);
+        ctx.fillStyle = this.team === 'player' ? '#00ff00' : '#ff0000';
+        ctx.fillRect(this.x - w/2, this.y - this.size - 10, w * (this.hp/this.maxHp), 5);
+    }
+}
+
+class Tower extends Entity {
+    constructor(x, y, hp, team, type) {
+        super(x, y, hp, team);
+        this.type = type;
+        this.size = type === 'king' ? 40 : 30;
+        this.range = 150;
+    }
+
+    update(entities) {
+        if (this.attackTimer > 0) this.attackTimer--;
+        else {
+            const enemy = entities.find(e => e.team !== this.team && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
+            if (enemy) {
+                enemy.takeDamage(50);
+                this.attackTimer = 60;
             }
         }
-    </script>
-</body>
+    }
 
+    draw(ctx) {
+        ctx.save();
+        if (this.isHit) ctx.filter = 'brightness(2)';
+        ctx.fillStyle = this.team === 'player' ? '#2c3e50' : '#c0392b';
+        ctx.beginPath();
+        ctx.roundRect(this.x - this.size, this.y - this.size, this.size*2, this.size*2, 5);
+        ctx.fill();
+        ctx.strokeStyle = 'gold';
+        ctx.stroke();
+        ctx.restore();
+        this.drawHP(ctx);
+    }
+}
+
+class Unit extends Entity {
+    constructor(x, y, hp, team, speed, range, damage) {
+        super(x, y, hp, team);
+        this.speed = speed;
+        this.range = range;
+        this.damage = damage;
+        this.target = null;
+    }
+
+    update(entities, particles) {
+        if (this.attackTimer > 0) this.attackTimer--;
+
+        this.target = this.findBestTarget(entities);
+        if (this.target) {
+            const dist = Math.hypot(this.target.x - this.x, this.target.y - this.y);
+            if (dist < this.range) {
+                if (this.attackTimer <= 0) {
+                    this.target.takeDamage(this.damage);
+                    this.attackTimer = 50;
+                    particles.push(new HitSpark(this.target.x, this.target.y));
+                }
+            } else {
+                const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                this.x += Math.cos(angle) * this.speed;
+                this.y += Math.sin(angle) * this.speed;
+            }
+        }
+    }
+
+    findBestTarget(entities) {
+        let nearest = null;
+        let minDist = Infinity;
+        entities.forEach(e => {
+            if (e.team !== this.team) {
+                const d = Math.hypot(e.x - this.x, e.y - this.y);
+                if (d < minDist) { minDist = d; nearest = e; }
+            }
+        });
+        return nearest;
+    }
+}
+
+class Knight extends Unit {
+    constructor(x, y, team) { super(x, y, 500, team, 1.2, 30, 45); }
+    draw(ctx) {
+        ctx.fillStyle = this.team === 'player' ? '#3498db' : '#e74c3c';
+        ctx.beginPath(); ctx.arc(this.x, this.y, 15, 0, Math.PI*2); ctx.fill();
+        this.drawHP(ctx);
+    }
+}
+
+class Giant extends Unit {
+    constructor(x, y, team) { super(x, y, 2000, team, 0.6, 40, 80); }
+    draw(ctx) {
+        ctx.fillStyle = '#d35400';
+        ctx.beginPath(); ctx.arc(this.x, this.y, 25, 0, Math.PI*2); ctx.fill();
+        this.drawHP(ctx);
+    }
+}
+
+class Archer extends Unit {
+    constructor(x, y, team) { super(x, y, 250, team, 1.5, 120, 25); }
+    draw(ctx) {
+        ctx.fillStyle = '#9b59b6';
+        ctx.beginPath(); ctx.moveTo(this.x, this.y-15); ctx.lineTo(this.x+12, this.y+10); ctx.lineTo(this.x-12, this.y+10); ctx.fill();
+        this.drawHP(ctx);
+    }
+}
+
+/**
+ * EFFEKTLƏR (Particles)
+ */
+class Explosion {
+    constructor(x,y) { this.x=x; this.y=y; this.r=10; this.dead=false; }
+    update() { this.r += 5; if(this.r > 80) this.dead=true; }
+    draw(ctx) {
+        ctx.strokeStyle = `rgba(255, 100, 0, ${1 - this.r/80})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.stroke();
+    }
+}
+
+class HitSpark {
+    constructor(x,y) { this.x=x; this.y=y; this.life=10; this.dead=false; }
+    update() { this.life--; if(this.life<=0) this.dead=true; }
+    draw(ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(this.x-5, this.y-5, 10, 10);
+    }
+}
+
+// Oyunu Başlat
+window.onload = () => new Game();
+
+</script>
+</body>
 </html>
