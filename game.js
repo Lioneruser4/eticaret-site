@@ -32,6 +32,7 @@ class GameManager {
 
         this.game3d = null;
         this.animationFrameId = null;
+        this.paused = false;
     }
 
     init() {
@@ -54,6 +55,7 @@ class GameManager {
         const joystickStick = document.getElementById('joystick-stick');
 
         const handleStart = (e) => {
+            if (this.paused) return;
             e.preventDefault();
             this.joystick.active = true;
 
@@ -66,7 +68,7 @@ class GameManager {
         };
 
         const handleMove = (e) => {
-            if (!this.joystick.active) return;
+            if (this.paused || !this.joystick.active) return;
             e.preventDefault();
 
             const touch = e.touches ? e.touches[0] : e;
@@ -120,26 +122,31 @@ class GameManager {
     setupActionButtons() {
         // Use button
         document.getElementById('btn-use').addEventListener('click', () => {
+            if (this.paused) return;
             this.handleUseAction();
         });
 
         // Report button
         document.getElementById('btn-report').addEventListener('click', () => {
+            if (this.paused) return;
             this.handleReportAction();
         });
 
         // Kill button (imposter only)
         document.getElementById('btn-kill').addEventListener('click', () => {
+            if (this.paused) return;
             this.handleKillAction();
         });
 
         // Sabotage button (imposter only)
         document.getElementById('btn-sabotage').addEventListener('click', () => {
+            if (this.paused) return;
             this.handleSabotageAction();
         });
 
         // Emergency button
         document.getElementById('btn-emergency').addEventListener('click', () => {
+            if (this.paused) return;
             this.handleEmergencyAction();
         });
     }
@@ -161,7 +168,7 @@ class GameManager {
     }
 
     update() {
-        if (this.gameState !== 'playing' || !this.isAlive) return;
+        if (this.paused || this.gameState !== 'playing' || !this.isAlive) return;
 
         // Update player movement
         if (this.movement.x !== 0 || this.movement.z !== 0) {
