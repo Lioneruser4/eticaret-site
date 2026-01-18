@@ -3,10 +3,10 @@ const CONFIG = {
     // Server URL - Render üzerinde deploy edilecek
     SERVER_URL: 'https://saskioyunu.onrender.com',
     WS_URL: 'wss://saskioyunu.onrender.com',
-    
+
     // Game Settings
     GAME: {
-        MIN_PLAYERS: 4,
+        MIN_PLAYERS: 3,
         MAX_PLAYERS: 10,
         MIN_IMPOSTERS: 1,
         MAX_IMPOSTERS: 3,
@@ -19,7 +19,7 @@ const CONFIG = {
         TASK_INTERACTION_DISTANCE: 1.5,
         EMERGENCY_COOLDOWN: 20000, // 20 seconds
     },
-    
+
     // Map Settings
     MAP: {
         WIDTH: 50,
@@ -28,7 +28,7 @@ const CONFIG = {
             { x: 25, y: 25, z: 0 }
         ]
     },
-    
+
     // Colors for players
     COLORS: [
         '#ff0000', // Red
@@ -42,14 +42,14 @@ const CONFIG = {
         '#800080', // Purple
         '#00ffff', // Cyan
     ],
-    
+
     // Roles
     ROLES: {
         CREWMATE: 'crewmate',
         IMPOSTER: 'imposter',
         POLICE: 'police'
     },
-    
+
     // Task Types
     TASKS: {
         WIRING: 'wiring',
