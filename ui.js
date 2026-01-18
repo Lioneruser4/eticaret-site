@@ -137,7 +137,8 @@ class UIManager {
     }
 
     handleQuickMatch() {
-        // Request room list and join first available
+        // Show join room screen with room list
+        this.showScreen('join-room-screen');
         window.networkManager.requestRoomList();
         window.telegramAuth?.vibrate('medium');
     }
