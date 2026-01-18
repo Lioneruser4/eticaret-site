@@ -1,403 +1,309 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cəngavər Döyüşü PRO</title>
-    <style>
-        :root { --elixir-color: #f062ff; --ui-bg: rgba(20, 20, 20, 0.9); }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Trebuchet MS', sans-serif; user-select: none; }
-        
-        /* Oyun Sahəsi */
-        #game-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; }
-        canvas { background: #355e3b; box-shadow: inset 0 0 100px rgba(0,0,0,0.5); cursor: crosshair; }
-
-        /* UI Elementləri */
-        #ui-top { position: absolute; top: 10px; width: 90%; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .stat-box { background: var(--ui-bg); padding: 5px 15px; border-radius: 20px; border: 2px solid #ffd700; color: white; font-weight: bold; }
-
-        #ui-bottom { position: absolute; bottom: 0; width: 100%; height: 160px; background: linear-gradient(to top, #1a1a1a, transparent); display: flex; flex-direction: column; align-items: center; z-index: 100; }
-        
-        /* Eliksir Barı */
-        .elixir-container { width: 80%; height: 15px; background: #333; border-radius: 10px; margin-bottom: 10px; border: 2px solid #555; position: relative; }
-        #elixir-progress { height: 100%; width: 0%; background: var(--elixir-color); box-shadow: 0 0 10px var(--elixir-color); transition: width 0.3s; }
-        #elixir-text { position: absolute; width: 100%; text-align: center; color: white; font-size: 12px; font-weight: bold; top: -2px; }
-
-        /* Kartlar */
-        .hand { display: flex; gap: 10px; padding: 10px; }
-        .card { width: 70px; height: 95px; background: #444; border-radius: 8px; border: 3px solid #777; position: relative; transition: 0.2s; overflow: hidden; }
-        .card.active { border-color: #ffd700; transform: translateY(-10px); cursor: pointer; }
-        .card.selected { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
-        .card-cost { position: absolute; top: -2px; right: -2px; background: var(--elixir-color); color: white; padding: 2px 6px; border-radius: 0 0 0 8px; font-size: 12px; }
-        .card-name { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.7); color: white; font-size: 10px; text-align: center; padding: 2px 0; }
-        
-        /* Animasiyalar */
-        @keyframes damage { 0% { filter: brightness(1); } 50% { filter: brightness(3) sepia(1); } 100% { filter: brightness(1); } }
-        .hit { animation: damage 0.2s; }
-    </style>
+    <meta name="theme-color" content="#000000">
+    <title>Among Us - Mobil</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
+
 <body>
-
-<div id="game-wrapper">
-    <div id="ui-top">
-        <div class="stat-box">Düşmən: <span id="bot-score">3</span></div>
-        <div class="stat-box">Sən: <span id="player-score">3</span></div>
-    </div>
-
-    <canvas id="arena"></canvas>
-
-    <div id="ui-bottom">
-        <div class="elixir-container">
-            <div id="elixir-progress"></div>
-            <div id="elixir-text">ELİKSİR: 0</div>
-        </div>
-        <div class="hand">
-            <div class="card" data-id="knight" data-cost="3">
-                <div class="card-cost">3</div>
-                <div class="card-name">CƏNGAVƏR</div>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <div class="crewmate-loading"></div>
             </div>
-            <div class="card" data-id="archer" data-cost="2">
-                <div class="card-cost">2</div>
-                <div class="card-name">OXÇU</div>
-            </div>
-            <div class="card" data-id="giant" data-cost="5">
-                <div class="card-cost">5</div>
-                <div class="card-name">DİV</div>
-            </div>
-            <div class="card" data-id="spell" data-cost="4">
-                <div class="card-cost">4</div>
-                <div class="card-name">OD TOPU</div>
+            <div class="loading-text">Yükleniyor...</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-/** * PRO STRATEGİYA MÜHƏRRİKİ v2.0
- * Bütün məntiq OOP (Obyekt Yönümlü Proqramlaşdırma) ilə qurulub.
- */
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen hidden">
+        <div class="menu-header">
+            <div class="user-profile">
+                <img id="user-avatar" src="" alt="Avatar" class="avatar">
+                <div class="user-info">
+                    <div id="user-name" class="username">Guest</div>
+                    <div id="user-id" class="user-id">ID: 0000</div>
+                </div>
+            </div>
+        </div>
 
-const CONFIG = {
-    LANE_L: 0.25,
-    LANE_R: 0.75,
-    START_ELIXIR: 5,
-    MAX_ELIXIR: 10,
-    ELIXIR_SPEED: 0.015, // Saniyədə artım
-    TOWER_HP: 1500,
-    KING_HP: 3000
-};
+        <div class="menu-content">
+            <h1 class="game-title">AMONG US</h1>
 
-class Game {
-    constructor() {
-        this.canvas = document.getElementById('arena');
-        this.ctx = this.canvas.getContext('2d');
-        this.resize();
-        
-        this.entities = [];
-        this.particles = [];
-        this.elixir = CONFIG.START_ELIXIR;
-        this.selectedCard = null;
-        this.isGameOver = false;
+            <div class="menu-buttons">
+                <button class="btn btn-primary" id="btn-quick-match">
+                    <span class="btn-icon">🎮</span>
+                    <span class="btn-text">Hızlı Oyun</span>
+                </button>
 
-        this.initEventListeners();
-        this.setupMap();
-        this.spawnInitialTowers();
-        this.loop();
-    }
+                <button class="btn btn-secondary" id="btn-create-room">
+                    <span class="btn-icon">➕</span>
+                    <span class="btn-text">Oda Oluştur</span>
+                </button>
 
-    resize() {
-        this.canvas.width = window.innerWidth > 500 ? 400 : window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.scale = this.canvas.width / 400;
-    }
+                <button class="btn btn-secondary" id="btn-join-room">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">Odaya Katıl</span>
+                </button>
 
-    setupMap() {
-        // Çay və körpü koordinatları
-        this.riverY = this.canvas.height / 2;
-    }
+                <button class="btn btn-tertiary" id="btn-settings">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">Ayarlar</span>
+                </button>
+            </div>
+        </div>
 
-    spawnInitialTowers() {
-        const createTower = (x, y, hp, team, type) => {
-            this.entities.push(new Tower(x * this.canvas.width, y * this.canvas.height, hp, team, type));
-        };
+        <div class="menu-footer">
+            <div class="online-count">
+                <span class="status-dot"></span>
+                <span id="online-players">0</span> Oyuncu Çevrimiçi
+            </div>
+        </div>
+    </div>
 
-        // Player towers (Göy)
-        createTower(0.2, 0.8, CONFIG.TOWER_HP, 'player', 'side');
-        createTower(0.8, 0.8, CONFIG.TOWER_HP, 'player', 'side');
-        createTower(0.5, 0.9, CONFIG.KING_HP, 'player', 'king');
+    <!-- Create Room Screen -->
+    <div id="create-room-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-back-from-create">←</button>
+            <h2>Oda Oluştur</h2>
+        </div>
 
-        // Bot towers (Qırmızı)
-        createTower(0.2, 0.2, CONFIG.TOWER_HP, 'bot', 'side');
-        createTower(0.8, 0.2, CONFIG.TOWER_HP, 'bot', 'side');
-        createTower(0.5, 0.1, CONFIG.KING_HP, 'bot', 'king');
-    }
+        <div class="room-settings">
+            <div class="setting-group">
+                <label>Oda Adı</label>
+                <input type="text" id="room-name" placeholder="Oda adını girin" maxlength="20">
+            </div>
 
-    initEventListeners() {
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const cost = parseInt(card.dataset.cost);
-                if (this.elixir >= cost) {
-                    this.selectedCard = { id: card.dataset.id, cost: cost };
-                    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                }
-            });
-        });
+            <div class="setting-group">
+                <label>Şifre (İsteğe Bağlı)</label>
+                <input type="password" id="room-password" placeholder="Şifre belirleyin">
+            </div>
 
-        this.canvas.addEventListener('mousedown', (e) => this.handleInput(e.clientX, e.clientY));
-        this.canvas.addEventListener('touchstart', (e) => this.handleInput(e.touches[0].clientX, e.touches[0].clientY));
-    }
+            <div class="setting-group">
+                <label>Maksimum Oyuncu: <span id="max-players-value">10</span></label>
+                <input type="range" id="max-players" min="4" max="10" value="10">
+            </div>
 
-    handleInput(rawX, rawY) {
-        if (!this.selectedCard) return;
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const x = rawX - rect.left;
-        const y = rawY - rect.top;
+            <div class="setting-group">
+                <label>İmposter Sayısı: <span id="imposter-count-value">2</span></label>
+                <input type="range" id="imposter-count" min="1" max="3" value="2">
+            </div>
 
-        // Yerləşdirmə qaydası (Məsələn: Sən ancaq öz tərəfinə qoya bilərsən)
-        if (y < this.riverY && this.selectedCard.id !== 'spell') return;
+            <div class="setting-group">
+                <label>Polis Sayısı: <span id="police-count-value">1</span></label>
+                <input type="range" id="police-count" min="0" max="2" value="1">
+            </div>
 
-        this.spawnUnit(x, y, 'player', this.selectedCard.id);
-        this.elixir -= this.selectedCard.cost;
-        this.selectedCard = null;
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-    }
+            <div class="setting-group">
+                <label>Görev Sayısı: <span id="task-count-value">5</span></label>
+                <input type="range" id="task-count" min="3" max="10" value="5">
+            </div>
 
-    spawnUnit(x, y, team, type) {
-        let unit;
-        switch(type) {
-            case 'knight': unit = new Knight(x, y, team); break;
-            case 'archer': unit = new Archer(x, y, team); break;
-            case 'giant':  unit = new Giant(x, y, team); break;
-            case 'spell':  this.triggerSpell(x, y, team); return;
-        }
-        if(unit) this.entities.push(unit);
-    }
+            <div class="setting-group">
+                <label>Acil Toplantı Sayısı: <span id="emergency-count-value">1</span></label>
+                <input type="range" id="emergency-count" min="0" max="3" value="1">
+            </div>
 
-    triggerSpell(x, y, team) {
-        this.particles.push(new Explosion(x, y));
-        this.entities.forEach(ent => {
-            const dist = Math.hypot(ent.x - x, ent.y - y);
-            if (dist < 80 && ent.team !== team) ent.takeDamage(400);
-        });
-    }
+            <div class="setting-group">
+                <label>Tartışma Süresi (sn): <span id="discussion-time-value">45</span></label>
+                <input type="range" id="discussion-time" min="15" max="120" step="15" value="45">
+            </div>
 
-    update() {
-        if (this.isGameOver) return;
+            <div class="setting-group">
+                <label>Oylama Süresi (sn): <span id="voting-time-value">60</span></label>
+                <input type="range" id="voting-time" min="30" max="120" step="15" value="60">
+            </div>
+        </div>
 
-        this.elixir = Math.min(CONFIG.MAX_ELIXIR, this.elixir + CONFIG.ELIXIR_SPEED);
-        this.updateUI();
+        <button class="btn btn-primary btn-large" id="btn-create-room-confirm">
+            Oda Oluştur
+        </button>
+    </div>
 
-        // Entity logic
-        this.entities.forEach(ent => ent.update(this.entities, this.particles));
-        this.entities = this.entities.filter(ent => ent.hp > 0);
-        
-        // Particle logic
-        this.particles.forEach(p => p.update());
-        this.particles = this.particles.filter(p => !p.dead);
+    <!-- Join Room Screen -->
+    <div id="join-room-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-back-from-join">←</button>
+            <h2>Odaya Katıl</h2>
+        </div>
 
-        // Simple AI
-        if (Math.random() < 0.01) {
-            const types = ['knight', 'archer', 'giant'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            this.spawnUnit(Math.random() * this.canvas.width, 100, 'bot', type);
-        }
-    }
+        <div class="room-list" id="room-list">
+            <!-- Rooms will be dynamically added here -->
+        </div>
+    </div>
 
-    updateUI() {
-        document.getElementById('elixir-progress').style.width = (this.elixir / CONFIG.MAX_ELIXIR * 100) + '%';
-        document.getElementById('elixir-text').innerText = `ELİKSİR: ${Math.floor(this.elixir)}`;
-        
-        document.querySelectorAll('.card').forEach(card => {
-            if (parseInt(card.dataset.cost) <= this.elixir) card.classList.add('active');
-            else card.classList.remove('active');
-        });
-    }
+    <!-- Room Lobby Screen -->
+    <div id="room-lobby-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-leave-room">←</button>
+            <h2 id="lobby-room-name">Oda</h2>
+        </div>
 
-    draw() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.drawMap();
-        this.entities.sort((a,b) => a.y - b.y).forEach(ent => ent.draw(this.ctx));
-        this.particles.forEach(p => p.draw(this.ctx));
-    }
+        <div class="lobby-info">
+            <div class="lobby-code">
+                Kod: <span id="lobby-code">XXXXXX</span>
+            </div>
+            <div class="lobby-settings-summary" id="lobby-settings">
+                <!-- Settings summary -->
+            </div>
+        </div>
 
-    drawMap() {
-        const ctx = this.ctx;
-        // Ot
-        ctx.fillStyle = '#457b4d';
-        ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
-        
-        // Çay
-        ctx.fillStyle = '#4a90e2';
-        ctx.fillRect(0, this.riverY - 20, this.canvas.width, 40);
+        <div class="players-grid" id="players-grid">
+            <!-- Players will be dynamically added here -->
+        </div>
 
-        // Körpülər
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(this.canvas.width * 0.2 - 25, this.riverY - 25, 50, 50);
-        ctx.fillRect(this.canvas.width * 0.8 - 25, this.riverY - 25, 50, 50);
-    }
+        <div class="lobby-footer">
+            <div class="ready-status" id="ready-status">
+                <span id="ready-count">0</span>/<span id="total-count">10</span> Hazır
+            </div>
+            <button class="btn btn-primary btn-large" id="btn-ready">
+                Hazır
+            </button>
+            <button class="btn btn-success btn-large hidden" id="btn-start-game">
+                Oyunu Başlat
+            </button>
+        </div>
+    </div>
 
-    loop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.loop());
-    }
-}
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <!-- Role Reveal -->
+        <div id="role-reveal" class="role-reveal hidden">
+            <div class="role-content">
+                <h2 id="role-title">Rolün</h2>
+                <div id="role-icon" class="role-icon"></div>
+                <p id="role-description"></p>
+            </div>
+        </div>
 
-/** * ENTITY CLASSES (Oyun obyektləri)
- */
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
 
-class Entity {
-    constructor(x, y, hp, team) {
-        this.x = x; this.y = y; this.hp = hp; this.maxHp = hp;
-        this.team = team;
-        this.size = 20;
-        this.attackTimer = 0;
-    }
+        <!-- Game UI Overlay -->
+        <div class="game-ui">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="alive-count">
+                    <span class="crewmate-icon">👤</span>
+                    <span id="alive-crewmates">8</span>
+                </div>
+                <div class="task-progress">
+                    <div class="task-bar">
+                        <div class="task-fill" id="task-fill"></div>
+                    </div>
+                    <span id="task-text">0/5</span>
+                </div>
+            </div>
 
-    takeDamage(amt) {
-        this.hp -= amt;
-        this.isHit = true;
-        setTimeout(() => this.isHit = false, 150);
-    }
+            <!-- Joystick -->
+            <div class="joystick-container" id="joystick-container">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="joystick-stick"></div>
+                </div>
+            </div>
 
-    drawHP(ctx) {
-        const w = 30;
-        ctx.fillStyle = 'black';
-        ctx.fillRect(this.x - w/2, this.y - this.size - 10, w, 5);
-        ctx.fillStyle = this.team === 'player' ? '#00ff00' : '#ff0000';
-        ctx.fillRect(this.x - w/2, this.y - this.size - 10, w * (this.hp/this.maxHp), 5);
-    }
-}
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn" id="btn-use">
+                    <span>Kullan</span>
+                </button>
+                <button class="action-btn" id="btn-report">
+                    <span>Bildir</span>
+                </button>
+                <button class="action-btn hidden" id="btn-kill">
+                    <span>Öldür</span>
+                </button>
+                <button class="action-btn hidden" id="btn-sabotage">
+                    <span>Sabotaj</span>
+                </button>
+                <button class="action-btn" id="btn-emergency">
+                    <span>Acil</span>
+                </button>
+            </div>
 
-class Tower extends Entity {
-    constructor(x, y, hp, team, type) {
-        super(x, y, hp, team);
-        this.type = type;
-        this.size = type === 'king' ? 40 : 30;
-        this.range = 150;
-    }
+            <!-- Map -->
+            <div class="minimap" id="minimap">
+                <canvas id="minimap-canvas"></canvas>
+            </div>
+        </div>
+    </div>
 
-    update(entities) {
-        if (this.attackTimer > 0) this.attackTimer--;
-        else {
-            const enemy = entities.find(e => e.team !== this.team && Math.hypot(e.x - this.x, e.y - this.y) < this.range);
-            if (enemy) {
-                enemy.takeDamage(50);
-                this.attackTimer = 60;
-            }
-        }
-    }
+    <!-- Meeting Screen -->
+    <div id="meeting-screen" class="screen hidden">
+        <div class="meeting-header">
+            <h2 id="meeting-title">Acil Toplantı</h2>
+            <div class="meeting-timer" id="meeting-timer">45</div>
+        </div>
 
-    draw(ctx) {
-        ctx.save();
-        if (this.isHit) ctx.filter = 'brightness(2)';
-        ctx.fillStyle = this.team === 'player' ? '#2c3e50' : '#c0392b';
-        ctx.beginPath();
-        ctx.roundRect(this.x - this.size, this.y - this.size, this.size*2, this.size*2, 5);
-        ctx.fill();
-        ctx.strokeStyle = 'gold';
-        ctx.stroke();
-        ctx.restore();
-        this.drawHP(ctx);
-    }
-}
+        <div class="meeting-body" id="meeting-body">
+            <!-- Dead body info or emergency caller -->
+        </div>
 
-class Unit extends Entity {
-    constructor(x, y, hp, team, speed, range, damage) {
-        super(x, y, hp, team);
-        this.speed = speed;
-        this.range = range;
-        this.damage = damage;
-        this.target = null;
-    }
+        <div class="players-voting" id="players-voting">
+            <!-- Players for voting -->
+        </div>
 
-    update(entities, particles) {
-        if (this.attackTimer > 0) this.attackTimer--;
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Chat messages -->
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." maxlength="100">
+                <button id="btn-send-chat">Gönder</button>
+            </div>
+        </div>
 
-        this.target = this.findBestTarget(entities);
-        if (this.target) {
-            const dist = Math.hypot(this.target.x - this.x, this.target.y - this.y);
-            if (dist < this.range) {
-                if (this.attackTimer <= 0) {
-                    this.target.takeDamage(this.damage);
-                    this.attackTimer = 50;
-                    particles.push(new HitSpark(this.target.x, this.target.y));
-                }
-            } else {
-                const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-                this.x += Math.cos(angle) * this.speed;
-                this.y += Math.sin(angle) * this.speed;
-            }
-        }
-    }
+        <div class="voting-results hidden" id="voting-results">
+            <!-- Voting results -->
+        </div>
+    </div>
 
-    findBestTarget(entities) {
-        let nearest = null;
-        let minDist = Infinity;
-        entities.forEach(e => {
-            if (e.team !== this.team) {
-                const d = Math.hypot(e.x - this.x, e.y - this.y);
-                if (d < minDist) { minDist = d; nearest = e; }
-            }
-        });
-        return nearest;
-    }
-}
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen hidden">
+        <div class="game-over-content">
+            <h1 id="game-over-title">Crewmates Kazandı!</h1>
+            <div id="game-over-reason"></div>
 
-class Knight extends Unit {
-    constructor(x, y, team) { super(x, y, 500, team, 1.2, 30, 45); }
-    draw(ctx) {
-        ctx.fillStyle = this.team === 'player' ? '#3498db' : '#e74c3c';
-        ctx.beginPath(); ctx.arc(this.x, this.y, 15, 0, Math.PI*2); ctx.fill();
-        this.drawHP(ctx);
-    }
-}
+            <div class="winners-list" id="winners-list">
+                <!-- Winners -->
+            </div>
 
-class Giant extends Unit {
-    constructor(x, y, team) { super(x, y, 2000, team, 0.6, 40, 80); }
-    draw(ctx) {
-        ctx.fillStyle = '#d35400';
-        ctx.beginPath(); ctx.arc(this.x, this.y, 25, 0, Math.PI*2); ctx.fill();
-        this.drawHP(ctx);
-    }
-}
+            <button class="btn btn-primary btn-large" id="btn-back-to-menu">
+                Ana Menüye Dön
+            </button>
+        </div>
+    </div>
 
-class Archer extends Unit {
-    constructor(x, y, team) { super(x, y, 250, team, 1.5, 120, 25); }
-    draw(ctx) {
-        ctx.fillStyle = '#9b59b6';
-        ctx.beginPath(); ctx.moveTo(this.x, this.y-15); ctx.lineTo(this.x+12, this.y+10); ctx.lineTo(this.x-12, this.y+10); ctx.fill();
-        this.drawHP(ctx);
-    }
-}
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Şifre Gerekli</h3>
+            <input type="password" id="modal-password" placeholder="Şifreyi girin">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="btn-cancel-password">İptal</button>
+                <button class="btn btn-primary" id="btn-submit-password">Katıl</button>
+            </div>
+        </div>
+    </div>
 
-/**
- * EFFEKTLƏR (Particles)
- */
-class Explosion {
-    constructor(x,y) { this.x=x; this.y=y; this.r=10; this.dead=false; }
-    update() { this.r += 5; if(this.r > 80) this.dead=true; }
-    draw(ctx) {
-        ctx.strokeStyle = `rgba(255, 100, 0, ${1 - this.r/80})`;
-        ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.stroke();
-    }
-}
-
-class HitSpark {
-    constructor(x,y) { this.x=x; this.y=y; this.life=10; this.dead=false; }
-    update() { this.life--; if(this.life<=0) this.dead=true; }
-    draw(ctx) {
-        ctx.fillStyle = 'white';
-        ctx.fillRect(this.x-5, this.y-5, 10, 10);
-    }
-}
-
-// Oyunu Başlat
-window.onload = () => new Game();
-
-</script>
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="telegram.js"></script>
+    <script src="network.js"></script>
+    <script src="game3d.js"></script>
+    <script src="game.js"></script>
+    <script src="ui.js"></script>
+    <script src="main.js"></script>
 </body>
+
 </html>
