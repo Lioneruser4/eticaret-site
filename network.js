@@ -59,6 +59,11 @@ class NetworkManager {
         });
     }
 
+    reconnect() {
+        this.reconnectAttempts = 0;
+        return this.connect();
+    }
+
     attemptReconnect() {
         // High limit for "never disconnect"
         const maxAttempts = 100;
@@ -68,17 +73,19 @@ class NetworkManager {
 
             this.emit('reconnecting', {
                 attempt: this.reconnectAttempts,
-                max: maxAttempts
+                max: maxAttempts,
+                url: CONFIG.WS_URL
             });
 
             setTimeout(() => {
                 this.connect().catch(err => {
-                    console.error('Reconnection attempt failed');
+                    console.error('Reconnection attempt failed:', err.message);
                 });
             }, this.reconnectDelay);
         } else {
             console.error('Max reconnection attempts reached');
-            window.telegramAuth?.showAlert('Sunucu ile bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
+            this.emit('connection_failed');
+            window.telegramAuth?.showAlert(`Sunucu ile bağlantı kurulamadı (${CONFIG.WS_URL}). Lütfen Render panelinden sunucunun açık olduğunu kontrol edin.`);
         }
     }
 
