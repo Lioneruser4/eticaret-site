@@ -27,45 +27,37 @@
 
     <!-- Main Menu -->
     <div id="main-menu" class="screen hidden">
-        <div class="menu-header">
-            <div class="user-profile">
-                <img id="user-avatar" src="" alt="Avatar" class="avatar">
-                <div class="user-info">
-                    <div id="user-name" class="username">Guest</div>
-                    <div id="user-id" class="user-id">ID: 0000</div>
-                </div>
+        <div class="main-menu-bg">
+            <!-- User Name at Top -->
+            <div class="welcome-section">
+                <div class="welcome-text">Hoş Geldin</div>
+                <div id="user-name-display" class="user-name-display">Guest</div>
             </div>
-        </div>
 
-        <div class="menu-content">
-            <h1 class="game-title">AMONG US</h1>
+            <!-- Game Title -->
+            <h1 class="game-title-main">AMONG US</h1>
 
-            <div class="menu-buttons">
-                <button class="btn btn-primary" id="btn-quick-match">
-                    <span class="btn-icon">🎮</span>
-                    <span class="btn-text">Hızlı Oyun</span>
+            <!-- Main Buttons -->
+            <div class="main-menu-buttons">
+                <button class="btn-main btn-main-primary" id="btn-quick-match">
+                    <div class="btn-main-icon">🎮</div>
+                    <div class="btn-main-text">Rastgele Oyna</div>
                 </button>
 
-                <button class="btn btn-secondary" id="btn-create-room">
-                    <span class="btn-icon">➕</span>
-                    <span class="btn-text">Oda Oluştur</span>
+                <button class="btn-main btn-main-secondary" id="btn-join-room">
+                    <div class="btn-main-icon">🏠</div>
+                    <div class="btn-main-text">Odalar</div>
                 </button>
 
-                <button class="btn btn-secondary" id="btn-join-room">
-                    <span class="btn-icon">🔍</span>
-                    <span class="btn-text">Odaya Katıl</span>
-                </button>
-
-                <button class="btn btn-tertiary" id="btn-settings">
-                    <span class="btn-icon">⚙️</span>
-                    <span class="btn-text">Ayarlar</span>
+                <button class="btn-main btn-main-tertiary" id="btn-create-room">
+                    <div class="btn-main-icon">➕</div>
+                    <div class="btn-main-text">Oda Kur</div>
                 </button>
             </div>
-        </div>
 
-        <div class="menu-footer">
-            <div class="online-count">
-                <span class="status-dot"></span>
+            <!-- Online Count -->
+            <div class="online-status">
+                <span class="status-indicator"></span>
                 <span id="online-players">0</span> Oyuncu Çevrimiçi
             </div>
         </div>
