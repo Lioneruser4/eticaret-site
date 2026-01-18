@@ -18,7 +18,8 @@
             <div class="loading-logo">
                 <div class="crewmate-loading"></div>
             </div>
-            <div class="loading-text">Yükleniyor...</div>
+            <div class="loading-text" id="loading-text">Yükleniyor...</div>
+            <div class="loading-status" id="loading-status">Sunucuya bağlanıyor...</div>
             <div class="loading-bar">
                 <div class="loading-progress"></div>
             </div>
@@ -285,6 +286,15 @@
                 <button class="btn btn-secondary" id="btn-cancel-password">İptal</button>
                 <button class="btn btn-primary" id="btn-submit-password">Katıl</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Freeze Overlay -->
+    <div id="freeze-overlay" class="freeze-overlay hidden">
+        <div class="freeze-content">
+            <div class="freeze-spinner"></div>
+            <h2 id="freeze-title">Bağlantı Kesildi</h2>
+            <p id="freeze-status">Yeniden bağlanılıyor...</p>
         </div>
     </div>
 
