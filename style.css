@@ -394,6 +394,56 @@ body {
     }
 }
 
+/* General Buttons for Other Screens */
+.btn {
+    padding: 15px 25px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), #ff6b81);
+    color: white;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, var(--secondary-color), #706fd3);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #20bf6b);
+    color: white;
+}
+
+.btn-large {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+}
+
+.btn-back {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
 /* Screen Header */
 .screen-header {
     display: flex;
