@@ -498,8 +498,13 @@ class UIManager {
     showFreezeScreen(message) {
         const overlay = document.getElementById('freeze-overlay');
         const status = document.getElementById('freeze-status');
+        const btn = document.getElementById('btn-reconnect');
+        const urlEl = document.getElementById('freeze-url');
+
         if (overlay) overlay.classList.remove('hidden');
         if (status) status.textContent = message;
+        if (btn) btn.style.display = 'none';
+        if (urlEl) urlEl.textContent = CONFIG.WS_URL;
     }
 
     hideFreezeScreen() {
@@ -507,9 +512,15 @@ class UIManager {
         if (overlay) overlay.classList.add('hidden');
     }
 
-    updateFreezeStatus(message) {
+    updateFreezeStatus(message, attemptCount = 0) {
         const status = document.getElementById('freeze-status');
+        const btn = document.getElementById('btn-reconnect');
         if (status) status.textContent = message;
+
+        // Show retry button after 5 failed attempts
+        if (btn && attemptCount > 5) {
+            btn.style.display = 'inline-block';
+        }
     }
 }
 
