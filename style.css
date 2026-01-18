@@ -88,8 +88,15 @@ body {
 .loading-text {
     font-size: 24px;
     font-weight: bold;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     color: var(--text-primary);
+}
+
+.loading-status {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 .loading-bar {
@@ -1183,6 +1190,10 @@ body {
     z-index: 10000;
 }
 
+.modal.hidden {
+    display: none;
+}
+
 .modal-content {
     background: var(--card-bg);
     padding: 30px;
@@ -1261,4 +1272,65 @@ body {
         width: 40px;
         height: 40px;
     }
+}
+
+/* Freeze Overlay */
+.freeze-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 14, 39, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    animation: fadeIn 0.3s ease;
+}
+
+.freeze-overlay.hidden {
+    display: none;
+}
+
+.freeze-content {
+    text-align: center;
+    padding: 40px;
+    background: var(--card-bg);
+    border-radius: 25px;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 50px rgba(255, 71, 87, 0.3);
+    max-width: 85%;
+}
+
+.freeze-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid var(--border-color);
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    margin: 0 auto 25px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#freeze-title {
+    color: var(--primary-color);
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+#freeze-status {
+    color: var(--text-secondary);
+    font-size: 16px;
 }
