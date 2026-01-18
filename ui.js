@@ -129,11 +129,8 @@ class UIManager {
     }
 
     updateUserProfile() {
-        const user = window.telegramAuth.getUser();
-
-        document.getElementById('user-avatar').src = window.telegramAuth.getUserAvatar();
-        document.getElementById('user-name').textContent = window.telegramAuth.getUserName();
-        document.getElementById('user-id').textContent = `ID: ${user.id}`;
+        const userName = window.telegramAuth.getUserName();
+        document.getElementById('user-name-display').textContent = userName;
     }
 
     handleQuickMatch() {
