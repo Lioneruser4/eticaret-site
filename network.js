@@ -19,11 +19,16 @@ class NetworkManager {
 
                 this.ws.onopen = () => {
                     console.log('WebSocket connected');
+                    const wasReconnecting = this.reconnectAttempts > 0;
                     this.connected = true;
                     this.reconnectAttempts = 0;
 
                     // Kullanıcı bilgilerini gönder
                     this.authenticate();
+
+                    if (wasReconnecting) {
+                        this.emit('connection_restored');
+                    }
 
                     resolve();
                 };
@@ -34,35 +39,46 @@ class NetworkManager {
 
                 this.ws.onerror = (error) => {
                     console.error('WebSocket error:', error);
-                    reject(error);
+                    // reject(error); // Don't reject to keep trying
                 };
 
                 this.ws.onclose = () => {
                     console.log('WebSocket disconnected');
-                    this.connected = false;
+                    if (this.connected) {
+                        this.connected = false;
+                        this.emit('connection_lost');
+                    }
                     this.attemptReconnect();
                 };
 
             } catch (error) {
                 console.error('Failed to create WebSocket:', error);
+                this.attemptReconnect();
                 reject(error);
             }
         });
     }
 
     attemptReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        // High limit for "never disconnect"
+        const maxAttempts = 100;
+        if (this.reconnectAttempts < maxAttempts) {
             this.reconnectAttempts++;
-            console.log(`Reconnecting... Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            console.log(`Reconnecting... Attempt ${this.reconnectAttempts}/${maxAttempts}`);
+
+            this.emit('reconnecting', {
+                attempt: this.reconnectAttempts,
+                max: maxAttempts
+            });
 
             setTimeout(() => {
                 this.connect().catch(err => {
-                    console.error('Reconnection failed:', err);
+                    console.error('Reconnection attempt failed');
                 });
             }, this.reconnectDelay);
         } else {
             console.error('Max reconnection attempts reached');
-            window.telegramAuth?.showAlert('Sunucuya bağlanılamadı. Lütfen sayfayı yenileyin.');
+            window.telegramAuth?.showAlert('Sunucu ile bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
         }
     }
 
