@@ -68,16 +68,6 @@ class AmongUsGame {
         // Room list
         nm.on('roomListUpdated', (rooms) => {
             ui.updateRoomList(rooms);
-
-            // Auto-join for quick match
-            if (ui.currentScreen === 'main-menu' && rooms.length > 0) {
-                const availableRoom = rooms.find(r =>
-                    r.currentPlayers < r.maxPlayers && !r.hasPassword
-                );
-                if (availableRoom) {
-                    nm.joinRoom(availableRoom.code);
-                }
-            }
         });
 
         // Room joined
