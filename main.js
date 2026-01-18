@@ -40,13 +40,17 @@ class AmongUsGame {
     }
 
     async initializeManagers() {
+        const loadingStatus = document.getElementById('loading-status');
+
         // Connect to server
         try {
+            if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlanıyor...';
             await window.networkManager.connect();
+            if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlandı! ✓';
             console.log('Connected to server');
         } catch (error) {
             console.error('Failed to connect to server:', error);
-            // Continue anyway for offline testing
+            if (loadingStatus) loadingStatus.textContent = 'Bağlantı hatası! Yeniden deneniyor...';
         }
     }
 
@@ -54,6 +58,24 @@ class AmongUsGame {
         const nm = window.networkManager;
         const ui = window.uiManager;
         const gm = window.gameManager;
+
+        // Connection State
+        nm.on('connection_lost', () => {
+            console.warn('Connection lost!');
+            ui.showFreezeScreen('Bağlantı koptu. Yeniden bağlanılıyor...');
+            gm.paused = true;
+        });
+
+        nm.on('connection_restored', () => {
+            console.log('Connection restored!');
+            ui.hideFreezeScreen();
+            gm.paused = false;
+            // Re-auth happens inside networkManager.connect() -> authenticate()
+        });
+
+        nm.on('reconnecting', (data) => {
+            ui.updateFreezeStatus(`Yeniden bağlanma denemesi: ${data.attempt}/100`);
+        });
 
         // Authentication
         nm.on('authenticated', (data) => {
