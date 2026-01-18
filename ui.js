@@ -490,7 +490,26 @@ class UIManager {
     }
 
     updateOnlineCount(count) {
-        document.getElementById('online-players').textContent = count;
+        const el = document.getElementById('online-players');
+        if (el) el.textContent = count;
+    }
+
+    // Freeze Overlay management
+    showFreezeScreen(message) {
+        const overlay = document.getElementById('freeze-overlay');
+        const status = document.getElementById('freeze-status');
+        if (overlay) overlay.classList.remove('hidden');
+        if (status) status.textContent = message;
+    }
+
+    hideFreezeScreen() {
+        const overlay = document.getElementById('freeze-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    }
+
+    updateFreezeStatus(message) {
+        const status = document.getElementById('freeze-status');
+        if (status) status.textContent = message;
     }
 }
 
