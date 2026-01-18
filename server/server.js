@@ -42,7 +42,7 @@ function generateRoomCode() {
 }
 
 function broadcast(ws, type, payload) {
-    if (ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type, payload }));
     }
 }
@@ -326,6 +326,7 @@ wss.on('connection', (ws) => {
                     }
 
                     broadcast(ws, 'auth_success', { playerId: playerId });
+                    broadcastOnlineCount();
 
                     // If reconnected and was in a room, send room data
                     const p = players.get(playerId);
@@ -333,19 +334,218 @@ wss.on('connection', (ws) => {
                         const room = rooms.get(p.roomCode);
                         if (room) {
                             broadcast(ws, 'room_joined', { room: getRoomData(room) });
-                            // If game is active, send game data? 
-                            // This might need more work in main.js to handle re-joining a game
                         }
                     }
-
-                    broadcastOnlineCount();
                     break;
 
-                // ... other cases remain the same ...
                 case 'get_rooms':
                     broadcast(ws, 'room_list', { rooms: getRoomList() });
                     break;
-                // I will use a multi-replace if needed, for now focusing on persistence
+
+                case 'create_room':
+                    const roomCode = generateRoomCode();
+                    const room = {
+                        code: roomCode,
+                        name: payload.name,
+                        password: payload.password,
+                        host: playerId,
+                        players: [playerId],
+                        settings: {
+                            maxPlayers: payload.maxPlayers,
+                            imposterCount: payload.imposterCount,
+                            policeCount: payload.policeCount,
+                            taskCount: payload.taskCount,
+                            emergencyMeetings: payload.emergencyMeetings,
+                            discussionTime: payload.discussionTime,
+                            votingTime: payload.votingTime
+                        },
+                        state: GAME_STATES.WAITING
+                    };
+
+                    rooms.set(roomCode, room);
+
+                    const creator = players.get(playerId);
+                    creator.roomCode = roomCode;
+
+                    broadcast(ws, 'room_created', { room: getRoomData(room) });
+                    break;
+
+                case 'join_room':
+                    const targetRoom = rooms.get(payload.roomCode);
+
+                    if (!targetRoom) {
+                        broadcast(ws, 'error', { message: 'Oda bulunamadı!' });
+                        break;
+                    }
+
+                    if (targetRoom.password && targetRoom.password !== payload.password) {
+                        broadcast(ws, 'error', { message: 'Yanlış şifre!' });
+                        break;
+                    }
+
+                    if (targetRoom.players.length >= targetRoom.settings.maxPlayers) {
+                        broadcast(ws, 'error', { message: 'Oda dolu!' });
+                        break;
+                    }
+
+                    targetRoom.players.push(playerId);
+                    const joiningPlayer = players.get(playerId);
+                    joiningPlayer.roomCode = payload.roomCode;
+
+                    broadcast(ws, 'room_joined', { room: getRoomData(targetRoom) });
+                    broadcastToRoom(payload.roomCode, 'room_updated', { room: getRoomData(targetRoom) });
+                    broadcastToRoom(payload.roomCode, 'player_joined', {
+                        playerId: playerId,
+                        username: joiningPlayer.username
+                    });
+                    break;
+
+                case 'leave_room':
+                    const leaver = players.get(playerId);
+                    if (leaver && leaver.roomCode) {
+                        const currentRoom = rooms.get(leaver.roomCode);
+                        if (currentRoom) {
+                            currentRoom.players = currentRoom.players.filter(id => id !== playerId);
+
+                            if (currentRoom.players.length === 0) {
+                                rooms.delete(leaver.roomCode);
+                            } else {
+                                if (currentRoom.host === playerId) {
+                                    currentRoom.host = currentRoom.players[0];
+                                }
+                                broadcastToRoom(leaver.roomCode, 'room_updated', {
+                                    room: getRoomData(currentRoom)
+                                });
+                                broadcastToRoom(leaver.roomCode, 'player_left', {
+                                    playerId: playerId
+                                });
+                            }
+                        }
+                        leaver.roomCode = null;
+                        leaver.ready = false;
+                    }
+                    break;
+
+                case 'set_ready':
+                    const readyPlayer = players.get(playerId);
+                    if (readyPlayer && readyPlayer.roomCode) {
+                        readyPlayer.ready = payload.ready;
+                        const readyRoom = rooms.get(readyPlayer.roomCode);
+                        if (readyRoom) {
+                            broadcastToRoom(readyPlayer.roomCode, 'room_updated', {
+                                room: getRoomData(readyRoom)
+                            });
+                        }
+                    }
+                    break;
+
+                case 'start_game':
+                    const hostPlayer = players.get(playerId);
+                    if (hostPlayer && hostPlayer.roomCode) {
+                        const hostRoom = rooms.get(hostPlayer.roomCode);
+                        if (hostRoom && hostRoom.host === playerId) {
+                            broadcastToRoom(hostPlayer.roomCode, 'game_starting', { countdown: 3 });
+                            setTimeout(() => {
+                                startGame(hostPlayer.roomCode);
+                            }, 3000);
+                        }
+                    }
+                    break;
+
+                case 'move_player':
+                    const movingPlayer = players.get(playerId);
+                    if (movingPlayer && movingPlayer.roomCode) {
+                        broadcastToRoom(movingPlayer.roomCode, 'player_moved', {
+                            playerId: playerId,
+                            position: payload.position,
+                            rotation: payload.rotation
+                        }, playerId);
+                    }
+                    break;
+
+                case 'kill_player':
+                    const killerPlayer = players.get(playerId);
+                    if (killerPlayer && killerPlayer.roomCode) {
+                        const killerGame = games.get(killerPlayer.roomCode);
+                        if (killerGame && killerGame.roles.get(playerId) === ROLES.IMPOSTER) {
+                            killerGame.alivePlayers.delete(payload.targetId);
+                            killerGame.deadBodies.set(payload.targetId, Date.now());
+
+                            broadcastToRoom(killerPlayer.roomCode, 'player_killed', {
+                                killerId: playerId,
+                                victimId: payload.targetId
+                            });
+
+                            checkGameEnd(killerPlayer.roomCode);
+                        }
+                    }
+                    break;
+
+                case 'report_body':
+                    const reporterPlayer = players.get(playerId);
+                    if (reporterPlayer && reporterPlayer.roomCode) {
+                        startMeeting(reporterPlayer.roomCode, 'body', playerId, payload.bodyId);
+                    }
+                    break;
+
+                case 'call_emergency':
+                    const callerPlayer = players.get(playerId);
+                    if (callerPlayer && callerPlayer.roomCode) {
+                        startMeeting(callerPlayer.roomCode, 'emergency', playerId);
+                    }
+                    break;
+
+                case 'chat_message':
+                    const chattingPlayer = players.get(playerId);
+                    if (chattingPlayer && chattingPlayer.roomCode) {
+                        broadcastToRoom(chattingPlayer.roomCode, 'chat_message', {
+                            playerId: playerId,
+                            username: chattingPlayer.username,
+                            message: payload.message
+                        });
+                    }
+                    break;
+
+                case 'cast_vote':
+                    const votingPlayer = players.get(playerId);
+                    if (votingPlayer && votingPlayer.roomCode) {
+                        const votingGame = games.get(votingPlayer.roomCode);
+                        if (votingGame) {
+                            votingGame.votes.set(playerId, payload.targetId);
+                            broadcastToRoom(votingPlayer.roomCode, 'vote_cast', {
+                                voterId: playerId
+                            });
+                        }
+                    }
+                    break;
+
+                case 'complete_task':
+                    const taskPlayer = players.get(playerId);
+                    if (taskPlayer && taskPlayer.roomCode) {
+                        const taskGame = games.get(taskPlayer.roomCode);
+                        if (taskGame) {
+                            taskGame.completedTaskCount++;
+                            broadcastToRoom(taskPlayer.roomCode, 'task_completed', {
+                                playerId: playerId,
+                                taskId: payload.taskId,
+                                totalCompleted: taskGame.completedTaskCount,
+                                totalTasks: taskGame.totalTasks
+                            });
+
+                            checkGameEnd(taskPlayer.roomCode);
+                        }
+                    }
+                    break;
+
+                case 'trigger_sabotage':
+                    const sabotagePlayer = players.get(playerId);
+                    if (sabotagePlayer && sabotagePlayer.roomCode) {
+                        broadcastToRoom(sabotagePlayer.roomCode, 'sabotage_triggered', {
+                            type: payload.sabotageType,
+                            playerId: playerId
+                        });
+                    }
+                    break;
             }
 
         } catch (error) {
