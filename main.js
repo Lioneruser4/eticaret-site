@@ -74,7 +74,13 @@ class AmongUsGame {
         });
 
         nm.on('reconnecting', (data) => {
-            ui.updateFreezeStatus(`Yeniden bağlanma denemesi: ${data.attempt}/100`);
+            ui.updateFreezeStatus(`Yeniden bağlanma denemesi: ${data.attempt}/100`, data.attempt);
+        });
+
+        // Reconnect button
+        document.getElementById('btn-reconnect').addEventListener('click', () => {
+            ui.updateFreezeStatus('Manuel yeniden bağlanma denemesi...');
+            nm.reconnect();
         });
 
         // Authentication
