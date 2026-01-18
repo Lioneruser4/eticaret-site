@@ -1,8 +1,9 @@
 // Configuration
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const CONFIG = {
-    // Server URL - Render üzerinde deploy edilecek
-    SERVER_URL: 'https://saskioyunu.onrender.com',
-    WS_URL: 'wss://saskioyunu.onrender.com',
+    // Server URL - Dinamik olarak belirlenir
+    SERVER_URL: isLocal ? `http://${window.location.hostname}:3000` : 'https://saskioyunu.onrender.com',
+    WS_URL: isLocal ? `ws://${window.location.hostname}:3000` : 'wss://saskioyunu.onrender.com',
 
     // Game Settings
     GAME: {
