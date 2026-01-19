@@ -1,314 +1,590 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>Among Us - Mobil</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonim Sohbet - Tinder Tarzı</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .screen { 
+            display: none;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: white;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        }
+        
+        .screen.active { display: block; }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        select:focus, input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .profile-card {
+            text-align: center;
+            padding: 40px 20px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .avatar.blurred {
+            filter: blur(15px);
+        }
+        
+        .name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .anon-name {
+            font-size: 28px;
+            letter-spacing: 4px;
+        }
+        
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .message {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            clear: both;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.outgoing {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            float: right;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.incoming {
+            background: #e9ecef;
+            color: #333;
+            float: left;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .message-input input {
+            flex: 1;
+            border-radius: 25px;
+        }
+        
+        .message-input button {
+            padding: 15px 25px;
+            border-radius: 25px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff6b6b;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
+            z-index: 1000;
+            animation: slideDown 0.3s;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .actions button {
+            flex: 1;
+        }
+        
+        .reveal-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+        }
+        
+        .next-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        }
+        
+        .telegram-widget {
+            background: #0088cc;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        /* Mobil uyum */
+        @media (max-width: 600px) {
+            .screen {
+                padding: 15px;
+                max-width: 100%;
+            }
+            
+            .profile-card {
+                padding: 30px 15px;
+            }
+            
+            .avatar {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
 </head>
-
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loading-content">
-            <div class="loading-logo">
-                <div class="crewmate-loading"></div>
-            </div>
-            <div class="loading-text" id="loading-text">Yükleniyor...</div>
-            <div class="loading-status" id="loading-status">Sunucuya bağlanıyor...</div>
-            <div class="loading-bar">
-                <div class="loading-progress"></div>
-            </div>
+    <!-- Kayıt Ekranı -->
+    <div id="register-screen" class="screen active">
+        <div class="header">
+            <div class="logo">AnonimSohbet</div>
+            <div class="subtitle">Telegram ile güvenli, anonim eşleşmeler</div>
         </div>
-    </div>
-
-    <!-- Main Menu -->
-    <div id="main-menu" class="screen hidden">
-        <div class="main-menu-bg">
-            <!-- User Name at Top -->
-            <div class="welcome-section">
-                <div class="welcome-text">Hoş Geldin</div>
-                <div id="user-name-display" class="user-name-display">Guest</div>
-            </div>
-
-            <!-- Game Title -->
-            <h1 class="game-title-main">AMONG US</h1>
-
-            <!-- Main Buttons -->
-            <div class="main-menu-buttons">
-                <button class="btn-main btn-main-primary" id="btn-quick-match">
-                    <div class="btn-main-icon">🎮</div>
-                    <div class="btn-main-text">Rastgele Oyna</div>
-                </button>
-
-                <button class="btn-main btn-main-secondary" id="btn-join-room">
-                    <div class="btn-main-icon">🏠</div>
-                    <div class="btn-main-text">Odalar</div>
-                </button>
-
-                <button class="btn-main btn-main-tertiary" id="btn-create-room">
-                    <div class="btn-main-icon">➕</div>
-                    <div class="btn-main-text">Oda Kur</div>
-                </button>
-            </div>
-
-            <!-- Online Count -->
-            <div class="online-status">
-                <span class="status-indicator"></span>
-                <span id="online-players">0</span> Oyuncu Çevrimiçi
-            </div>
+        
+        <!-- Telegram Simülasyonu -->
+        <div class="telegram-widget" onclick="simulateTelegramLogin()">
+            <div style="font-size: 24px;">📱</div>
+            <div style="font-weight: 600; margin: 10px 0;">Telegram ile Giriş Yap</div>
+            <div style="font-size: 14px; opacity: 0.9;">Profil bilgileriniz otomatik alınacak</div>
         </div>
-    </div>
-
-    <!-- Create Room Screen -->
-    <div id="create-room-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-back-from-create">←</button>
-            <h2>Oda Oluştur</h2>
+        
+        <div class="form-group">
+            <label>Cinsiyet Tercihi</label>
+            <select id="gender">
+                <option value="">Farketmez</option>
+                <option value="male">Erkek</option>
+                <option value="female">Kadın</option>
+            </select>
         </div>
-
-        <div class="room-settings">
-            <div class="setting-group">
-                <label>Oda Adı</label>
-                <input type="text" id="room-name" placeholder="Oda adını girin" maxlength="20">
-            </div>
-
-            <div class="setting-group">
-                <label>Şifre (İsteğe Bağlı)</label>
-                <input type="password" id="room-password" placeholder="Şifre belirleyin">
-            </div>
-
-            <div class="setting-group">
-                <label>Maksimum Oyuncu: <span id="max-players-value">10</span></label>
-                <input type="range" id="max-players" min="3" max="10" value="10">
-            </div>
-
-            <div class="setting-group">
-                <label>İmposter Sayısı: <span id="imposter-count-value">2</span></label>
-                <input type="range" id="imposter-count" min="1" max="3" value="2">
-            </div>
-
-            <div class="setting-group">
-                <label>Polis Sayısı: <span id="police-count-value">1</span></label>
-                <input type="range" id="police-count" min="0" max="2" value="1">
-            </div>
-
-            <div class="setting-group">
-                <label>Görev Sayısı: <span id="task-count-value">5</span></label>
-                <input type="range" id="task-count" min="3" max="10" value="5">
-            </div>
-
-            <div class="setting-group">
-                <label>Acil Toplantı Sayısı: <span id="emergency-count-value">1</span></label>
-                <input type="range" id="emergency-count" min="0" max="3" value="1">
-            </div>
-
-            <div class="setting-group">
-                <label>Tartışma Süresi (sn): <span id="discussion-time-value">45</span></label>
-                <input type="range" id="discussion-time" min="15" max="120" step="15" value="45">
-            </div>
-
-            <div class="setting-group">
-                <label>Oylama Süresi (sn): <span id="voting-time-value">60</span></label>
-                <input type="range" id="voting-time" min="30" max="120" step="15" value="60">
-            </div>
+        
+        <div class="form-group">
+            <label>Ülke</label>
+            <select id="country" onchange="loadCities()">
+                <option value="">Seçiniz</option>
+                <option value="turkiye">Türkiye</option>
+                <option value="azerbaycan">Azerbaycan</option>
+            </select>
         </div>
-
-        <button class="btn btn-primary btn-large" id="btn-create-room-confirm">
-            Oda Oluştur
+        
+        <div class="form-group">
+            <label>Şehir</label>
+            <select id="city" disabled>
+                <option value="">Önce ülke seçin</option>
+            </select>
+        </div>
+        
+        <button class="btn" onclick="startChat()" id="start-btn" disabled>
+            <span class="pulse">Eşleşme Bul 🔍</span>
         </button>
     </div>
-
-    <!-- Join Room Screen -->
-    <div id="join-room-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-back-from-join">←</button>
-            <h2>Odaya Katıl</h2>
-        </div>
-
-        <div class="room-list" id="room-list">
-            <!-- Rooms will be dynamically added here -->
+    
+    <!-- Yükleniyor Ekranı -->
+    <div id="loading-screen" class="screen">
+        <div class="loading">
+            <div style="font-size: 48px; margin-bottom: 20px;">💬</div>
+            <div style="font-size: 20px; font-weight: 600; margin-bottom: 10px;">Eşleşme Aranıyor</div>
+            <div class="pulse">Sizinle eşleşecek birini arıyoruz...</div>
+            <div style="margin-top: 30px; font-size: 14px; color: #999;">
+                <div>📱 Mobil uyumlu</div>
+                <div>🔒 Tamamen anonim</div>
+                <div>⚡ Gerçek zamanlı</div>
+            </div>
         </div>
     </div>
-
-    <!-- Room Lobby Screen -->
-    <div id="room-lobby-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-leave-room">←</button>
-            <h2 id="lobby-room-name">Oda</h2>
+    
+    <!-- Sohbet Ekranı -->
+    <div id="chat-screen" class="screen">
+        <div class="header">
+            <div class="logo" style="font-size: 22px;">Anonim Sohbet</div>
+            <div class="subtitle">Eşleştiniz! Profiller iki tarafın onayıyla açılır</div>
         </div>
-
-        <div class="lobby-info">
-            <div class="lobby-code">
-                Kod: <span id="lobby-code">XXXXXX</span>
-            </div>
-            <div class="lobby-settings-summary" id="lobby-settings">
-                <!-- Settings summary -->
-            </div>
+        
+        <div class="profile-card">
+            <img id="partner-avatar" src="blurred.jpg" class="avatar blurred" alt="Profil">
+            <div id="partner-name" class="name anon-name">********</div>
+            <div style="color: #666; font-size: 14px;">Profil gizli</div>
         </div>
-
-        <div class="players-grid" id="players-grid">
-            <!-- Players will be dynamically added here -->
-        </div>
-
-        <div class="lobby-footer">
-            <div class="ready-status" id="ready-status">
-                <span id="ready-count">0</span>/<span id="total-count">10</span> Hazır
-            </div>
-            <button class="btn btn-primary btn-large" id="btn-ready">
-                Hazır
+        
+        <div class="actions">
+            <button class="btn reveal-btn" onclick="requestReveal()">
+                👤 Eşleşdik Butonu
             </button>
-            <button class="btn btn-success btn-large hidden" id="btn-start-game">
-                Oyunu Başlat
+            <button class="btn next-btn" onclick="nextChat()">
+                🔄 Sonraki
             </button>
+        </div>
+        
+        <div class="chat-container" id="message-container">
+            <!-- Mesajlar buraya gelecek -->
+            <div class="message incoming">Merhaba! Nasılsın? 👋</div>
+        </div>
+        
+        <div class="message-input">
+            <input type="text" id="message-input" placeholder="Mesajınızı yazın..." 
+                   onkeypress="if(event.key=='Enter') sendMessage()">
+            <button class="btn" onclick="sendMessage()">Gönder</button>
         </div>
     </div>
-
-    <!-- Game Screen -->
-    <div id="game-screen" class="screen hidden">
-        <!-- Role Reveal -->
-        <div id="role-reveal" class="role-reveal hidden">
-            <div class="role-content">
-                <h2 id="role-title">Rolün</h2>
-                <div id="role-icon" class="role-icon"></div>
-                <p id="role-description"></p>
-            </div>
-        </div>
-
-        <!-- Game Canvas -->
-        <canvas id="game-canvas"></canvas>
-
-        <!-- Game UI Overlay -->
-        <div class="game-ui">
-            <!-- Top Bar -->
-            <div class="top-bar">
-                <div class="alive-count">
-                    <span class="crewmate-icon">👤</span>
-                    <span id="alive-crewmates">8</span>
-                </div>
-                <div class="task-progress">
-                    <div class="task-bar">
-                        <div class="task-fill" id="task-fill"></div>
+    
+    <script>
+        let socket;
+        let currentUser = {};
+        let currentRoom = null;
+        
+        // Şehirleri yükle
+        function loadCities() {
+            const country = document.getElementById('country').value;
+            const citySelect = document.getElementById('city');
+            
+            if (!country) {
+                citySelect.disabled = true;
+                citySelect.innerHTML = '<option value="">Önce ülke seçin</option>';
+                return;
+            }
+            
+            fetch(`/cities/${country}`)
+                .then(res => res.json())
+                .then(cities => {
+                    citySelect.disabled = false;
+                    citySelect.innerHTML = '<option value="">Şehir seçin</option>';
+                    cities.forEach(city => {
+                        citySelect.innerHTML += `<option value="${city}">${city}</option>`;
+                    });
+                });
+        }
+        
+        // Telegram giriş simülasyonu
+        function simulateTelegramLogin() {
+            const randomNames = ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya', 'Zeynep Şahin', 'Can Öztürk'];
+            const randomPhotos = [
+                'https://i.pravatar.cc/150?img=1',
+                'https://i.pravatar.cc/150?img=2',
+                'https://i.pravatar.cc/150?img=3',
+                'https://i.pravatar.cc/150?img=4',
+                'https://i.pravatar.cc/150?img=5'
+            ];
+            
+            currentUser = {
+                name: randomNames[Math.floor(Math.random() * randomNames.length)],
+                photo: randomPhotos[Math.floor(Math.random() * randomPhotos.length)],
+                telegram_id: `tg_${Date.now()}`
+            };
+            
+            document.getElementById('start-btn').disabled = false;
+            document.querySelector('.telegram-widget').innerHTML = `
+                <div style="font-size: 24px;">✅</div>
+                <div style="font-weight: 600; margin: 10px 0;">${currentUser.name}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Telegram ile giriş yapıldı</div>
+            `;
+            
+            showNotification('Telegram bilgileriniz alındı!');
+        }
+        
+        // Sohbeti başlat
+        function startChat() {
+            if (!currentUser.name) {
+                showNotification('Önce Telegram ile giriş yapın!');
+                return;
+            }
+            
+            currentUser.gender = document.getElementById('gender').value;
+            currentUser.country = document.getElementById('country').value;
+            currentUser.city = document.getElementById('city').value;
+            
+            // Socket bağlantısı
+            socket = io();
+            
+            // Kayıt ol
+            socket.emit('register', currentUser);
+            
+            // Ekran değiştir
+            document.getElementById('register-screen').classList.remove('active');
+            document.getElementById('loading-screen').classList.add('active');
+            
+            // Socket olayları
+            socket.on('registered', (user) => {
+                console.log('Kayıt oldu:', user);
+            });
+            
+            socket.on('matched', (data) => {
+                currentRoom = data.roomId;
+                document.getElementById('loading-screen').classList.remove('active');
+                document.getElementById('chat-screen').classList.add('active');
+                
+                // Partner bilgilerini göster
+                document.getElementById('partner-avatar').src = data.partner.photo;
+                document.getElementById('partner-name').textContent = data.partner.name;
+                
+                showNotification('Eşleştiniz! Mesajlaşmaya başlayabilirsiniz.');
+            });
+            
+            socket.on('receive_message', (data) => {
+                const container = document.getElementById('message-container');
+                const isOwn = data.sender === socket.id;
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
+                messageDiv.textContent = data.message;
+                
+                container.appendChild(messageDiv);
+                container.scrollTop = container.scrollHeight;
+            });
+            
+            socket.on('reveal_requested', (data) => {
+                showNotification('Partneriniz profilinizi açmak istiyor. 7 saniye içinde onaylayın.', 7000);
+                
+                // Onay butonu göster
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'btn reveal-btn';
+                confirmBtn.style.marginTop = '10px';
+                confirmBtn.textContent = '✅ Evet, açılsın';
+                confirmBtn.onclick = () => {
+                    socket.emit('reveal_confirm', { roomId: currentRoom });
+                    confirmBtn.remove();
+                };
+                
+                document.querySelector('.actions').appendChild(confirmBtn);
+                
+                // 7 saniye sonra butonu kaldır
+                setTimeout(() => {
+                    if (confirmBtn.parentNode) {
+                        confirmBtn.remove();
+                        showNotification('Profil açma isteği zaman aşımına uğradı.');
+                    }
+                }, 7000);
+            });
+            
+            socket.on('profiles_revealed', (data) => {
+                // Profilleri göster
+                const isUser1 = data.user1.telegram_id === currentUser.telegram_id;
+                const partner = isUser1 ? data.user2 : data.user1;
+                
+                document.getElementById('partner-avatar').src = partner.photo;
+                document.getElementById('partner-avatar').classList.remove('blurred');
+                document.getElementById('partner-name').textContent = partner.name;
+                document.getElementById('partner-name').classList.remove('anon-name');
+                
+                // Telegram linki göster
+                const telegramLink = document.createElement('div');
+                telegramLink.innerHTML = `
+                    <div style="margin-top: 10px;">
+                        <a href="https://t.me/${partner.telegram_id}" target="_blank" 
+                           style="color: #0088cc; text-decoration: none; font-weight: 600;">
+                            📱 Telegram: @${partner.telegram_id}
+                        </a>
                     </div>
-                    <span id="task-text">0/5</span>
-                </div>
-            </div>
-
-            <!-- Joystick -->
-            <div class="joystick-container" id="joystick-container">
-                <div class="joystick-base">
-                    <div class="joystick-stick" id="joystick-stick"></div>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="action-btn" id="btn-use">
-                    <span>Kullan</span>
-                </button>
-                <button class="action-btn" id="btn-report">
-                    <span>Bildir</span>
-                </button>
-                <button class="action-btn hidden" id="btn-kill">
-                    <span>Öldür</span>
-                </button>
-                <button class="action-btn hidden" id="btn-sabotage">
-                    <span>Sabotaj</span>
-                </button>
-                <button class="action-btn" id="btn-emergency">
-                    <span>Acil</span>
-                </button>
-            </div>
-
-            <!-- Map -->
-            <div class="minimap" id="minimap">
-                <canvas id="minimap-canvas"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Meeting Screen -->
-    <div id="meeting-screen" class="screen hidden">
-        <div class="meeting-header">
-            <h2 id="meeting-title">Acil Toplantı</h2>
-            <div class="meeting-timer" id="meeting-timer">45</div>
-        </div>
-
-        <div class="meeting-body" id="meeting-body">
-            <!-- Dead body info or emergency caller -->
-        </div>
-
-        <div class="players-voting" id="players-voting">
-            <!-- Players for voting -->
-        </div>
-
-        <div class="chat-container">
-            <div class="chat-messages" id="chat-messages">
-                <!-- Chat messages -->
-            </div>
-            <div class="chat-input-container">
-                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." maxlength="100">
-                <button id="btn-send-chat">Gönder</button>
-            </div>
-        </div>
-
-        <div class="voting-results hidden" id="voting-results">
-            <!-- Voting results -->
-        </div>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div id="game-over-screen" class="screen hidden">
-        <div class="game-over-content">
-            <h1 id="game-over-title">Crewmates Kazandı!</h1>
-            <div id="game-over-reason"></div>
-
-            <div class="winners-list" id="winners-list">
-                <!-- Winners -->
-            </div>
-
-            <button class="btn btn-primary btn-large" id="btn-back-to-menu">
-                Ana Menüye Dön
-            </button>
-        </div>
-    </div>
-
-    <!-- Password Modal -->
-    <div id="password-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Şifre Gerekli</h3>
-            <input type="password" id="modal-password" placeholder="Şifreyi girin">
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" id="btn-cancel-password">İptal</button>
-                <button class="btn btn-primary" id="btn-submit-password">Katıl</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Freeze Overlay -->
-    <div id="freeze-overlay" class="freeze-overlay hidden">
-        <div class="freeze-content">
-            <div class="freeze-spinner"></div>
-            <h2 id="freeze-title">Bağlantı Kesildi</h2>
-            <p id="freeze-status">Yeniden bağlanılıyor...</p>
-            <button class="btn btn-primary" id="btn-reconnect" style="margin-top: 20px; display: none;">Tekrar
-                Dene</button>
-            <p id="freeze-url" style="font-size: 10px; color: #555; margin-top: 15px; opacity: 0.5;"></p>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="config.js"></script>
-    <script src="telegram.js"></script>
-    <script src="network.js"></script>
-    <script src="game3d.js"></script>
-    <script src="game.js"></script>
-    <script src="ui.js"></script>
-    <script src="main.js"></script>
+                `;
+                
+                document.querySelector('.profile-card').appendChild(telegramLink);
+                
+                showNotification('Profiller açıldı! Artık birbirinizi görebilirsiniz.');
+            });
+            
+            socket.on('partner_left', () => {
+                showNotification('Partneriniz sohbeti bitirdi. Lobiye yönlendiriliyorsunuz...');
+                setTimeout(() => {
+                    document.getElementById('chat-screen').classList.remove('active');
+                    document.getElementById('register-screen').classList.add('active');
+                }, 3000);
+            });
+        }
+        
+        // Mesaj gönder
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (message && currentRoom) {
+                socket.emit('send_message', {
+                    roomId: currentRoom,
+                    message: message
+                });
+                
+                // Kendi mesajını göster
+                const container = document.getElementById('message-container');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message outgoing';
+                messageDiv.textContent = message;
+                container.appendChild(messageDiv);
+                container.scrollTop = container.scrollHeight;
+                
+                input.value = '';
+            }
+        }
+        
+        // Profil açma isteği
+        function requestReveal() {
+            if (currentRoom) {
+                socket.emit('reveal_request', { roomId: currentRoom });
+                showNotification('Profil açma isteği gönderildi. Partneriniz onaylamalı.');
+            }
+        }
+        
+        // Sonraki sohbet
+        function nextChat() {
+            if (currentRoom) {
+                socket.emit('end_chat', { roomId: currentRoom });
+                document.getElementById('chat-screen').classList.remove('active');
+                document.getElementById('register-screen').classList.add('active');
+                document.getElementById('message-container').innerHTML = '<div class="message incoming">Merhaba! Nasılsın? 👋</div>';
+            }
+        }
+        
+        // Bildirim göster
+        function showNotification(message, duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideDown 0.3s reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+        
+        // Enter tuşu ile mesaj gönder
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
 </body>
-
 </html>
