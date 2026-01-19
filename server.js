@@ -1,363 +1,781 @@
 const express = require('express');
+const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb');
 const http = require('http');
 const socketIo = require('socket.io');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const axios = require('axios');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
-
-// SQLite veritabanı
-const db = new sqlite3.Database(':memory:');
-
-// Veritabanını başlat
-db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id TEXT UNIQUE,
-        username TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        photo_url TEXT,
-        gender TEXT CHECK(gender IN ('male', 'female', 'any')) DEFAULT 'any',
-        country TEXT DEFAULT '',
-        city TEXT DEFAULT '',
-        socket_id TEXT,
-        status TEXT DEFAULT 'waiting',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-    
-    db.run(`CREATE TABLE IF NOT EXISTS matches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user1_id INTEGER,
-        user2_id INTEGER,
-        room_id TEXT UNIQUE,
-        user1_revealed INTEGER DEFAULT 0,
-        user2_revealed INTEGER DEFAULT 0,
-        reveal_requested INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user1_id) REFERENCES users (id),
-        FOREIGN KEY (user2_id) REFERENCES users (id)
-    )`);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
-// Ülke ve şehir verileri
-const countries = {
-    'turkiye': ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep'],
-    'azerbaycan': ['Bakı', 'Sumqayıt', 'Xırdalan', 'Gəncə', 'Mingəçevir', 'Naxçıvan', 'Şəki', 'Şirvan']
-};
+// MongoDB bağlantısı - Render Environment Variables kullan
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://xaliqmustafayev7313_db_user:R4Cno5z1Enhtr09u@sayt.1oqunne.mongodb.net/telegram_askfm?retryWrites=true&w=majority";
+const client = new MongoClient(MONGO_URI, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
 
+let db, usersCollection, questionsCollection, messagesCollection, notificationsCollection;
+
+async function connectDB() {
+  try {
+    await client.connect();
+    db = client.db();
+    
+    // Koleksiyonları oluştur
+    usersCollection = db.collection('users');
+    questionsCollection = db.collection('questions');
+    messagesCollection = db.collection('messages');
+    notificationsCollection = db.collection('notifications');
+    
+    // Index'ler oluştur
+    await usersCollection.createIndex({ telegramId: 1 }, { unique: true });
+    await questionsCollection.createIndex({ toUserId: 1, createdAt: -1 });
+    await messagesCollection.createIndex({ participants: 1, createdAt: -1 });
+    
+    console.log('✅ MongoDB bağlantısı başarılı.');
+  } catch (err) {
+    console.error('❌ MongoDB bağlantı hatası:', err);
+    process.exit(1);
+  }
+}
+connectDB();
+
+app.use(cors());
 app.use(express.static(__dirname));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Telegram kullanıcı işleme
+app.post('/api/auth/telegram', async (req, res) => {
+  try {
+    const { id, first_name, last_name, username, photo_url, auth_date, hash } = req.body;
+    
+    // Telegram WebApp data validation (basit versiyon)
+    if (!id || !first_name) {
+      return res.status(400).json({ error: 'Geçersiz Telegram verisi' });
+    }
+    
+    // Kullanıcı adını oluştur
+    const displayName = `${first_name}${last_name ? ' ' + last_name : ''}`;
+    
+    // Varsayılan avatar
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name)}&background=667eea&color=fff&size=150`;
+    
+    const userData = {
+      telegramId: String(id),
+      firstName: first_name,
+      lastName: last_name || '',
+      username: username || '',
+      photoUrl: photo_url || defaultAvatar,
+      displayName: displayName,
+      bio: '',
+      stats: {
+        questionsReceived: 0,
+        questionsAnswered: 0,
+        messagesSent: 0
+      },
+      settings: {
+        allowAnonymousQuestions: true,
+        allowAnonymousMessages: true,
+        showOnlineStatus: true
+      },
+      isOnline: false,
+      lastSeen: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Kullanıcıyı bul veya oluştur
+    const result = await usersCollection.updateOne(
+      { telegramId: String(id) },
+      { 
+        $setOnInsert: userData,
+        $set: { 
+          lastSeen: new Date(),
+          updatedAt: new Date(),
+          photoUrl: photo_url || userData.photoUrl
+        }
+      },
+      { upsert: true }
+    );
+    
+    // Kullanıcıyı getir
+    const user = await usersCollection.findOne({ telegramId: String(id) });
+    
+    res.json({ 
+      success: true, 
+      user: {
+        _id: user._id,
+        telegramId: user.telegramId,
+        displayName: user.displayName,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        bio: user.bio || '',
+        stats: user.stats
+      }
+    });
+    
+  } catch (error) {
+    console.error('Telegram auth error:', error);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// Tüm kullanıcıları getir (keşfet sayfası için)
+app.get('/api/users', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = '' } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    let query = {};
+    if (search) {
+      query = {
+        $or: [
+          { displayName: { $regex: search, $options: 'i' } },
+          { username: { $regex: search, $options: 'i' } },
+          { firstName: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    
+    const users = await usersCollection.find(query, {
+      projection: {
+        _id: 1,
+        telegramId: 1,
+        displayName: 1,
+        username: 1,
+        photoUrl: 1,
+        bio: 1,
+        stats: 1,
+        isOnline: 1,
+        lastSeen: 1,
+        'settings.allowAnonymousQuestions': 1
+      }
+    })
+    .sort({ 'stats.questionsAnswered': -1, createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .toArray();
+    
+    const total = await usersCollection.countDocuments(query);
+    
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ error: 'Kullanıcılar yüklenemedi' });
+  }
+});
+
+// Belirli bir kullanıcıyı getir
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    let query;
+    
+    if (ObjectId.isValid(userId)) {
+      query = { _id: new ObjectId(userId) };
+    } else {
+      query = { username: userId };
+    }
+    
+    const user = await usersCollection.findOne(query, {
+      projection: {
+        telegramId: 0 // Güvenlik için telegramId'yi gizle
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Kullanıcının sorularını getir (cevaplanmış olanlar)
+    const questions = await questionsCollection.find({
+      toUserId: user._id,
+      answered: true
+    })
+    .sort({ answeredAt: -1 })
+    .limit(50)
+    .toArray();
+    
+    // Soruları düzenle
+    const formattedQuestions = await Promise.all(questions.map(async (question) => {
+      let fromUser = null;
+      if (question.fromUserId && !question.isAnonymous) {
+        fromUser = await usersCollection.findOne(
+          { _id: new ObjectId(question.fromUserId) },
+          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
+        );
+      }
+      
+      return {
+        _id: question._id,
+        text: question.text,
+        answerText: question.answerText,
+        isAnonymous: question.isAnonymous,
+        anonymousName: question.anonymousName,
+        fromUser: fromUser ? {
+          displayName: fromUser.displayName,
+          username: fromUser.username,
+          photoUrl: fromUser.photoUrl
+        } : null,
+        createdAt: question.createdAt,
+        answeredAt: question.answeredAt,
+        likes: question.likes || 0
+      };
+    }));
+    
+    res.json({
+      success: true,
+      user: {
+        ...user,
+        questions: formattedQuestions
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Kullanıcı bilgileri yüklenemedi' });
+  }
+});
+
+// Soru gönder
+app.post('/api/questions', async (req, res) => {
+  try {
+    const { toUserId, text, isAnonymous, fromUserId } = req.body;
+    
+    if (!text || !text.trim() || !toUserId) {
+      return res.status(400).json({ error: 'Soru metni ve alıcı gereklidir' });
+    }
+    
+    // Alıcıyı kontrol et
+    const toUser = await usersCollection.findOne({ 
+      _id: new ObjectId(toUserId) 
+    });
+    
+    if (!toUser) {
+      return res.status(404).json({ error: 'Alıcı bulunamadı' });
+    }
+    
+    // Anonim soru izni kontrolü
+    if (isAnonymous && !toUser.settings.allowAnonymousQuestions) {
+      return res.status(403).json({ error: 'Bu kullanıcı anonim soru kabul etmiyor' });
+    }
+    
+    const questionData = {
+      toUserId: new ObjectId(toUserId),
+      text: text.trim(),
+      isAnonymous: Boolean(isAnonymous),
+      fromUserId: isAnonymous ? null : (fromUserId ? new ObjectId(fromUserId) : null),
+      anonymousName: isAnonymous ? `Anonim${Math.floor(1000 + Math.random() * 9000)}` : null,
+      createdAt: new Date(),
+      answered: false,
+      answerText: null,
+      answeredAt: null,
+      likes: 0
+    };
+    
+    const result = await questionsCollection.insertOne(questionData);
+    
+    // Bildirim oluştur
+    const notification = {
+      userId: new ObjectId(toUserId),
+      type: 'new_question',
+      questionId: result.insertedId,
+      fromUserId: isAnonymous ? null : (fromUserId ? new ObjectId(fromUserId) : null),
+      fromUsername: isAnonymous ? questionData.anonymousName : null,
+      text: `Yeni bir ${isAnonymous ? 'anonim' : ''} soru aldın`,
+      isRead: false,
+      createdAt: new Date()
+    };
+    
+    await notificationsCollection.insertOne(notification);
+    
+    // Alıcı online ise bildirim gönder
+    io.to(`user_${toUserId}`).emit('new_notification', notification);
+    
+    // İstatistikleri güncelle
+    await usersCollection.updateOne(
+      { _id: new ObjectId(toUserId) },
+      { $inc: { 'stats.questionsReceived': 1 } }
+    );
+    
+    res.json({ 
+      success: true, 
+      questionId: result.insertedId,
+      anonymousName: questionData.anonymousName
+    });
+    
+  } catch (error) {
+    console.error('Send question error:', error);
+    res.status(500).json({ error: 'Soru gönderilemedi' });
+  }
+});
+
+// Kullanıcının aldığı soruları getir (cevaplanmamış)
+app.get('/api/users/:id/questions', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { type = 'unanswered' } = req.query; // unanswered, answered, all
+    
+    let query = { toUserId: new ObjectId(userId) };
+    
+    if (type === 'unanswered') {
+      query.answered = false;
+    } else if (type === 'answered') {
+      query.answered = true;
+    }
+    
+    const questions = await questionsCollection.find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    // Soruları zenginleştir
+    const enrichedQuestions = await Promise.all(questions.map(async (question) => {
+      let fromUser = null;
+      if (question.fromUserId && !question.isAnonymous) {
+        fromUser = await usersCollection.findOne(
+          { _id: new ObjectId(question.fromUserId) },
+          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
+        );
+      }
+      
+      return {
+        ...question,
+        fromUser: fromUser ? {
+          displayName: fromUser.displayName,
+          username: fromUser.username,
+          photoUrl: fromUser.photoUrl
+        } : null
+      };
+    }));
+    
+    res.json({ success: true, questions: enrichedQuestions });
+    
+  } catch (error) {
+    console.error('Get questions error:', error);
+    res.status(500).json({ error: 'Sorular yüklenemedi' });
+  }
+});
+
+// Soruyu yanıtla
+app.post('/api/questions/:id/answer', async (req, res) => {
+  try {
+    const questionId = req.params.id;
+    const { answerText, userId } = req.body;
+    
+    if (!answerText || !answerText.trim()) {
+      return res.status(400).json({ error: 'Yanıt metni gereklidir' });
+    }
+    
+    // Soruyu bul ve yetki kontrolü
+    const question = await questionsCollection.findOne({
+      _id: new ObjectId(questionId),
+      toUserId: new ObjectId(userId)
+    });
+    
+    if (!question) {
+      return res.status(404).json({ error: 'Soru bulunamadı veya yanıtlama yetkiniz yok' });
+    }
+    
+    if (question.answered) {
+      return res.status(400).json({ error: 'Bu soru zaten yanıtlandı' });
+    }
+    
+    // Soruyu güncelle
+    await questionsCollection.updateOne(
+      { _id: new ObjectId(questionId) },
+      { 
+        $set: { 
+          answered: true,
+          answerText: answerText.trim(),
+          answeredAt: new Date()
+        }
+      }
+    );
+    
+    // İstatistikleri güncelle
+    await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $inc: { 'stats.questionsAnswered': 1 } }
+    );
+    
+    // Soruyu soran kişi anonim değilse bildirim gönder
+    if (question.fromUserId && !question.isAnonymous) {
+      const notification = {
+        userId: question.fromUserId,
+        type: 'question_answered',
+        questionId: new ObjectId(questionId),
+        fromUserId: new ObjectId(userId),
+        text: 'Soruunu yanıtladı',
+        isRead: false,
+        createdAt: new Date()
+      };
+      
+      await notificationsCollection.insertOne(notification);
+      io.to(`user_${question.fromUserId.toString()}`).emit('new_notification', notification);
+    }
+    
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Answer question error:', error);
+    res.status(500).json({ error: 'Yanıt kaydedilemedi' });
+  }
+});
+
+// Direkt mesaj gönder
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { toUserId, text, isAnonymous, fromUserId } = req.body;
+    
+    if (!text || !text.trim() || !toUserId) {
+      return res.status(400).json({ error: 'Mesaj metni ve alıcı gereklidir' });
+    }
+    
+    // Alıcıyı kontrol et
+    const toUser = await usersCollection.findOne({ 
+      _id: new ObjectId(toUserId) 
+    });
+    
+    if (!toUser) {
+      return res.status(404).json({ error: 'Alıcı bulunamadı' });
+    }
+    
+    // Anonim mesaj izni kontrolü
+    if (isAnonymous && !toUser.settings.allowAnonymousMessages) {
+      return res.status(403).json({ error: 'Bu kullanıcı anonim mesaj kabul etmiyor' });
+    }
+    
+    // Konuşma ID'sini oluştur (sıralı)
+    const participants = [
+      new ObjectId(fromUserId).toString(),
+      new ObjectId(toUserId).toString()
+    ].sort();
+    
+    const conversationId = participants.join('_');
+    
+    const messageData = {
+      conversationId,
+      participants: participants.map(id => new ObjectId(id)),
+      fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
+      toUserId: new ObjectId(toUserId),
+      text: text.trim(),
+      isAnonymous: Boolean(isAnonymous),
+      anonymousName: isAnonymous ? `Anonim${Math.floor(1000 + Math.random() * 9000)}` : null,
+      isRead: false,
+      createdAt: new Date()
+    };
+    
+    const result = await messagesCollection.insertOne(messageData);
+    
+    // Bildirim oluştur
+    const notification = {
+      userId: new ObjectId(toUserId),
+      type: 'new_message',
+      messageId: result.insertedId,
+      fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
+      fromUsername: isAnonymous ? messageData.anonymousName : null,
+      text: `Yeni bir ${isAnonymous ? 'anonim' : ''} mesajın var`,
+      isRead: false,
+      createdAt: new Date()
+    };
+    
+    await notificationsCollection.insertOne(notification);
+    
+    // Gerçek zamanlı mesaj gönder
+    io.to(`user_${toUserId}`).emit('new_message', {
+      ...messageData,
+      _id: result.insertedId
+    });
+    
+    // İstatistikleri güncelle
+    if (!isAnonymous) {
+      await usersCollection.updateOne(
+        { _id: new ObjectId(fromUserId) },
+        { $inc: { 'stats.messagesSent': 1 } }
+      );
+    }
+    
+    res.json({ 
+      success: true, 
+      messageId: result.insertedId,
+      conversationId,
+      anonymousName: messageData.anonymousName
+    });
+    
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({ error: 'Mesaj gönderilemedi' });
+  }
+});
+
+// Kullanıcının konuşmalarını getir
+app.get('/api/conversations/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    // Son mesajlaşma yapılan kişileri bul
+    const conversations = await messagesCollection.aggregate([
+      {
+        $match: {
+          participants: new ObjectId(userId)
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $group: {
+          _id: "$conversationId",
+          lastMessage: { $first: "$$ROOT" },
+          unreadCount: {
+            $sum: {
+              $cond: [{ $eq: ["$isRead", false] }, 1, 0]
+            }
+          }
+        }
+      },
+      {
+        $sort: { "lastMessage.createdAt": -1 }
+      }
+    ]).toArray();
+    
+    // Konuşmaları zenginleştir
+    const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
+      const otherParticipantId = conv.lastMessage.participants.find(
+        id => id.toString() !== userId
+      );
+      
+      const otherUser = await usersCollection.findOne(
+        { _id: otherParticipantId },
+        { projection: { displayName: 1, username: 1, photoUrl: 1, isOnline: 1 } }
+      );
+      
+      return {
+        conversationId: conv._id,
+        otherUser: otherUser ? {
+          _id: otherUser._id,
+          displayName: otherUser.displayName,
+          username: otherUser.username,
+          photoUrl: otherUser.photoUrl,
+          isOnline: otherUser.isOnline
+        } : null,
+        lastMessage: {
+          text: conv.lastMessage.text,
+          isAnonymous: conv.lastMessage.isAnonymous,
+          anonymousName: conv.lastMessage.anonymousName,
+          createdAt: conv.lastMessage.createdAt,
+          isRead: conv.lastMessage.isRead
+        },
+        unreadCount: conv.unreadCount
+      };
+    }));
+    
+    res.json({ success: true, conversations: enrichedConversations });
+    
+  } catch (error) {
+    console.error('Get conversations error:', error);
+    res.status(500).json({ error: 'Konuşmalar yüklenemedi' });
+  }
+});
+
+// Bir konuşmanın mesajlarını getir
+app.get('/api/conversations/:conversationId/messages', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const messages = await messagesCollection.find({ conversationId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .toArray();
+    
+    // Mesajları ters çevir (eskiden yeniye)
+    messages.reverse();
+    
+    // Gönderen bilgilerini ekle (anonim olmayanlar için)
+    const enrichedMessages = await Promise.all(messages.map(async (msg) => {
+      let fromUser = null;
+      if (msg.fromUserId && !msg.isAnonymous) {
+        fromUser = await usersCollection.findOne(
+          { _id: msg.fromUserId },
+          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
+        );
+      }
+      
+      return {
+        ...msg,
+        fromUser: fromUser ? {
+          displayName: fromUser.displayName,
+          username: fromUser.username,
+          photoUrl: fromUser.photoUrl
+        } : null
+      };
+    }));
+    
+    res.json({ success: true, messages: enrichedMessages });
+    
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ error: 'Mesajlar yüklenemedi' });
+  }
+});
+
+// Bildirimleri getir
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    const notifications = await notificationsCollection.find({
+      userId: new ObjectId(userId)
+    })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .toArray();
+    
+    // Bildirimleri zenginleştir
+    const enrichedNotifications = await Promise.all(notifications.map(async (notif) => {
+      let fromUser = null;
+      if (notif.fromUserId) {
+        fromUser = await usersCollection.findOne(
+          { _id: notif.fromUserId },
+          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
+        );
+      }
+      
+      return {
+        ...notif,
+        fromUser: fromUser ? {
+          displayName: fromUser.displayName,
+          username: fromUser.username,
+          photoUrl: fromUser.photoUrl
+        } : null
+      };
+    }));
+    
+    res.json({ success: true, notifications: enrichedNotifications });
+    
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ error: 'Bildirimler yüklenemedi' });
+  }
+});
+
+// Bildirimi okundu olarak işaretle
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    
+    await notificationsCollection.updateOne(
+      { _id: new ObjectId(notificationId) },
+      { $set: { isRead: true } }
+    );
+    
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ error: 'Bildirim güncellenemedi' });
+  }
+});
 
 // Ana sayfa
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Şehirleri getir
-app.get('/api/cities/:country', (req, res) => {
-    const country = req.params.country;
-    if (countries[country]) {
-        res.json({ success: true, cities: countries[country] });
-    } else {
-        res.json({ success: false, cities: [] });
-    }
-});
-
-// Telegram kullanıcı bilgilerini al
-app.post('/api/telegram-user', async (req, res) => {
-    try {
-        const { initData } = req.body;
-        
-        // Telegram WebApp'den gelen veriyi parse et
-        const params = new URLSearchParams(initData);
-        const userData = JSON.parse(params.get('user') || '{}');
-        
-        if (!userData.id) {
-            return res.json({ success: false, error: 'Geçersiz kullanıcı verisi' });
-        }
-        
-        // Kullanıcıyı veritabanında ara veya oluştur
-        db.get('SELECT * FROM users WHERE telegram_id = ?', [userData.id], (err, existingUser) => {
-            if (err) {
-                return res.json({ success: false, error: 'Veritabanı hatası' });
-            }
-            
-            if (existingUser) {
-                // Mevcut kullanıcıyı güncelle
-                db.run(`UPDATE users SET 
-                    username = ?, first_name = ?, last_name = ?, photo_url = ?
-                    WHERE telegram_id = ?`,
-                    [
-                        userData.username || '',
-                        userData.first_name || '',
-                        userData.last_name || '',
-                        userData.photo_url || '',
-                        userData.id
-                    ], (updateErr) => {
-                        if (updateErr) {
-                            console.error('Update error:', updateErr);
-                        }
-                        res.json({ 
-                            success: true, 
-                            user: { ...existingUser, ...userData }
-                        });
-                    });
-            } else {
-                // Yeni kullanıcı oluştur
-                const newUser = {
-                    telegram_id: userData.id,
-                    username: userData.username || '',
-                    first_name: userData.first_name || 'Kullanıcı',
-                    last_name: userData.last_name || '',
-                    photo_url: userData.photo_url || '',
-                    gender: 'any',
-                    country: '',
-                    city: '',
-                    status: 'waiting'
-                };
-                
-                db.run(`INSERT INTO users 
-                    (telegram_id, username, first_name, last_name, photo_url, gender, country, city, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        newUser.telegram_id,
-                        newUser.username,
-                        newUser.first_name,
-                        newUser.last_name,
-                        newUser.photo_url,
-                        newUser.gender,
-                        newUser.country,
-                        newUser.city,
-                        newUser.status
-                    ], function(insertErr) {
-                        if (insertErr) {
-                            console.error('Insert error:', insertErr);
-                            return res.json({ success: false, error: 'Kullanıcı oluşturulamadı' });
-                        }
-                        newUser.id = this.lastID;
-                        res.json({ success: true, user: newUser });
-                    });
-            }
-        });
-        
-    } catch (error) {
-        console.error('Telegram user error:', error);
-        res.json({ success: false, error: 'Sunucu hatası' });
-    }
-});
-
-// Kullanıcı tercihlerini güncelle
-app.post('/api/update-preferences', (req, res) => {
-    const { telegram_id, gender, country, city } = req.body;
-    
-    if (!telegram_id) {
-        return res.json({ success: false, error: 'Telegram ID gerekli' });
-    }
-    
-    db.run(`UPDATE users SET gender = ?, country = ?, city = ? WHERE telegram_id = ?`,
-        [gender || 'any', country || '', city || '', telegram_id],
-        function(err) {
-            if (err) {
-                return res.json({ success: false, error: 'Güncelleme hatası' });
-            }
-            res.json({ success: true });
-        });
+app.get('*', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
 });
 
 // Socket.io bağlantıları
 io.on('connection', (socket) => {
-    console.log('Kullanıcı bağlandı:', socket.id);
-    
-    let currentUser = null;
-    let currentRoom = null;
-    
-    // Kullanıcıyı kaydet
-    socket.on('register', (userData) => {
-        currentUser = userData;
-        currentUser.socket_id = socket.id;
-        
-        db.run(`UPDATE users SET socket_id = ?, status = 'waiting' WHERE telegram_id = ?`,
-            [socket.id, userData.telegram_id], (err) => {
-                if (err) console.error('Socket update error:', err);
-                
-                // Eşleşme bul
-                findMatch(socket.id, userData);
-            });
-    });
-    
-    // Eşleşme bul
-    function findMatch(socketId, user) {
-        // Bekleyen kullanıcıları bul
-        db.all(`SELECT * FROM users WHERE status = 'waiting' AND socket_id != ? AND gender IN (?, 'any') 
-                AND (country = ? OR country = '' OR ? = '')`,
-            [socketId, user.gender, user.country, user.country], (err, candidates) => {
-                if (err || !candidates.length) {
-                    // Eşleşme bulunamadı, bekleme modunda kal
-                    setTimeout(() => findMatch(socketId, user), 3000);
-                    return;
-                }
-                
-                // Rastgele bir eş seç
-                const partner = candidates[Math.floor(Math.random() * candidates.length)];
-                const roomId = `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                // Eşleşme oluştur
-                db.run(`INSERT INTO matches (user1_id, user2_id, room_id) 
-                        VALUES ((SELECT id FROM users WHERE socket_id = ?), 
-                                (SELECT id FROM users WHERE socket_id = ?), ?)`,
-                    [socketId, partner.socket_id, roomId], function(err) {
-                        if (err) {
-                            console.error('Match creation error:', err);
-                            return;
-                        }
-                        
-                        // Kullanıcı durumlarını güncelle
-                        db.run(`UPDATE users SET status = 'chatting' WHERE socket_id IN (?, ?)`,
-                            [socketId, partner.socket_id]);
-                        
-                        // Her iki kullanıcıya da bildir
-                        socket.emit('matched', {
-                            roomId: roomId,
-                            partner: {
-                                name: '********',
-                                photo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+',
-                                isAnon: true
-                            }
-                        });
-                        
-                        const partnerSocket = io.sockets.sockets.get(partner.socket_id);
-                        if (partnerSocket) {
-                            partnerSocket.emit('matched', {
-                                roomId: roomId,
-                                partner: {
-                                    name: '********',
-                                    photo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+',
-                                    isAnon: true
-                                }
-                            });
-                        }
-                        
-                        console.log(`Eşleşme: ${socketId} - ${partner.socket_id} (Oda: ${roomId})`);
-                    });
-            });
+  console.log('Yeni socket bağlantısı:', socket.id);
+  
+  // Kullanıcı giriş yaptığında
+  socket.on('user_online', async (userId) => {
+    if (userId) {
+      socket.join(`user_${userId}`);
+      
+      // Online durumunu güncelle
+      await usersCollection.updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { isOnline: true, lastSeen: new Date() } }
+      );
+      
+      // Diğer kullanıcılara bildir
+      socket.broadcast.emit('user_status_changed', {
+        userId,
+        isOnline: true
+      });
     }
+  });
+  
+  // Mesaj okundu işaretleme
+  socket.on('mark_message_read', async (data) => {
+    const { messageId, userId } = data;
     
-    // Mesaj gönder
-    socket.on('send_message', (data) => {
-        if (data.roomId) {
-            socket.to(data.roomId).emit('receive_message', {
-                sender: 'partner',
-                message: data.message,
-                timestamp: new Date().toISOString()
-            });
-        }
-    });
+    await messagesCollection.updateOne(
+      { _id: new ObjectId(messageId), toUserId: new ObjectId(userId) },
+      { $set: { isRead: true } }
+    );
     
-    // Profil açma isteği
-    socket.on('reveal_request', (data) => {
-        db.get(`SELECT * FROM matches WHERE room_id = ?`, [data.roomId], (err, match) => {
-            if (match) {
-                // Diğer kullanıcıyı bul
-                db.get(`SELECT socket_id FROM users WHERE id = ?`, 
-                    [match.user1_id === currentUser.id ? match.user2_id : match.user1_id],
-                    (err, partner) => {
-                        if (partner && partner.socket_id) {
-                            const partnerSocket = io.sockets.sockets.get(partner.socket_id);
-                            if (partnerSocket) {
-                                partnerSocket.emit('reveal_requested', {
-                                    roomId: data.roomId,
-                                    timeout: 7000
-                                });
-                                
-                                // 7 saniye sonra zaman aşımı
-                                setTimeout(() => {
-                                    partnerSocket.emit('reveal_timeout');
-                                }, 7000);
-                            }
-                        }
-                    });
-            }
-        });
-    });
+    // Karşı tarafa bildir
+    socket.broadcast.emit('message_read', { messageId });
+  });
+  
+  // Canlı mesajlaşma
+  socket.on('send_private_message', async (data) => {
+    const { conversationId, fromUserId, toUserId, text, isAnonymous } = data;
     
-    // Profil açma onayı
-    socket.on('reveal_confirm', (data) => {
-        db.get(`SELECT * FROM matches WHERE room_id = ?`, [data.roomId], (err, match) => {
-            if (match) {
-                const isUser1 = match.user1_id === currentUser.id;
-                const column = isUser1 ? 'user1_revealed' : 'user2_revealed';
-                
-                db.run(`UPDATE matches SET ${column} = 1 WHERE room_id = ?`, [data.roomId], () => {
-                    // Her ikisi de onayladı mı?
-                    db.get(`SELECT user1_revealed, user2_revealed FROM matches WHERE room_id = ?`,
-                        [data.roomId], (err, row) => {
-                            if (row.user1_revealed && row.user2_revealed) {
-                                // Profilleri aç
-                                db.get(`SELECT u1.*, u2.* FROM matches m
-                                        JOIN users u1 ON m.user1_id = u1.id
-                                        JOIN users u2 ON m.user2_id = u2.id
-                                        WHERE m.room_id = ?`, [data.roomId], (err, usersData) => {
-                                    if (usersData) {
-                                        io.to(data.roomId).emit('profiles_revealed', {
-                                            user1: {
-                                                name: `${usersData.first_name} ${usersData.last_name}`.trim(),
-                                                username: usersData.username,
-                                                photo: usersData.photo_url || 'default_avatar.jpg'
-                                            },
-                                            user2: {
-                                                name: `${usersData.first_name1} ${usersData.last_name1}`.trim(),
-                                                username: usersData.username1,
-                                                photo: usersData.photo_url1 || 'default_avatar.jpg'
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                });
-            }
-        });
-    });
+    const messageData = {
+      conversationId,
+      participants: [new ObjectId(fromUserId), new ObjectId(toUserId)].sort(),
+      fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
+      toUserId: new ObjectId(toUserId),
+      text: text.trim(),
+      isAnonymous: Boolean(isAnonymous),
+      anonymousName: isAnonymous ? `Anonim${Math.floor(1000 + Math.random() * 9000)}` : null,
+      isRead: false,
+      createdAt: new Date()
+    };
     
-    // Sohbeti bitir
-    socket.on('end_chat', (data) => {
-        if (data.roomId) {
-            // Diğer kullanıcıya bildir
-            socket.to(data.roomId).emit('partner_left');
-            
-            // Odadan çık
-            socket.leave(data.roomId);
-            
-            // Kullanıcı durumunu güncelle
-            if (currentUser) {
-                db.run(`UPDATE users SET status = 'waiting' WHERE telegram_id = ?`, [currentUser.telegram_id]);
-            }
-            
-            // Eşleşmeyi sil
-            db.run(`DELETE FROM matches WHERE room_id = ?`, [data.roomId]);
-            
-            socket.emit('chat_ended');
-        }
-    });
+    const result = await messagesCollection.insertOne(messageData);
+    messageData._id = result.insertedId;
     
-    // Bağlantı kesildiğinde
-    socket.on('disconnect', () => {
-        if (currentUser) {
-            db.run(`UPDATE users SET status = 'offline', socket_id = NULL WHERE telegram_id = ?`,
-                [currentUser.telegram_id]);
-        }
-        console.log('Kullanıcı ayrıldı:', socket.id);
-    });
+    // Alıcıya gönder
+    io.to(`user_${toUserId}`).emit('new_private_message', messageData);
+    
+    // Gönderene onay gönder
+    socket.emit('message_sent', { success: true, messageId: result.insertedId });
+  });
+  
+  // Bağlantı kesildiğinde
+  socket.on('disconnect', async () => {
+    console.log('Socket bağlantısı kesildi:', socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Sunucu ${PORT} portunda çalışıyor`);
-    console.log(`Telegram WebApp için hazır`);
+  console.log(`🚀 Sunucu ${PORT} portunda çalışıyor`);
+  console.log(`🌐 Telegram WebApp hazır`);
 });
