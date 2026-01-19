@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nesne ve Hareket Tespit Kamerası</title>
+    <title>Otomatik Nesne Tespit Kamerası</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
@@ -82,7 +82,7 @@
         .video-container {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 500px;
             border-radius: 10px;
             overflow: hidden;
             background-color: #000;
@@ -168,6 +168,18 @@
             border-left: 5px solid #ff0000;
         }
         
+        .status-detecting {
+            background: rgba(0, 114, 255, 0.1);
+            border-left: 5px solid #0072ff;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
         .detections {
             margin-top: 20px;
         }
@@ -194,6 +206,12 @@
             justify-content: space-between;
             align-items: center;
             border-left: 4px solid #0072ff;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
         .detection-item-person {
@@ -206,6 +224,10 @@
         
         .detection-item-animal {
             border-left-color: #ff5500;
+        }
+        
+        .detection-item-traffic {
+            border-left-color: #ff00ff;
         }
         
         .detection-label {
@@ -285,6 +307,8 @@
             transform: translate(-50%, -50%);
             font-size: 1.2rem;
             color: #00c6ff;
+            text-align: center;
+            width: 100%;
         }
         
         .notification {
@@ -297,21 +321,48 @@
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             z-index: 1000;
-            animation: slideIn 0.3s ease;
+            animation: slideInRight 0.3s ease;
             display: none;
         }
         
-        @keyframes slideIn {
+        @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-text {
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-robot"></i> Nesne ve Hareket Tespit Kamerası</h1>
-            <p class="subtitle">Bu uygulama, web kamerasından aldığı görüntülerde nesneleri (insanlar, araçlar, hayvanlar vb.) ve hareketleri gerçek zamanlı olarak tespit eder. TensorFlow.js ve COCO-SSD modeli kullanılmaktadır.</p>
+            <h1><i class="fas fa-robot"></i> Otomatik Nesne Tespit Kamerası</h1>
+            <p class="subtitle">Kamera açıldığında otomatik olarak nesneleri (insanlar, araçlar, hayvanlar, trafik ışıkları vb.) tespit eder ve işaretler. Hiçbir butona basmanıza gerek yok!</p>
         </header>
         
         <div class="main-content">
@@ -320,27 +371,21 @@
                     <video id="video" autoplay playsinline></video>
                     <canvas id="canvas"></canvas>
                     <div class="loading" id="loading">
-                        <i class="fas fa-spinner fa-spin"></i> Model yükleniyor...
+                        <i class="fas fa-spinner fa-spin"></i> Model yükleniyor ve kamera başlatılıyor...
                     </div>
                 </div>
                 
                 <div class="controls">
-                    <button id="startBtn" class="btn btn-primary">
-                        <i class="fas fa-video"></i> Kamerayı Başlat
+                    <button id="toggleCameraBtn" class="btn btn-primary">
+                        <i class="fas fa-video"></i> Kamerayı Değiştir
                     </button>
-                    <button id="detectBtn" class="btn btn-primary" disabled>
-                        <i class="fas fa-eye"></i> Tespiti Başlat
-                    </button>
-                    <button id="stopBtn" class="btn btn-secondary" disabled>
-                        <i class="fas fa-stop"></i> Tespiti Durdur
-                    </button>
-                    <button id="snapshotBtn" class="btn btn-secondary" disabled>
+                    <button id="snapshotBtn" class="btn btn-secondary">
                         <i class="fas fa-camera"></i> Fotoğraf Çek
                     </button>
                 </div>
                 
                 <div class="status status-inactive" id="status">
-                    <p><i class="fas fa-exclamation-circle"></i> Kamera başlatılmadı. Lütfen "Kamerayı Başlat" butonuna tıklayın.</p>
+                    <p><i class="fas fa-exclamation-circle"></i> Sistem başlatılıyor...</p>
                 </div>
                 
                 <div class="stats">
@@ -349,44 +394,67 @@
                         <div class="stat-label">İnsan</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="objectCount">0</div>
-                        <div class="stat-label">Nesne</div>
+                        <div class="stat-value" id="vehicleCount">0</div>
+                        <div class="stat-label">Araç</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="detectionCount">0</div>
-                        <div class="stat-label">Toplam Tespit</div>
+                        <div class="stat-value" id="animalCount">0</div>
+                        <div class="stat-label">Hayvan</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="fps">0</div>
-                        <div class="stat-label">FPS</div>
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">Toplam</div>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #00ff88;"></div>
+                        <div class="legend-text">İnsan</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ffaa00;"></div>
+                        <div class="legend-text">Araç</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff5500;"></div>
+                        <div class="legend-text">Hayvan</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff00ff;"></div>
+                        <div class="legend-text">Trafik Işığı</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #0072ff;"></div>
+                        <div class="legend-text">Diğer Nesneler</div>
                     </div>
                 </div>
             </section>
             
             <section class="info-section">
                 <div class="detections">
-                    <h3><i class="fas fa-list"></i> Son Tespitler</h3>
+                    <h3><i class="fas fa-list"></i> Son Tespit Edilenler</h3>
                     <div class="detections-list" id="detectionsList">
-                        <p style="text-align: center; padding: 20px; opacity: 0.7;">Henüz tespit yapılmadı</p>
+                        <p style="text-align: center; padding: 20px; opacity: 0.7;">Nesne tespit başladığında burada görünecek...</p>
                     </div>
                 </div>
                 
                 <div class="instructions">
-                    <h3><i class="fas fa-info-circle"></i> Kullanım Talimatları</h3>
-                    <ol>
-                        <li>"Kamerayı Başlat" butonuna tıklayarak kameraya erişim izni verin.</li>
-                        <li>"Tespiti Başlat" butonuyla nesne tespitini başlatın.</li>
-                        <li>Ekranda tespit edilen nesneler kutu içinde gösterilecektir.</li>
-                        <li>Sağdaki panelde son tespit edilen nesneler listelenecektir.</li>
-                        <li>İsterseniz "Fotoğraf Çek" butonuyla anlık görüntü alabilirsiniz.</li>
-                    </ol>
+                    <h3><i class="fas fa-info-circle"></i> Sistem Özellikleri</h3>
+                    <ul style="padding-left: 20px;">
+                        <li>Kamera otomatik başlar ve nesne tespiti yapar</li>
+                        <li>İnsan, araba, kedi, köpek, trafik ışığı vb. nesneleri tanır</li>
+                        <li>Nesneleri renkli kutularla işaretler</li>
+                        <li>Gerçek zamanlı istatistikler gösterir</li>
+                        <li>Tamamen otomatik - buton gerekmez</li>
+                    </ul>
                 </div>
             </section>
         </div>
         
         <footer>
-            <p>TensorFlow.js COCO-SSD Modeli ile Nesne Tespiti | GitHub Pages için Optimize Edilmiştir</p>
-            <p>© 2023 Nesne Tespit Sistemi | Tarayıcınızda tamamen yerel olarak çalışır</p>
+            <p>TensorFlow.js COCO-SSD Modeli ile Otomatik Nesne Tespiti | GitHub Pages için Optimize Edilmiştir</p>
+            <p>© 2023 Otomatik Nesne Tespit Sistemi | Kamera açıldığında otomatik başlar</p>
         </footer>
     </div>
     
@@ -397,9 +465,7 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const startBtn = document.getElementById('startBtn');
-        const detectBtn = document.getElementById('detectBtn');
-        const stopBtn = document.getElementById('stopBtn');
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
         const snapshotBtn = document.getElementById('snapshotBtn');
         const statusDiv = document.getElementById('status');
         const loadingDiv = document.getElementById('loading');
@@ -408,143 +474,125 @@
         
         // İstatistik elementleri
         const personCountEl = document.getElementById('personCount');
-        const objectCountEl = document.getElementById('objectCount');
-        const detectionCountEl = document.getElementById('detectionCount');
-        const fpsEl = document.getElementById('fps');
+        const vehicleCountEl = document.getElementById('vehicleCount');
+        const animalCountEl = document.getElementById('animalCount');
+        const totalCountEl = document.getElementById('totalCount');
         
         // Değişkenler
         let model = null;
-        let isDetecting = false;
+        let isDetecting = true; // Her zaman aktif
         let detectionInterval = null;
-        let lastDetectionTime = 0;
-        let frameCount = 0;
-        let fps = 0;
-        let lastFpsUpdate = Date.now();
+        let currentFacingMode = "environment"; // "user" (ön kamera) veya "environment" (arka kamera)
+        let stream = null;
         
         // Tespit edilen nesnelerin geçmişi
         let detectionHistory = [];
-        let stats = {
-            totalDetections: 0,
-            personDetections: 0,
-            objectDetections: 0
+        let currentFrameCounts = {
+            person: 0,
+            vehicle: 0,
+            animal: 0,
+            traffic: 0,
+            other: 0,
+            total: 0
         };
         
-        // Modeli yükle
-        async function loadModel() {
+        // Modeli yükle ve kamerayı başlat
+        async function initializeSystem() {
             try {
                 loadingDiv.style.display = 'block';
-                console.log("Model yükleniyor...");
+                loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI modeli yükleniyor...`;
                 
-                // COCO-SSD modelini yükle
+                // Önce modeli yükle
                 model = await cocoSsd.load();
                 
-                console.log("Model başarıyla yüklendi!");
-                loadingDiv.style.display = 'none';
-                showNotification("Model başarıyla yüklendi!", "success");
+                loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Model yüklendi, kamera başlatılıyor...`;
                 
-                // Model yüklendikten sonra kamera butonunu etkinleştir
-                startBtn.disabled = false;
+                // Model yüklendikten sonra kamerayı başlat
+                await startCamera();
+                
+                // Otomatik tespiti başlat
+                startAutoDetection();
+                
+                loadingDiv.style.display = 'none';
+                showNotification("Sistem başlatıldı! Nesne tespiti otomatik olarak başladı.", "success");
+                
             } catch (error) {
-                console.error("Model yüklenirken hata oluştu:", error);
-                loadingDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Model yüklenemedi: ${error.message}`;
-                showNotification("Model yüklenirken hata oluştu!", "error");
+                console.error("Sistem başlatma hatası:", error);
+                loadingDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Hata: ${error.message}`;
+                statusDiv.className = "status status-inactive";
+                statusDiv.innerHTML = `<p><i class="fas fa-exclamation-triangle"></i> Sistem başlatılamadı: ${error.message}</p>`;
+                showNotification("Sistem başlatılamadı!", "error");
             }
         }
         
         // Kamera akışını başlat
         async function startCamera() {
             try {
+                // Mevcut stream varsa durdur
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
                 const constraints = {
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
-                        facingMode: "environment"
+                        facingMode: currentFacingMode
                     }
                 };
                 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 
                 // Video yüklendiğinde canvas boyutlarını ayarla
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    
-                    // Durumu güncelle
-                    statusDiv.className = "status status-active";
-                    statusDiv.innerHTML = `<p><i class="fas fa-check-circle"></i> Kamera başarıyla başlatıldı. Çözünürlük: ${video.videoWidth}x${video.videoHeight}</p>`;
-                    
-                    // Buton durumlarını güncelle
-                    startBtn.disabled = true;
-                    detectBtn.disabled = false;
-                    snapshotBtn.disabled = false;
-                    stopBtn.disabled = true;
-                    
-                    showNotification("Kamera başarıyla başlatıldı!", "success");
-                };
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        
+                        // Durumu güncelle
+                        statusDiv.className = "status status-detecting";
+                        statusDiv.innerHTML = `<p><i class="fas fa-eye"></i> Kamera başlatıldı. Nesne tespiti aktif. Çözünürlük: ${video.videoWidth}x${video.videoHeight}</p>`;
+                        
+                        resolve();
+                    };
+                });
             } catch (error) {
                 console.error("Kamera erişim hatası:", error);
-                statusDiv.className = "status status-inactive";
-                statusDiv.innerHTML = `<p><i class="fas fa-exclamation-triangle"></i> Kamera erişim hatası: ${error.message}</p>`;
-                showNotification("Kamera erişim hatası!", "error");
+                throw error;
             }
         }
         
-        // Nesne tespitini başlat
-        function startDetection() {
+        // Kamerayı değiştir (ön/arka)
+        async function toggleCamera() {
+            currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+            toggleCameraBtn.innerHTML = `<i class="fas fa-sync-alt"></i> ${currentFacingMode === "environment" ? "Arka Kameraya Geç" : "Ön Kameraya Geç"}`;
+            
+            loadingDiv.style.display = 'block';
+            loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Kamera değiştiriliyor...`;
+            
+            await startCamera();
+            
+            loadingDiv.style.display = 'none';
+            showNotification(`Kamera değiştirildi: ${currentFacingMode === "environment" ? "Arka Kamera" : "Ön Kamera"}`, "success");
+        }
+        
+        // Otomatik tespiti başlat
+        function startAutoDetection() {
             if (!model) {
                 showNotification("Model henüz yüklenmedi!", "error");
                 return;
             }
             
-            if (!video.srcObject) {
-                showNotification("Önce kamerayı başlatın!", "error");
-                return;
-            }
-            
             isDetecting = true;
-            detectBtn.disabled = true;
-            stopBtn.disabled = false;
-            startBtn.disabled = true;
             
-            statusDiv.innerHTML = `<p><i class="fas fa-eye"></i> Nesne tespiti aktif. Nesneler gerçek zamanlı olarak tespit ediliyor...</p>`;
-            
-            // FPS hesaplama döngüsünü başlat
-            setInterval(updateFPS, 1000);
-            
-            // Tespit döngüsünü başlat
-            detectionInterval = setInterval(detectFrame, 100); // Her 100ms'de bir tespit yap
-            showNotification("Nesne tespiti başlatıldı!", "success");
-        }
-        
-        // Nesne tespitini durdur
-        function stopDetection() {
-            isDetecting = false;
-            clearInterval(detectionInterval);
-            
-            detectBtn.disabled = false;
-            stopBtn.disabled = true;
-            startBtn.disabled = false;
-            
-            statusDiv.innerHTML = `<p><i class="fas fa-pause-circle"></i> Nesne tespiti durduruldu.</p>`;
-            
-            // Canvas'ı temizle
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            showNotification("Nesne tespiti durduruldu!", "info");
+            // Tespit döngüsünü başlat (her 150ms'de bir)
+            detectionInterval = setInterval(detectFrame, 150);
         }
         
         // Video karesinde nesne tespiti yap
         async function detectFrame() {
-            if (!isDetecting) return;
-            
-            // FPS hesaplama
-            frameCount++;
-            const now = Date.now();
-            
-            // Her 100ms'de bir tespit yap (performans için)
-            if (now - lastDetectionTime < 100) return;
-            lastDetectionTime = now;
+            if (!isDetecting || !video.srcObject) return;
             
             try {
                 // Video karesinden tahmin yap
@@ -553,35 +601,21 @@
                 // Canvas'ı temizle
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // Tespit edilen nesne sayılarını sıfırla
-                let personCount = 0;
-                let objectCount = 0;
+                // Mevcut frame sayılarını sıfırla
+                resetCurrentFrameCounts();
                 
                 // Tespit edilen her nesne için kutucuk çiz
                 predictions.forEach(prediction => {
                     // Sınırlayıcı kutuyu çiz
                     const [x, y, width, height] = prediction.bbox;
                     
-                    // Nesne türüne göre renk belirle
-                    let color = '#0072FF'; // Varsayılan mavi
-                    let detectionClass = '';
+                    // Nesne türüne göre renk ve sınıf belirle
+                    const detectionInfo = getDetectionInfo(prediction.class);
+                    const color = detectionInfo.color;
+                    const detectionClass = detectionInfo.class;
                     
-                    if (prediction.class === 'person') {
-                        color = '#00FF88';
-                        personCount++;
-                        detectionClass = 'person';
-                    } else if (['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(prediction.class)) {
-                        color = '#FFAA00';
-                        objectCount++;
-                        detectionClass = 'vehicle';
-                    } else if (['dog', 'cat', 'bird', 'horse', 'sheep', 'cow'].includes(prediction.class)) {
-                        color = '#FF5500';
-                        objectCount++;
-                        detectionClass = 'animal';
-                    } else {
-                        objectCount++;
-                        detectionClass = 'object';
-                    }
+                    // İstatistikleri güncelle
+                    updateFrameCounts(detectionClass);
                     
                     // Kutuyu çiz
                     ctx.strokeStyle = color;
@@ -601,16 +635,64 @@
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillText(text, x + 5, y - 5);
                     
-                    // Tespit geçmişine ekle
-                    addDetectionToHistory(prediction.class, prediction.score, detectionClass);
+                    // Tespit geçmişine ekle (yüksek güvenilirlikli tespitler için)
+                    if (prediction.score > 0.5) {
+                        addDetectionToHistory(prediction.class, prediction.score, detectionClass);
+                    }
                 });
                 
                 // İstatistikleri güncelle
-                updateStats(personCount, objectCount, predictions.length);
+                updateStats();
                 
             } catch (error) {
                 console.error("Tespit sırasında hata:", error);
             }
+        }
+        
+        // Nesne türüne göre renk ve sınıf bilgisi al
+        function getDetectionInfo(className) {
+            className = className.toLowerCase();
+            
+            // İnsan tespiti
+            if (className === 'person') {
+                return { color: '#00ff88', class: 'person' };
+            }
+            
+            // Araç tespiti
+            const vehicles = ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'airplane', 'train'];
+            if (vehicles.includes(className)) {
+                return { color: '#ffaa00', class: 'vehicle' };
+            }
+            
+            // Hayvan tespiti
+            const animals = ['dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'];
+            if (animals.includes(className)) {
+                return { color: '#ff5500', class: 'animal' };
+            }
+            
+            // Trafik ışığı tespiti
+            if (className === 'traffic light') {
+                return { color: '#ff00ff', class: 'traffic' };
+            }
+            
+            // Diğer nesneler
+            return { color: '#0072ff', class: 'other' };
+        }
+        
+        // Frame sayılarını sıfırla
+        function resetCurrentFrameCounts() {
+            currentFrameCounts.person = 0;
+            currentFrameCounts.vehicle = 0;
+            currentFrameCounts.animal = 0;
+            currentFrameCounts.traffic = 0;
+            currentFrameCounts.other = 0;
+            currentFrameCounts.total = 0;
+        }
+        
+        // Frame sayılarını güncelle
+        function updateFrameCounts(detectionClass) {
+            currentFrameCounts[detectionClass]++;
+            currentFrameCounts.total++;
         }
         
         // Tespit geçmişine ekle
@@ -618,24 +700,35 @@
             const timestamp = new Date().toLocaleTimeString();
             const confidence = Math.round(score * 100);
             
+            // Sadece son 1 dakika içindeki benzer tespitleri kontrol et
+            const oneMinuteAgo = Date.now() - 60000;
+            const similarRecentDetection = detectionHistory.find(det => 
+                det.class === className && 
+                det.time > oneMinuteAgo &&
+                Math.abs(det.confidence - confidence) < 10
+            );
+            
+            // Eğer çok benzer bir tespit son 1 dakikada varsa, ekleme
+            if (similarRecentDetection) {
+                return;
+            }
+            
             // Yeni tespiti geçmişin başına ekle
             detectionHistory.unshift({
                 class: className,
                 confidence: confidence,
                 time: timestamp,
-                detectionClass: detectionClass
+                detectionClass: detectionClass,
+                timestamp: Date.now()
             });
             
-            // Sadece son 10 tespiti tut
-            if (detectionHistory.length > 10) {
-                detectionHistory = detectionHistory.slice(0, 10);
+            // Sadece son 15 tespiti tut
+            if (detectionHistory.length > 15) {
+                detectionHistory = detectionHistory.slice(0, 15);
             }
             
             // Tespit listesini güncelle
             updateDetectionsList();
-            
-            // Toplam tespit sayısını artır
-            stats.totalDetections++;
         }
         
         // Tespit listesini güncelle
@@ -651,7 +744,8 @@
                     'person': 'detection-item-person',
                     'vehicle': 'detection-item-vehicle',
                     'animal': 'detection-item-animal',
-                    'object': ''
+                    'traffic': 'detection-item-traffic',
+                    'other': ''
                 };
                 
                 const detectionClass = classNames[detection.detectionClass] || '';
@@ -671,28 +765,17 @@
         }
         
         // İstatistikleri güncelle
-        function updateStats(personCount, objectCount, totalDetections) {
-            personCountEl.textContent = personCount;
-            objectCountEl.textContent = objectCount;
-            detectionCountEl.textContent = stats.totalDetections;
-            
-            // FPS değerini güncelle
-            fpsEl.textContent = fps;
-        }
-        
-        // FPS güncelle
-        function updateFPS() {
-            const now = Date.now();
-            const elapsed = (now - lastFpsUpdate) / 1000;
-            fps = Math.round(frameCount / elapsed);
-            frameCount = 0;
-            lastFpsUpdate = now;
+        function updateStats() {
+            personCountEl.textContent = currentFrameCounts.person;
+            vehicleCountEl.textContent = currentFrameCounts.vehicle;
+            animalCountEl.textContent = currentFrameCounts.animal;
+            totalCountEl.textContent = currentFrameCounts.total;
         }
         
         // Fotoğraf çek
         function takeSnapshot() {
             if (!video.srcObject) {
-                showNotification("Önce kamerayı başlatın!", "error");
+                showNotification("Kamera başlatılmadı!", "error");
                 return;
             }
             
@@ -701,7 +784,8 @@
             
             // Fotoğrafı indirme bağlantısı oluştur
             const link = document.createElement('a');
-            link.download = `nesne-tespit-${new Date().getTime()}.png`;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.download = `nesne-tespit-${timestamp}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             
@@ -726,15 +810,51 @@
             }, 3000);
         }
         
+        // Sistem performansını izle
+        function monitorPerformance() {
+            let frameCount = 0;
+            let lastCheck = Date.now();
+            
+            setInterval(() => {
+                const now = Date.now();
+                const elapsed = (now - lastCheck) / 1000;
+                const fps = Math.round(frameCount / elapsed);
+                
+                // Düşük FPS uyarısı
+                if (fps < 5 && isDetecting) {
+                    console.warn(`Düşük FPS: ${fps}. Tespit hızı düşürülebilir.`);
+                }
+                
+                frameCount = 0;
+                lastCheck = now;
+            }, 2000);
+            
+            // Her frame için sayacı artır
+            const originalDetectFrame = detectFrame;
+            detectFrame = async function() {
+                frameCount++;
+                return originalDetectFrame.apply(this, arguments);
+            };
+        }
+        
         // Olay dinleyicileri
-        startBtn.addEventListener('click', startCamera);
-        detectBtn.addEventListener('click', startDetection);
-        stopBtn.addEventListener('click', stopDetection);
+        toggleCameraBtn.addEventListener('click', toggleCamera);
         snapshotBtn.addEventListener('click', takeSnapshot);
         
-        // Sayfa yüklendiğinde modeli yükle
+        // Sayfa yüklendiğinde sistemi başlat
         window.addEventListener('load', () => {
-            loadModel();
+            initializeSystem();
+            monitorPerformance();
+        });
+        
+        // Sayfa kapanırken stream'i temizle
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+            }
         });
     </script>
 </body>
