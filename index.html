@@ -2,1218 +2,2744 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anonim Sohbet • Telegram</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AskTelegram • Anonim Soru & Mesaj</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --danger: #f87171;
+            --warning: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --radius: 16px;
+            --radius-sm: 8px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
             overflow-x: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-top: env(safe-area-inset-top);
         }
-        
-        .screen {
-            display: none;
-            width: 100%;
-            max-width: 100%;
-            min-height: 100vh;
-            background: #fff;
-            position: relative;
-        }
-        
-        .screen.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .container {
-            padding: 20px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        /* Header Styles */
-        .header {
-            text-align: center;
-            padding: 30px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 0 0 30px 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        
-        .logo {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-        
-        .subtitle {
-            font-size: 15px;
-            opacity: 0.9;
-            font-weight: 400;
-        }
-        
-        /* Card Styles */
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            border: 1px solid rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
-        }
-        
-        /* Form Elements */
-        .form-group {
-            margin-bottom: 25px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: #444;
-            font-size: 15px;
-        }
-        
-        .select-wrapper, .input-wrapper {
-            position: relative;
-        }
-        
-        select, input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid #eef2f7;
-            border-radius: 15px;
-            font-size: 16px;
-            background: #f8fafc;
-            color: #333;
-            appearance: none;
-            transition: all 0.3s ease;
-            font-family: inherit;
-        }
-        
-        select:focus, input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        select:disabled {
-            background: #f5f7fa;
-            color: #999;
-            cursor: not-allowed;
-        }
-        
-        .select-wrapper::after {
-            content: "▼";
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #667eea;
-            font-size: 12px;
-            pointer-events: none;
-        }
-        
-        /* Button Styles */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            border: none;
-            border-radius: 15px;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-        
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #475569;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .btn-secondary:hover:not(:disabled) {
-            background: #e2e8f0;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #f56565 0%, #ed64a6 100%);
-            color: white;
-            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #48bb78 0%, #38b2ac 100%);
-            color: white;
-            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        /* Profile Card */
-        .profile-card {
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #f6f9ff 0%, #f0f4ff 100%);
-            border-radius: 25px;
-            position: relative;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-        
-        .profile-card::before {
-            content: "";
-            position: absolute;
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .avatar {
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 25px;
-            border: 8px solid white;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            transition: all 0.5s ease;
-        }
-        
-        .avatar.blurred {
-            filter: blur(20px) brightness(1.2);
-            transform: scale(1.05);
-        }
-        
-        .name {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #1e293b;
-            letter-spacing: 1px;
-        }
-        
-        .anon-name {
-            font-size: 32px;
-            letter-spacing: 4px;
-            color: #64748b;
-        }
-        
-        .status {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 25px;
-            padding: 8px 20px;
-            background: rgba(255,255,255,0.8);
-            border-radius: 20px;
-            display: inline-block;
-        }
-        
-        /* Chat Container */
-        .chat-container {
-            height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 20px;
-            margin: 20px 0;
-            border: 2px solid #eef2f7;
-            scroll-behavior: smooth;
-        }
-        
-        .chat-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .chat-container::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-        }
-        
-        .chat-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        
-        .message {
-            max-width: 80%;
-            padding: 14px 20px;
-            border-radius: 22px;
-            margin-bottom: 15px;
-            clear: both;
-            position: relative;
-            animation: messageIn 0.3s ease;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        
-        @keyframes messageIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .message.outgoing {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            float: right;
-            border-bottom-right-radius: 8px;
-        }
-        
-        .message.incoming {
-            background: white;
-            color: #334155;
-            float: left;
-            border: 1px solid #e2e8f0;
-            border-bottom-left-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        
-        .message-time {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 5px;
-            text-align: right;
-        }
-        
-        .message-input-container {
-            display: flex;
-            gap: 12px;
-            margin-top: 25px;
-            padding: 0 5px;
-        }
-        
-        .message-input {
-            flex: 1;
-            padding: 18px 25px;
-            border: 2px solid #e2e8f0;
-            border-radius: 25px;
-            font-size: 16px;
-            background: white;
-            transition: all 0.3s ease;
-        }
-        
-        .message-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .send-btn {
-            padding: 18px 30px;
-            border-radius: 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            min-width: 80px;
-        }
-        
-        .send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-        
-        /* Action Buttons */
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 25px 0;
-        }
-        
-        .action-btn {
-            padding: 20px;
-            border-radius: 18px;
-            font-weight: 600;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .reveal-btn {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
-        }
-        
-        .reveal-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
-        }
-        
-        .next-btn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-        }
-        
-        .next-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
-        }
-        
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: white;
-            color: #334155;
-            padding: 18px 25px;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            z-index: 1000;
-            max-width: 90%;
-            width: 400px;
-            border-left: 6px solid #667eea;
-            animation: slideIn 0.4s ease forwards;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        @keyframes slideIn {
-            to {
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-        
-        .notification.hide {
-            animation: slideOut 0.4s ease forwards;
-        }
-        
-        @keyframes slideOut {
-            from {
-                transform: translateX(-50%) translateY(0);
-            }
-            to {
-                transform: translateX(-50%) translateY(-100px);
-            }
-        }
-        
-        .notification-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-        
-        .notification-content {
-            flex: 1;
-        }
-        
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            font-size: 16px;
-        }
-        
-        .notification-message {
-            font-size: 14px;
-            opacity: 0.9;
-            line-height: 1.4;
-        }
-        
-        /* Loading Animation */
-        .loading-screen {
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 9999;
             color: white;
             text-align: center;
-            padding: 30px;
+            padding: 20px;
+            transition: opacity 0.3s ease;
         }
-        
+
+        .loading-logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 6px solid rgba(255,255,255,0.3);
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 1s linear infinite;
             margin-bottom: 30px;
         }
-        
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
-        .loading-title {
+
+        /* App Container */
+        .app-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 30px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            background: var(--gray-200);
+            transform: translateY(-1px);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+            color: var(--gray-500);
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1;
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active .nav-icon {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 16px;
+            padding-bottom: 80px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Profile Screen */
+        .profile-header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 0 0 30px 30px;
+            margin: -16px -16px 20px -16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" fill-opacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,197.3C672,192,768,160,864,160C960,160,1056,192,1152,192C1248,192,1344,160,1392,144L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            opacity: 0.5;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            margin: 0 auto 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .online-status {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            background: var(--success);
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+
+        .profile-name {
             font-size: 28px;
             font-weight: 700;
-            margin-bottom: 15px;
-            letter-spacing: -0.5px;
+            margin-bottom: 5px;
         }
-        
-        .loading-subtitle {
+
+        .profile-username {
             font-size: 16px;
             opacity: 0.9;
-            max-width: 300px;
-            line-height: 1.5;
+            margin-bottom: 15px;
         }
-        
-        .loading-dots {
+
+        .profile-stats {
             display: flex;
-            gap: 8px;
-            margin-top: 30px;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 25px;
         }
-        
-        .loading-dot {
-            width: 12px;
-            height: 12px;
-            background: rgba(255,255,255,0.6);
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Stats Cards */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: var(--gray-100);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--gray-200);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card .icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        /* Questions List */
+        .questions-list {
+            margin-top: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .question-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .question-avatar {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            animation: pulse 1.4s infinite;
+            margin-right: 12px;
+            overflow: hidden;
         }
-        
-        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
-        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+
+        .question-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
-        
-        /* Responsive */
-        @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header {
-                padding: 25px 15px;
-                border-radius: 0 0 25px 25px;
-            }
-            
-            .logo {
-                font-size: 28px;
-            }
-            
-            .avatar {
-                width: 120px;
-                height: 120px;
-            }
-            
-            .name {
-                font-size: 24px;
-            }
-            
-            .anon-name {
-                font-size: 28px;
-            }
-            
-            .chat-container {
-                height: 350px;
-            }
-            
-            .action-buttons {
+
+        .question-info {
+            flex: 1;
+        }
+
+        .question-author {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .question-time {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            padding-left: 52px;
+        }
+
+        .answer-section {
+            background: var(--gray-100);
+            border-radius: var(--radius-sm);
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .answer-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .answer-text {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .answer-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: var(--radius);
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        /* Explore Screen */
+        .search-bar {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px 15px 50px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius);
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+        }
+
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 400px) {
+            .users-grid {
                 grid-template-columns: 1fr;
             }
         }
-        
-        /* Telegram Info */
-        .telegram-info {
+
+        .user-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .user-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            overflow: hidden;
+            border: 3px solid var(--gray-100);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .user-username {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 10px;
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .user-stat {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .user-stat span {
+            display: block;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--dark);
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        /* Messages Screen */
+        .conversations-list {
+            margin-top: 10px;
+        }
+
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: var(--radius);
+            background: white;
+            margin-bottom: 10px;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .conversation-item:hover {
+            transform: translateX(5px);
+            border-color: var(--primary);
+        }
+
+        .conversation-item.unread {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, rgba(255,255,255,1) 100%);
+            border-left: 3px solid var(--primary);
+        }
+
+        .conversation-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .conversation-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .conversation-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .conversation-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--dark);
+        }
+
+        .conversation-time {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .conversation-preview {
+            font-size: 14px;
+            color: var(--gray-600);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .unread-badge {
+            background: var(--primary);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Chat Screen */
+        .chat-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            padding: 15px;
+            border-bottom: 1px solid var(--gray-200);
             display: flex;
             align-items: center;
             gap: 15px;
-            background: linear-gradient(135deg, #0088cc 0%, #006699 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 18px;
-            margin-bottom: 25px;
         }
-        
-        .telegram-icon {
-            font-size: 32px;
-            flex-shrink: 0;
+
+        .chat-back-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--gray-600);
+            cursor: pointer;
         }
-        
-        .telegram-content h3 {
-            margin-bottom: 5px;
+
+        .chat-user-info {
+            flex: 1;
+        }
+
+        .chat-user-name {
+            font-weight: 600;
             font-size: 18px;
+            color: var(--dark);
         }
-        
-        .telegram-content p {
-            font-size: 14px;
-            opacity: 0.9;
+
+        .chat-user-status {
+            font-size: 13px;
+            color: var(--gray-500);
         }
-        
-        /* Revealed Profile */
-        .revealed-profile {
-            background: linear-gradient(135deg, #f0fff4 0%, #dcffe4 100%);
-            border: 2px solid #86efac;
-            padding: 25px;
+
+        .chat-user-status.online {
+            color: var(--success);
+        }
+
+        .messages-container {
+            padding: 20px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .message.incoming {
+            align-items: flex-start;
+        }
+
+        .message.outgoing {
+            align-items: flex-end;
+            margin-left: auto;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
             border-radius: 20px;
-            text-align: center;
-            margin: 20px 0;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.4;
         }
-        
-        .revealed-profile .avatar {
-            border-color: #86efac;
+
+        .message.incoming .message-bubble {
+            background: var(--gray-100);
+            color: var(--dark);
+            border-bottom-left-radius: 5px;
         }
-        
-        .telegram-link {
-            display: inline-flex;
+
+        .message.outgoing .message-bubble {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-top: 5px;
+            padding: 0 5px;
+        }
+
+        .chat-input-container {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            border-top: 1px solid var(--gray-200);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid var(--gray-200);
+            border-radius: 25px;
+            font-size: 16px;
+            background: var(--gray-100);
+            transition: all 0.3s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--gray-500);
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-100);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            display: flex;
             align-items: center;
             gap: 10px;
-            background: #0088cc;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 15px;
-            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .toggle-track {
+            width: 50px;
+            height: 26px;
+            background: var(--gray-300);
+            border-radius: 13px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .toggle-track.active {
+            background: var(--primary);
+        }
+
+        .toggle-thumb {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-track.active .toggle-thumb {
+            left: 26px;
+        }
+
+        /* Anonymous Badge */
+        .anonymous-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
             font-weight: 600;
-            margin-top: 15px;
-            transition: all 0.3s ease;
         }
-        
-        .telegram-link:hover {
-            background: #006699;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,136,204,0.3);
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--gray-500);
         }
-        
-        /* Animation for match */
-        @keyframes matchPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
-        
-        .match-animation {
-            animation: matchPulse 0.5s ease 3;
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            font-weight: 600;
+            border: 2px solid white;
+        }
+
+        /* Tab Navigation */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-500);
+            cursor: pointer;
+            position: relative;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-100);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-300);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-400);
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 480px) {
+            .app-container {
+                max-width: 100%;
+                box-shadow: none;
+            }
+            
+            .main-content {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            
+            .chat-input-container {
+                bottom: 60px;
+                padding: 12px;
+            }
+            
+            .bottom-nav {
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+            }
+        }
+
+        /* Dark Mode Support for Telegram */
+        @media (prefers-color-scheme: dark) {
+            body.dark-mode {
+                --light: #1e293b;
+                --dark: #f1f5f9;
+                --gray-100: #334155;
+                --gray-200: #475569;
+                --gray-300: #64748b;
+                --gray-400: #94a3b8;
+                --gray-500: #cbd5e1;
+                --gray-600: #e2e8f0;
+            }
+            
+            .app-container {
+                background: var(--light);
+            }
+            
+            .app-header {
+                background: rgba(30, 41, 59, 0.95);
+                border-bottom-color: var(--gray-200);
+            }
+            
+            .bottom-nav {
+                background: rgba(30, 41, 59, 0.98);
+                border-top-color: var(--gray-200);
+            }
+            
+            .question-card,
+            .user-card,
+            .conversation-item,
+            .modal {
+                background: var(--gray-100);
+                border-color: var(--gray-200);
+            }
+            
+            .stat-card {
+                background: var(--gray-200);
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Telegram WebApp SDK -->
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.enableClosingConfirmation();
-    </script>
-
     <!-- Loading Screen -->
-    <div id="loading-screen" class="loading-screen active">
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-logo">💬</div>
         <div class="loading-spinner"></div>
-        <div class="loading-title">Anonim Sohbet</div>
-        <div class="loading-subtitle">Telegram profilinizle güvenli ve anonim sohbet</div>
-        <div class="loading-dots">
-            <div class="loading-dot"></div>
-            <div class="loading-dot"></div>
-            <div class="loading-dot"></div>
+        <h1 style="font-size: 28px; margin-bottom: 10px; font-weight: 800;">AskTelegram</h1>
+        <p style="opacity: 0.9;">Telegram profilinizle anonim soru ve mesaj</p>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-title" id="header-title">AskTelegram</div>
+            <div class="header-actions">
+                <button class="header-btn" id="search-btn" title="Ara">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="header-btn" id="notifications-btn" title="Bildirimler">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notification-badge" style="display: none;"></span>
+                </button>
+                <button class="header-btn" id="settings-btn" title="Ayarlar">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Profile Screen -->
+            <div id="profile-screen" class="screen active">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <img id="profile-avatar-img" src="" alt="Profil">
+                        <div class="online-status" id="online-status"></div>
+                    </div>
+                    <h1 class="profile-name" id="profile-name">Yükleniyor...</h1>
+                    <div class="profile-username" id="profile-username">@kullanici</div>
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="questions-received">0</span>
+                            <span class="stat-label">Soru</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="questions-answered">0</span>
+                            <span class="stat-label">Yanıt</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="messages-sent">0</span>
+                            <span class="stat-label">Mesaj</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="icon"><i class="fas fa-question-circle"></i></div>
+                        <div class="stat-value" id="unanswered-questions">0</div>
+                        <div class="stat-label">Yanıt Bekleyen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon"><i class="fas fa-comments"></i></div>
+                        <div class="stat-value" id="active-conversations">0</div>
+                        <div class="stat-label">Konuşma</div>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation for Questions -->
+                <div class="tab-navigation">
+                    <button class="tab-btn active" data-tab="unanswered">Yanıt Bekleyen</button>
+                    <button class="tab-btn" data-tab="answered">Yanıtlanan</button>
+                    <button class="tab-btn" data-tab="all">Tüm Sorular</button>
+                </div>
+
+                <!-- Questions List -->
+                <div class="questions-list" id="questions-list">
+                    <!-- Questions will be loaded here -->
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-questions" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-question-circle"></i></div>
+                    <h3>Henüz sorunuz yok</h3>
+                    <p>Profilinizi paylaşarak soru almaya başlayın!</p>
+                </div>
+            </div>
+
+            <!-- Explore Screen -->
+            <div id="explore-screen" class="screen">
+                <div class="search-bar">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="user-search" placeholder="Kullanıcı ara...">
+                </div>
+                <div class="users-grid" id="users-grid">
+                    <!-- Users will be loaded here -->
+                </div>
+                <div class="empty-state" id="empty-users" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-users"></i></div>
+                    <h3>Kullanıcı bulunamadı</h3>
+                    <p>Arama kriterlerinize uygun kullanıcı yok</p>
+                </div>
+            </div>
+
+            <!-- Messages Screen -->
+            <div id="messages-screen" class="screen">
+                <h2 class="section-title">Mesajlar</h2>
+                <div class="conversations-list" id="conversations-list">
+                    <!-- Conversations will be loaded here -->
+                </div>
+                <div class="empty-state" id="empty-messages" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>Henüz mesajınız yok</h3>
+                    <p>Bir kullanıcıya mesaj göndererek başlayın!</p>
+                </div>
+            </div>
+
+            <!-- Chat Screen -->
+            <div id="chat-screen" class="screen">
+                <div class="chat-header">
+                    <button class="chat-back-btn" id="chat-back-btn">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="chat-user-info">
+                        <div class="chat-user-name" id="chat-user-name">...</div>
+                        <div class="chat-user-status" id="chat-user-status">çevrimdışı</div>
+                    </div>
+                </div>
+                <div class="messages-container" id="messages-container">
+                    <!-- Messages will be loaded here -->
+                </div>
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="Mesaj yaz...">
+                        <button class="send-btn" id="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-screen="profile">
+                <div class="nav-icon"><i class="fas fa-user"></i></div>
+                <span>Profil</span>
+            </a>
+            <a href="#" class="nav-item" data-screen="explore">
+                <div class="nav-icon"><i class="fas fa-compass"></i></div>
+                <span>Keşfet</span>
+            </a>
+            <a href="#" class="nav-item" data-screen="messages">
+                <div class="nav-icon"><i class="fas fa-comments"></i></div>
+                <span>Mesajlar</span>
+                <span class="notification-badge" id="messages-badge" style="display: none;">0</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Modals -->
+    <!-- Ask Question Modal -->
+    <div id="ask-question-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Soru Sor</h3>
+                <button class="modal-close" id="close-question-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Soru</label>
+                    <textarea class="form-control" id="question-text" placeholder="Sorunuzu yazın..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="toggle-switch" id="anonymous-toggle">
+                        <div class="toggle-track active">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <span>Anonim olarak sor</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gönderilecek kişi</label>
+                    <div id="target-user-info" style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--gray-100); border-radius: var(--radius-sm);">
+                        <img id="target-user-avatar" src="" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div>
+                            <div id="target-user-name" style="font-weight: 600;"></div>
+                            <div id="target-user-username" style="font-size: 14px; color: var(--gray-500);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-question">İptal</button>
+                <button class="btn btn-primary" id="send-question-btn">Gönder</button>
+            </div>
         </div>
     </div>
 
-    <!-- Register Screen -->
-    <div id="register-screen" class="screen">
-        <div class="header">
-            <div class="logo">AnonimSohbet</div>
-            <div class="subtitle">Telegram ile güvenli, anonim eşleşmeler</div>
-        </div>
-        
-        <div class="container">
-            <!-- Telegram User Info -->
-            <div id="telegram-info" class="telegram-info" style="display: none;">
-                <div class="telegram-icon">📱</div>
-                <div class="telegram-content">
-                    <h3 id="tg-user-name">Telegram Kullanıcısı</h3>
-                    <p id="tg-user-details">Profil bilgileriniz yükleniyor...</p>
-                </div>
+    <!-- Send Message Modal -->
+    <div id="send-message-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Mesaj Gönder</h3>
+                <button class="modal-close" id="close-message-modal">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            
-            <!-- Gender Selection -->
-            <div class="card">
+            <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">Kiminle sohbet etmek istersiniz?</label>
-                    <div class="select-wrapper">
-                        <select id="gender-select" class="form-select">
-                            <option value="any">Farketmez</option>
-                            <option value="male">Erkekler</option>
-                            <option value="female">Kadınlar</option>
-                        </select>
+                    <label class="form-label">Mesaj</label>
+                    <textarea class="form-control" id="message-text" placeholder="Mesajınızı yazın..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="toggle-switch" id="message-anonymous-toggle">
+                        <div class="toggle-track active">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <span>Anonim olarak gönder</span>
                     </div>
                 </div>
-                
-                <!-- Country Selection -->
                 <div class="form-group">
-                    <label class="form-label">Ülke</label>
-                    <div class="select-wrapper">
-                        <select id="country-select" class="form-select" onchange="loadCities()">
-                            <option value="">Tüm Ülkeler</option>
-                            <option value="turkiye">🇹🇷 Türkiye</option>
-                            <option value="azerbaycan">🇦🇿 Azerbaycan</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- City Selection -->
-                <div class="form-group">
-                    <label class="form-label">Şehir</label>
-                    <div class="select-wrapper">
-                        <select id="city-select" class="form-select" disabled>
-                            <option value="">Önce ülke seçin</option>
-                        </select>
+                    <label class="form-label">Gönderilecek kişi</label>
+                    <div id="message-target-info" style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--gray-100); border-radius: var(--radius-sm);">
+                        <img id="message-target-avatar" src="" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div>
+                            <div id="message-target-name" style="font-weight: 600;"></div>
+                            <div id="message-target-username" style="font-size: 14px; color: var(--gray-500);"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Start Button -->
-            <button id="start-btn" class="btn btn-primary" onclick="startChat()" disabled>
-                <span id="btn-text">Eşleşme Bul 🔍</span>
-            </button>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-message">İptal</button>
+                <button class="btn btn-primary" id="send-message-btn">Gönder</button>
+            </div>
         </div>
     </div>
 
-    <!-- Chat Screen -->
-    <div id="chat-screen" class="screen">
-        <div class="header">
-            <div class="logo" style="font-size: 24px;">Anonim Sohbet</div>
-            <div class="subtitle">Profiller iki tarafın onayıyla açılır</div>
+    <!-- Answer Question Modal -->
+    <div id="answer-question-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Soruyu Yanıtla</h3>
+                <button class="modal-close" id="close-answer-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="question-card" style="margin: 0; border: none; padding: 0;">
+                    <div class="question-header">
+                        <div class="question-avatar">
+                            <img id="question-asker-avatar" src="" alt="Soran">
+                        </div>
+                        <div class="question-info">
+                            <div class="question-author" id="question-asker-name">Anonim1234</div>
+                            <div class="question-time" id="question-time">Şimdi</div>
+                        </div>
+                    </div>
+                    <div class="question-text" id="question-content">...</div>
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Yanıtınız</label>
+                    <textarea class="form-control" id="answer-text" placeholder="Yanıtınızı yazın..." rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-answer">İptal</button>
+                <button class="btn btn-primary" id="submit-answer-btn">Yanıtla</button>
+            </div>
         </div>
-        
-        <div class="container">
-            <!-- Profile Card -->
-            <div class="profile-card">
-                <img id="partner-avatar" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+" 
-                     class="avatar blurred" alt="Profil">
-                <div id="partner-name" class="name anon-name">********</div>
-                <div class="status" id="partner-status">Profil gizli</div>
-                
-                <!-- Revealed Profile Info -->
-                <div id="revealed-info" style="display: none;">
-                    <a id="telegram-link" class="telegram-link" target="_blank">
-                        <span>📱 Telegram'da aç</span>
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="action-btn reveal-btn" onclick="requestReveal()" id="reveal-btn">
-                    <span>👤</span>
-                    <span>Eşleşdik</span>
-                </button>
-                <button class="action-btn next-btn" onclick="nextChat()" id="next-btn">
-                    <span>🔄</span>
-                    <span>Sonraki</span>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div id="notifications-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Bildirimler</h3>
+                <button class="modal-close" id="close-notifications-modal">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-            
-            <!-- Chat Container -->
-            <div class="chat-container" id="message-container">
-                <div class="message incoming">
-                    Merhaba! Anonim sohbete hoş geldin. İstersen 'Eşleşdik' butonuyla profilleri açabiliriz. 👋
-                    <div class="message-time">Şimdi</div>
+            <div class="modal-body" id="notifications-list" style="max-height: 400px; overflow-y: auto;">
+                <!-- Notifications will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-notifications">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Ayarlar</h3>
+                <button class="modal-close" id="close-settings-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Profil Ayarları</label>
+                    <div class="toggle-switch" style="margin-bottom: 15px;">
+                        <div class="toggle-track active" id="toggle-anonymous-questions">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <span>Anonim soru kabul et</span>
+                    </div>
+                    <div class="toggle-switch" style="margin-bottom: 15px;">
+                        <div class="toggle-track active" id="toggle-anonymous-messages">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <span>Anonim mesaj kabul et</span>
+                    </div>
+                    <div class="toggle-switch">
+                        <div class="toggle-track active" id="toggle-online-status">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <span>Çevrimiçi durumunu göster</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hakkında</label>
+                    <p style="font-size: 14px; color: var(--gray-600); line-height: 1.5;">
+                        AskTelegram, Telegram profilinizi kullanarak anonim soru ve mesaj alabileceğiniz bir platformdur.
+                        Verileriniz güvende ve her zaman kontrol sizde.
+                    </p>
                 </div>
             </div>
-            
-            <!-- Message Input -->
-            <div class="message-input-container">
-                <input type="text" id="message-input" class="message-input" 
-                       placeholder="Mesajınızı yazın..." onkeypress="handleKeyPress(event)">
-                <button class="send-btn" onclick="sendMessage()">Gönder</button>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-settings">Kapat</button>
             </div>
         </div>
     </div>
 
     <script>
-        let socket = null;
+        // Global variables
         let currentUser = null;
-        let currentRoom = null;
-        let revealTimeout = null;
-        let notificationTimeout = null;
+        let socket = null;
+        let currentChatUser = null;
+        let currentConversationId = null;
+        let notificationsCount = 0;
+        let unreadMessagesCount = 0;
 
-        // Uygulama başladığında
+        // Telegram WebApp initialization
+        const tg = window.Telegram.WebApp;
+        
+        // Initialize the app
         document.addEventListener('DOMContentLoaded', async () => {
+            // Expand Telegram WebApp to full screen
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            // Set theme colors
+            tg.setHeaderColor('#667eea');
+            tg.setBackgroundColor('#667eea');
+            
+            // Check for dark mode
+            if (tg.colorScheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            
+            // Initialize app
             await initializeApp();
         });
 
-        // Uygulamayı başlat
+        // Initialize the application
         async function initializeApp() {
             try {
-                // Telegram WebApp kontrolü
-                if (typeof Telegram !== 'undefined' && Telegram.WebApp.initData) {
-                    await loadTelegramUser();
+                // Check if Telegram WebApp is available
+                if (tg.initData) {
+                    await authenticateWithTelegram();
                 } else {
-                    // Telegram olmadan test modu
-                    showNotification('Telegram WebApp tespit edilemedi. Test modunda çalışıyorsunuz.');
-                    simulateTelegramUser();
+                    // Fallback for testing without Telegram
+                    showError('Telegram WebApp bağlantısı yok. Test modunda çalışıyorsunuz.');
+                    await simulateTelegramUser();
                 }
+                
+                // Initialize Socket.io
+                initializeSocket();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Load initial data
+                await loadInitialData();
+                
             } catch (error) {
                 console.error('Başlatma hatası:', error);
-                showNotification('Başlatma hatası. Sayfayı yenileyin.');
+                showError('Uygulama başlatılamadı. Lütfen sayfayı yenileyin.');
             }
         }
 
-        // Telegram kullanıcısını yükle
-        async function loadTelegramUser() {
+        // Authenticate with Telegram
+        async function authenticateWithTelegram() {
             try {
-                const initData = Telegram.WebApp.initData;
+                const initData = tg.initData;
+                const user = tg.initDataUnsafe.user;
                 
-                const response = await fetch('/api/telegram-user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ initData })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.user) {
-                    currentUser = data.user;
-                    
-                    // Kullanıcı bilgilerini göster
-                    document.getElementById('telegram-info').style.display = 'flex';
-                    document.getElementById('tg-user-name').textContent = 
-                        currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
-                    document.getElementById('tg-user-details').textContent = 
-                        currentUser.username ? `@${currentUser.username}` : 'Telegram kullanıcısı';
-                    
-                    // Butonu aktif et
-                    document.getElementById('start-btn').disabled = false;
-                    document.getElementById('btn-text').textContent = 'Eşleşme Bul 🔍';
-                    
-                    // Loading ekranını kapat
-                    document.getElementById('loading-screen').classList.remove('active');
-                    document.getElementById('register-screen').classList.add('active');
-                    
-                    showNotification(`Hoş geldin ${currentUser.first_name}!`, 2000);
-                } else {
-                    throw new Error(data.error || 'Kullanıcı yüklenemedi');
+                if (!user) {
+                    throw new Error('Telegram kullanıcı bilgileri alınamadı');
                 }
-            } catch (error) {
-                console.error('Telegram yükleme hatası:', error);
-                showNotification('Telegram bağlantı hatası. Test moduna geçiliyor.');
-                simulateTelegramUser();
-            }
-        }
-
-        // Test için simüle kullanıcı
-        function simulateTelegramUser() {
-            currentUser = {
-                telegram_id: 'test_' + Date.now(),
-                first_name: 'Test',
-                last_name: 'Kullanıcı',
-                username: 'testuser',
-                photo_url: '',
-                gender: 'any',
-                country: '',
-                city: ''
-            };
-            
-            document.getElementById('telegram-info').style.display = 'flex';
-            document.getElementById('tg-user-name').textContent = 'Test Kullanıcı';
-            document.getElementById('tg-user-details').textContent = 'Test modu aktif';
-            
-            document.getElementById('start-btn').disabled = false;
-            document.getElementById('btn-text').textContent = 'Test Modunda Başla 🔍';
-            
-            document.getElementById('loading-screen').classList.remove('active');
-            document.getElementById('register-screen').classList.add('active');
-            
-            showNotification('Test modu aktif. Telegram bilgileri simüle ediliyor.', 2000);
-        }
-
-        // Şehirleri yükle
-        async function loadCities() {
-            const countrySelect = document.getElementById('country-select');
-            const citySelect = document.getElementById('city-select');
-            const country = countrySelect.value;
-            
-            if (!country) {
-                citySelect.disabled = true;
-                citySelect.innerHTML = '<option value="">Önce ülke seçin</option>';
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/cities/${country}`);
-                const data = await response.json();
                 
-                if (data.success) {
-                    citySelect.disabled = false;
-                    citySelect.innerHTML = '<option value="">Tüm Şehirler</option>';
-                    
-                    data.cities.forEach(city => {
-                        const option = document.createElement('option');
-                        option.value = city;
-                        option.textContent = city;
-                        citySelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Şehir yükleme hatası:', error);
-                showNotification('Şehirler yüklenemedi');
-            }
-        }
-
-        // Tercihleri güncelle
-        async function updatePreferences() {
-            if (!currentUser) return;
-            
-            const gender = document.getElementById('gender-select').value;
-            const country = document.getElementById('country-select').value;
-            const city = document.getElementById('city-select').value;
-            
-            try {
-                await fetch('/api/update-preferences', {
+                // Send user data to server
+                const response = await fetch('/api/auth/telegram', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        telegram_id: currentUser.telegram_id,
-                        gender: gender,
-                        country: country,
-                        city: city
+                        id: user.id,
+                        first_name: user.first_name,
+                        last_name: user.last_name || '',
+                        username: user.username || '',
+                        photo_url: user.photo_url || '',
+                        auth_date: tg.initDataUnsafe.auth_date,
+                        hash: tg.initDataUnsafe.hash
                     })
                 });
-            } catch (error) {
-                console.error('Tercih güncelleme hatası:', error);
-            }
-        }
-
-        // Sohbeti başlat
-        async function startChat() {
-            if (!currentUser) {
-                showNotification('Önce Telegram ile giriş yapın!');
-                return;
-            }
-            
-            // Tercihleri güncelle
-            await updatePreferences();
-            
-            // Socket bağlantısı
-            socket = io();
-            
-            // Kayıt ol
-            socket.emit('register', currentUser);
-            
-            // Ekran değiştir
-            document.getElementById('register-screen').classList.remove('active');
-            document.getElementById('loading-screen').classList.add('active');
-            
-            // Socket olayları
-            socket.on('matched', (data) => {
-                currentRoom = data.roomId;
                 
-                document.getElementById('loading-screen').classList.remove('active');
-                document.getElementById('chat-screen').classList.add('active');
+                const data = await response.json();
                 
-                // Partner bilgilerini göster
-                document.getElementById('partner-avatar').src = data.partner.photo;
-                document.getElementById('partner-name').textContent = data.partner.name;
-                document.getElementById('partner-name').classList.add('anon-name');
-                document.getElementById('partner-avatar').classList.add('blurred');
-                
-                showNotification('🎉 Eşleştiniz! Mesajlaşmaya başlayabilirsiniz.', 3000);
-            });
-            
-            socket.on('receive_message', (data) => {
-                addMessage(data.message, 'incoming');
-            });
-            
-            socket.on('reveal_requested', (data) => {
-                showNotification('⚠️ Partneriniz profilleri açmak istiyor. 7 saniye içinde onaylayın.', 7000);
-                
-                // Onay butonu göster
-                const confirmBtn = document.createElement('button');
-                confirmBtn.className = 'btn btn-success';
-                confirmBtn.style.marginTop = '10px';
-                confirmBtn.style.width = '100%';
-                confirmBtn.innerHTML = '✅ Evet, profiller açılsın';
-                confirmBtn.onclick = () => {
-                    socket.emit('reveal_confirm', { roomId: currentRoom });
-                    confirmBtn.remove();
-                    showNotification('Onayınız gönderildi!');
-                };
-                
-                const actionsDiv = document.querySelector('.action-buttons');
-                actionsDiv.insertBefore(confirmBtn, actionsDiv.firstChild);
-                
-                // 7 saniye sonra butonu kaldır
-                revealTimeout = setTimeout(() => {
-                    if (confirmBtn.parentNode) {
-                        confirmBtn.remove();
-                        showNotification('⏰ Profil açma isteği zaman aşımına uğradı.');
-                    }
-                }, 7000);
-            });
-            
-            socket.on('reveal_timeout', () => {
-                showNotification('⏰ Profil açma isteği zaman aşımına uğradı.');
-            });
-            
-            socket.on('profiles_revealed', (data) => {
-                // Profilleri aç
-                const isUser1 = data.user1.username === currentUser.username;
-                const partner = isUser1 ? data.user2 : data.user1;
-                
-                document.getElementById('partner-avatar').src = partner.photo || 
-                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2N2VlYSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+';
-                document.getElementById('partner-avatar').classList.remove('blurred');
-                document.getElementById('partner-name').textContent = partner.name;
-                document.getElementById('partner-name').classList.remove('anon-name');
-                document.getElementById('partner-status').textContent = 'Profil görünür';
-                
-                // Telegram linki göster
-                if (partner.username) {
-                    document.getElementById('revealed-info').style.display = 'block';
-                    document.getElementById('telegram-link').href = `https://t.me/${partner.username}`;
+                if (data.success) {
+                    currentUser = data.user;
+                    updateProfileUI();
+                    hideLoadingScreen();
+                } else {
+                    throw new Error(data.error || 'Kimlik doğrulama başarısız');
                 }
                 
-                // Butonu devre dışı bırak
-                document.getElementById('reveal-btn').disabled = true;
-                document.getElementById('reveal-btn').innerHTML = '<span>✅</span><span>Profiller Açıldı</span>';
+            } catch (error) {
+                console.error('Telegram kimlik doğrulama hatası:', error);
+                showError('Telegram bağlantı hatası. Test moduna geçiliyor.');
+                await simulateTelegramUser();
+            }
+        }
+
+        // Simulate Telegram user for testing
+        async function simulateTelegramUser() {
+            currentUser = {
+                _id: 'test_user_' + Date.now(),
+                telegramId: '123456789',
+                displayName: 'Test Kullanıcı',
+                username: 'testuser',
+                photoUrl: 'https://ui-avatars.com/api/?name=Test+Kullanıcı&background=667eea&color=fff&size=150',
+                bio: 'Test kullanıcısı',
+                stats: {
+                    questionsReceived: 5,
+                    questionsAnswered: 3,
+                    messagesSent: 12
+                },
+                settings: {
+                    allowAnonymousQuestions: true,
+                    allowAnonymousMessages: true,
+                    showOnlineStatus: true
+                },
+                isOnline: true
+            };
+            
+            updateProfileUI();
+            hideLoadingScreen();
+            
+            // Show test mode notification
+            showNotification('Test modu aktif', 'info');
+        }
+
+        // Update profile UI with user data
+        function updateProfileUI() {
+            if (!currentUser) return;
+            
+            // Update profile elements
+            document.getElementById('profile-name').textContent = currentUser.displayName;
+            document.getElementById('profile-username').textContent = '@' + currentUser.username;
+            document.getElementById('profile-avatar-img').src = currentUser.photoUrl;
+            document.getElementById('questions-received').textContent = currentUser.stats.questionsReceived;
+            document.getElementById('questions-answered').textContent = currentUser.stats.questionsAnswered;
+            document.getElementById('messages-sent').textContent = currentUser.stats.messagesSent;
+            
+            // Update online status
+            const onlineStatus = document.getElementById('online-status');
+            if (currentUser.isOnline) {
+                onlineStatus.style.background = 'var(--success)';
+                onlineStatus.title = 'Çevrimiçi';
+            } else {
+                onlineStatus.style.background = 'var(--gray-400)';
+                onlineStatus.title = 'Çevrimdışı';
+            }
+            
+            // Update settings toggles
+            document.getElementById('toggle-anonymous-questions').classList.toggle('active', currentUser.settings.allowAnonymousQuestions);
+            document.getElementById('toggle-anonymous-messages').classList.toggle('active', currentUser.settings.allowAnonymousMessages);
+            document.getElementById('toggle-online-status').classList.toggle('active', currentUser.settings.showOnlineStatus);
+        }
+
+        // Hide loading screen and show app
+        function hideLoadingScreen() {
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                document.querySelector('.app-container').style.display = 'block';
+            }, 300);
+        }
+
+        // Initialize Socket.io connection
+        function initializeSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Socket bağlandı');
                 
-                showNotification('🎊 Profiller açıldı! Artık birbirinizi görebilirsiniz.', 3000);
+                // Notify server that user is online
+                if (currentUser) {
+                    socket.emit('user_online', currentUser._id);
+                }
             });
             
-            socket.on('partner_left', () => {
-                showNotification('👋 Partneriniz sohbeti bitirdi. Lobiye yönlendiriliyorsunuz...');
-                setTimeout(() => {
-                    resetToLobby();
-                }, 2000);
+            socket.on('new_question', (question) => {
+                showNotification('Yeni bir sorunuz var!', 'info');
+                loadQuestions();
+                updateNotificationBadge();
             });
             
-            socket.on('chat_ended', () => {
-                resetToLobby();
+            socket.on('new_message', (message) => {
+                showNotification('Yeni mesajınız var!', 'info');
+                loadConversations();
+                updateNotificationBadge();
+            });
+            
+            socket.on('new_private_message', (message) => {
+                // If we're in the chat with this user, show the message
+                if (currentConversationId === message.conversationId) {
+                    displayMessage(message);
+                } else {
+                    showNotification('Yeni mesajınız var!', 'info');
+                    unreadMessagesCount++;
+                    updateNotificationBadge();
+                }
+                loadConversations();
+            });
+            
+            socket.on('message_read', (data) => {
+                // Update message read status in UI if needed
+                const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
+                if (messageElement) {
+                    messageElement.classList.add('read');
+                }
+            });
+            
+            socket.on('user_status_changed', (data) => {
+                // Update user status in UI if they're in our current chat
+                if (currentChatUser && currentChatUser._id === data.userId) {
+                    const statusElement = document.getElementById('chat-user-status');
+                    statusElement.textContent = data.isOnline ? 'çevrimiçi' : 'çevrimdışı';
+                    statusElement.classList.toggle('online', data.isOnline);
+                }
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Socket bağlantısı kesildi');
             });
         }
 
-        // Mesaj gönder
-        function sendMessage() {
-            const input = document.getElementById('message-input');
-            const message = input.value.trim();
-            
-            if (message && currentRoom && socket) {
-                socket.emit('send_message', {
-                    roomId: currentRoom,
-                    message: message
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Bottom navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const screen = item.getAttribute('data-screen');
+                    switchScreen(screen);
+                    
+                    // Update active nav item
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    item.classList.add('active');
                 });
-                
-                addMessage(message, 'outgoing');
-                input.value = '';
-                input.focus();
-            }
-        }
-
-        // Enter tuşu ile mesaj gönder
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
-
-        // Mesaj ekle
-        function addMessage(text, type) {
-            const container = document.getElementById('message-container');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            
-            const time = new Date().toLocaleTimeString('tr-TR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
             });
+            
+            // Tab navigation for questions
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.getAttribute('data-tab');
+                    
+                    // Update active tab
+                    document.querySelectorAll('.tab-btn').forEach(t => {
+                        t.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+                    
+                    // Load questions for selected tab
+                    loadQuestions(tab);
+                });
+            });
+            
+            // Header buttons
+            document.getElementById('search-btn').addEventListener('click', () => {
+                switchScreen('explore');
+                document.getElementById('user-search').focus();
+            });
+            
+            document.getElementById('notifications-btn').addEventListener('click', showNotificationsModal);
+            document.getElementById('settings-btn').addEventListener('click', showSettingsModal);
+            
+            // User search
+            document.getElementById('user-search').addEventListener('input', debounce(searchUsers, 300));
+            
+            // Chat back button
+            document.getElementById('chat-back-btn').addEventListener('click', () => {
+                switchScreen('messages');
+            });
+            
+            // Send message button
+            document.getElementById('send-btn').addEventListener('click', sendMessage);
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Modal close buttons
+            document.getElementById('close-question-modal').addEventListener('click', () => {
+                document.getElementById('ask-question-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-message-modal').addEventListener('click', () => {
+                document.getElementById('send-message-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-answer-modal').addEventListener('click', () => {
+                document.getElementById('answer-question-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-notifications-modal').addEventListener('click', () => {
+                document.getElementById('notifications-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-settings-modal').addEventListener('click', () => {
+                document.getElementById('settings-modal').style.display = 'none';
+            });
+            
+            // Modal cancel buttons
+            document.getElementById('cancel-question').addEventListener('click', () => {
+                document.getElementById('ask-question-modal').style.display = 'none';
+            });
+            
+            document.getElementById('cancel-message').addEventListener('click', () => {
+                document.getElementById('send-message-modal').style.display = 'none';
+            });
+            
+            document.getElementById('cancel-answer').addEventListener('click', () => {
+                document.getElementById('answer-question-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-notifications').addEventListener('click', () => {
+                document.getElementById('notifications-modal').style.display = 'none';
+            });
+            
+            document.getElementById('close-settings').addEventListener('click', () => {
+                document.getElementById('settings-modal').style.display = 'none';
+            });
+            
+            // Modal action buttons
+            document.getElementById('send-question-btn').addEventListener('click', submitQuestion);
+            document.getElementById('send-message-btn').addEventListener('click', submitMessage);
+            document.getElementById('submit-answer-btn').addEventListener('click', submitAnswer);
+            
+            // Toggle switches
+            document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    const track = this.querySelector('.toggle-track');
+                    track.classList.toggle('active');
+                });
+            });
+            
+            // Settings toggles
+            document.getElementById('toggle-anonymous-questions').addEventListener('click', async function() {
+                const isActive = !this.classList.contains('active');
+                this.classList.toggle('active', isActive);
+                await updateUserSetting('allowAnonymousQuestions', isActive);
+            });
+            
+            document.getElementById('toggle-anonymous-messages').addEventListener('click', async function() {
+                const isActive = !this.classList.contains('active');
+                this.classList.toggle('active', isActive);
+                await updateUserSetting('allowAnonymousMessages', isActive);
+            });
+            
+            document.getElementById('toggle-online-status').addEventListener('click', async function() {
+                const isActive = !this.classList.contains('active');
+                this.classList.toggle('active', isActive);
+                await updateUserSetting('showOnlineStatus', isActive);
+            });
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            if (!currentUser) return;
+            
+            try {
+                // Load user's questions
+                await loadQuestions('unanswered');
+                
+                // Load users for explore screen
+                await loadExploreUsers();
+                
+                // Load conversations
+                await loadConversations();
+                
+                // Load notifications
+                await loadNotifications();
+                
+            } catch (error) {
+                console.error('Veri yükleme hatası:', error);
+                showError('Veriler yüklenemedi');
+            }
+        }
+
+        // Load user's questions
+        async function loadQuestions(type = 'unanswered') {
+            if (!currentUser) return;
+            
+            try {
+                const response = await fetch(`/api/users/${currentUser._id}/questions?type=${type}`);
+                const data = await response.json();
+                
+                const questionsList = document.getElementById('questions-list');
+                const emptyState = document.getElementById('empty-questions');
+                
+                if (data.success && data.questions.length > 0) {
+                    questionsList.innerHTML = '';
+                    emptyState.style.display = 'none';
+                    
+                    data.questions.forEach(question => {
+                        const questionElement = createQuestionElement(question, type === 'unanswered');
+                        questionsList.appendChild(questionElement);
+                    });
+                    
+                    // Update unanswered count
+                    if (type === 'unanswered') {
+                        const unansweredQuestions = data.questions.filter(q => !q.answered).length;
+                        document.getElementById('unanswered-questions').textContent = unansweredQuestions;
+                    }
+                } else {
+                    questionsList.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Sorular yükleme hatası:', error);
+                showError('Sorular yüklenemedi');
+            }
+        }
+
+        // Create question element
+        function createQuestionElement(question, showAnswerButton = false) {
+            const div = document.createElement('div');
+            div.className = 'question-card';
+            div.dataset.questionId = question._id;
+            
+            let askerInfo = '';
+            if (question.isAnonymous) {
+                askerInfo = `
+                    <div class="question-avatar">
+                        <img src="https://ui-avatars.com/api/?name=A&background=94a3b8&color=fff&size=150" alt="Anonim">
+                    </div>
+                    <div class="question-info">
+                        <div class="question-author">
+                            ${question.anonymousName}
+                            <span class="anonymous-badge">
+                                <i class="fas fa-user-secret"></i> Anonim
+                            </span>
+                        </div>
+                `;
+            } else if (question.fromUser) {
+                askerInfo = `
+                    <div class="question-avatar">
+                        <img src="${question.fromUser.photoUrl}" alt="${question.fromUser.displayName}">
+                    </div>
+                    <div class="question-info">
+                        <div class="question-author">${question.fromUser.displayName}</div>
+                `;
+            } else {
+                askerInfo = `
+                    <div class="question-avatar">
+                        <img src="https://ui-avatars.com/api/?name=K&background=94a3b8&color=fff&size=150" alt="Kullanıcı">
+                    </div>
+                    <div class="question-info">
+                        <div class="question-author">Kullanıcı</div>
+                `;
+            }
+            
+            const timeAgo = formatTimeAgo(new Date(question.createdAt));
+            
+            let answerSection = '';
+            if (question.answered) {
+                answerSection = `
+                    <div class="answer-section">
+                        <div class="answer-header">
+                            <div class="answer-label">Yanıt</div>
+                            <div class="question-time">${formatTimeAgo(new Date(question.answeredAt))}</div>
+                        </div>
+                        <div class="answer-text">${escapeHtml(question.answerText)}</div>
+                    </div>
+                `;
+            } else if (showAnswerButton) {
+                answerSection = `
+                    <div class="answer-actions">
+                        <button class="btn btn-primary btn-sm answer-btn" data-question-id="${question._id}">
+                            <i class="fas fa-reply"></i> Yanıtla
+                        </button>
+                    </div>
+                `;
+            }
+            
+            div.innerHTML = `
+                <div class="question-header">
+                    ${askerInfo}
+                    <div class="question-time">${timeAgo}</div>
+                    </div>
+                </div>
+                <div class="question-text">${escapeHtml(question.text)}</div>
+                ${answerSection}
+            `;
+            
+            // Add event listener to answer button
+            if (showAnswerButton) {
+                const answerBtn = div.querySelector('.answer-btn');
+                answerBtn.addEventListener('click', () => {
+                    showAnswerQuestionModal(question);
+                });
+            }
+            
+            return div;
+        }
+
+        // Load explore users
+        async function loadExploreUsers(search = '') {
+            try {
+                const url = search ? `/api/users?search=${encodeURIComponent(search)}` : '/api/users';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const usersGrid = document.getElementById('users-grid');
+                const emptyState = document.getElementById('empty-users');
+                
+                if (data.success && data.users.length > 0) {
+                    usersGrid.innerHTML = '';
+                    emptyState.style.display = 'none';
+                    
+                    data.users.forEach(user => {
+                        if (user._id !== currentUser._id) {
+                            const userElement = createUserElement(user);
+                            usersGrid.appendChild(userElement);
+                        }
+                    });
+                } else {
+                    usersGrid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Kullanıcılar yükleme hatası:', error);
+                showError('Kullanıcılar yüklenemedi');
+            }
+        }
+
+        // Create user element for explore screen
+        function createUserElement(user) {
+            const div = document.createElement('div');
+            div.className = 'user-card';
+            div.dataset.userId = user._id;
+            
+            const timeAgo = user.lastSeen ? formatTimeAgo(new Date(user.lastSeen)) : 'Hiç aktif değil';
+            
+            div.innerHTML = `
+                <div class="user-avatar">
+                    <img src="${user.photoUrl}" alt="${user.displayName}">
+                </div>
+                <h3 class="user-name">${escapeHtml(user.displayName)}</h3>
+                <div class="user-username">@${escapeHtml(user.username)}</div>
+                <div class="user-stats">
+                    <div class="user-stat">
+                        <span>${user.stats.questionsAnswered || 0}</span>
+                        Yanıt
+                    </div>
+                    <div class="user-stat">
+                        <span>${user.stats.questionsReceived || 0}</span>
+                        Soru
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn btn-primary btn-sm ask-btn" data-user-id="${user._id}">
+                        <i class="fas fa-question"></i> Soru Sor
+                    </button>
+                    <button class="btn btn-secondary btn-sm message-btn" data-user-id="${user._id}">
+                        <i class="fas fa-envelope"></i> Mesaj
+                    </button>
+                </div>
+            `;
+            
+            // Add event listeners
+            const askBtn = div.querySelector('.ask-btn');
+            const messageBtn = div.querySelector('.message-btn');
+            
+            askBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showAskQuestionModal(user);
+            });
+            
+            messageBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showSendMessageModal(user);
+            });
+            
+            // Make whole card clickable to view profile
+            div.addEventListener('click', () => {
+                // You can implement profile view here
+                showNotification(`${user.displayName} profilini görüntüle`, 'info');
+            });
+            
+            return div;
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            if (!currentUser) return;
+            
+            try {
+                const response = await fetch(`/api/conversations/${currentUser._id}`);
+                const data = await response.json();
+                
+                const conversationsList = document.getElementById('conversations-list');
+                const emptyState = document.getElementById('empty-messages');
+                
+                if (data.success && data.conversations.length > 0) {
+                    conversationsList.innerHTML = '';
+                    emptyState.style.display = 'none';
+                    
+                    let totalUnread = 0;
+                    
+                    data.conversations.forEach(conv => {
+                        if (conv.otherUser) {
+                            const convElement = createConversationElement(conv);
+                            conversationsList.appendChild(convElement);
+                            totalUnread += conv.unreadCount || 0;
+                        }
+                    });
+                    
+                    // Update badge
+                    unreadMessagesCount = totalUnread;
+                    updateNotificationBadge();
+                    
+                    // Update active conversations count
+                    document.getElementById('active-conversations').textContent = data.conversations.length;
+                    
+                } else {
+                    conversationsList.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    unreadMessagesCount = 0;
+                    updateNotificationBadge();
+                }
+                
+            } catch (error) {
+                console.error('Konuşmalar yükleme hatası:', error);
+                showError('Konuşmalar yüklenemedi');
+            }
+        }
+
+        // Create conversation element
+        function createConversationElement(conversation) {
+            const div = document.createElement('div');
+            div.className = `conversation-item ${conversation.unreadCount > 0 ? 'unread' : ''}`;
+            div.dataset.conversationId = conversation.conversationId;
+            div.dataset.userId = conversation.otherUser._id;
+            
+            const timeAgo = formatTimeAgo(new Date(conversation.lastMessage.createdAt));
+            const messagePreview = conversation.lastMessage.text.length > 50 
+                ? conversation.lastMessage.text.substring(0, 50) + '...'
+                : conversation.lastMessage.text;
+            
+            let senderName = conversation.otherUser.displayName;
+            if (conversation.lastMessage.isAnonymous) {
+                senderName = conversation.lastMessage.anonymousName;
+            }
+            
+            div.innerHTML = `
+                <div class="conversation-avatar">
+                    <img src="${conversation.otherUser.photoUrl}" alt="${senderName}">
+                </div>
+                <div class="conversation-info">
+                    <div class="conversation-header">
+                        <div class="conversation-name">${escapeHtml(senderName)}</div>
+                        <div class="conversation-time">${timeAgo}</div>
+                    </div>
+                    <div class="conversation-preview">${escapeHtml(messagePreview)}</div>
+                </div>
+                ${conversation.unreadCount > 0 ? `<div class="unread-badge">${conversation.unreadCount}</div>` : ''}
+            `;
+            
+            // Add click event to open chat
+            div.addEventListener('click', () => {
+                openChat(conversation.otherUser, conversation.conversationId);
+            });
+            
+            return div;
+        }
+
+        // Open chat with user
+        async function openChat(user, conversationId) {
+            currentChatUser = user;
+            currentConversationId = conversationId;
+            
+            // Update UI
+            document.getElementById('chat-user-name').textContent = user.displayName;
+            document.getElementById('chat-user-status').textContent = user.isOnline ? 'çevrimiçi' : 'çevrimdışı';
+            document.getElementById('chat-user-status').classList.toggle('online', user.isOnline);
+            
+            // Switch to chat screen
+            switchScreen('chat');
+            
+            // Load messages
+            await loadMessages(conversationId);
+            
+            // Mark messages as read
+            if (socket) {
+                // You can implement marking messages as read here
+            }
+        }
+
+        // Load messages for a conversation
+        async function loadMessages(conversationId) {
+            try {
+                const response = await fetch(`/api/conversations/${conversationId}/messages`);
+                const data = await response.json();
+                
+                const messagesContainer = document.getElementById('messages-container');
+                messagesContainer.innerHTML = '';
+                
+                if (data.success && data.messages) {
+                    data.messages.forEach(message => {
+                        displayMessage(message);
+                    });
+                    
+                    // Scroll to bottom
+                    setTimeout(() => {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }, 100);
+                }
+                
+            } catch (error) {
+                console.error('Mesajlar yükleme hatası:', error);
+                showError('Mesajlar yüklenemedi');
+            }
+        }
+
+        // Display a message in chat
+        function displayMessage(message) {
+            const messagesContainer = document.getElementById('messages-container');
+            const isOutgoing = message.fromUserId && message.fromUserId.toString() === currentUser._id;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
+            messageDiv.dataset.messageId = message._id;
+            
+            const time = new Date(message.createdAt).toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            let senderName = '';
+            if (!isOutgoing) {
+                if (message.isAnonymous) {
+                    senderName = `<div style="font-size: 12px; color: var(--gray-500); margin-bottom: 5px;">${message.anonymousName}</div>`;
+                } else if (message.fromUser) {
+                    senderName = `<div style="font-size: 12px; color: var(--gray-500); margin-bottom: 5px;">${message.fromUser.displayName}</div>`;
+                }
+            }
             
             messageDiv.innerHTML = `
-                ${text}
+                <div class="message-bubble">
+                    ${senderName}
+                    ${escapeHtml(message.text)}
+                </div>
                 <div class="message-time">${time}</div>
             `;
             
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+            messagesContainer.appendChild(messageDiv);
+            
+            // Auto scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Profil açma isteği
-        function requestReveal() {
-            if (currentRoom && socket) {
-                socket.emit('reveal_request', { roomId: currentRoom });
-                showNotification('📨 Profil açma isteği gönderildi. Partneriniz onaylamalı.');
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            
+            if (!text || !currentChatUser || !socket) return;
+            
+            try {
+                // Send via Socket.io for real-time
+                socket.emit('send_private_message', {
+                    conversationId: currentConversationId,
+                    fromUserId: currentUser._id,
+                    toUserId: currentChatUser._id,
+                    text: text,
+                    isAnonymous: false // Direct messages are never anonymous
+                });
+                
+                // Clear input
+                input.value = '';
+                
+                // Show sending indicator
+                showNotification('Mesaj gönderiliyor...', 'info');
+                
+            } catch (error) {
+                console.error('Mesaj gönderme hatası:', error);
+                showError('Mesaj gönderilemedi');
             }
         }
 
-        // Sonraki sohbet
-        function nextChat() {
-            if (currentRoom && socket) {
-                socket.emit('end_chat', { roomId: currentRoom });
-                showNotification('Sohbet bitiriliyor...');
-            }
+        // Show ask question modal
+        function showAskQuestionModal(user) {
+            document.getElementById('target-user-avatar').src = user.photoUrl;
+            document.getElementById('target-user-name').textContent = user.displayName;
+            document.getElementById('target-user-username').textContent = '@' + user.username;
+            
+            // Store target user ID in modal
+            document.getElementById('ask-question-modal').dataset.targetUserId = user._id;
+            
+            // Reset form
+            document.getElementById('question-text').value = '';
+            document.getElementById('anonymous-toggle').querySelector('.toggle-track').classList.add('active');
+            
+            // Show modal
+            document.getElementById('ask-question-modal').style.display = 'flex';
         }
 
-        // Lobiy
-        <!-- index.html devamı (kaldığımız yerden) -->
-            <!-- Lobiyee dön -->
-            function resetToLobby() {
-                if (revealTimeout) {
-                    clearTimeout(revealTimeout);
+        // Submit question
+        async function submitQuestion() {
+            const text = document.getElementById('question-text').value.trim();
+            const targetUserId = document.getElementById('ask-question-modal').dataset.targetUserId;
+            const isAnonymous = document.getElementById('anonymous-toggle').querySelector('.toggle-track').classList.contains('active');
+            
+            if (!text) {
+                showError('Lütfen bir soru yazın');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/questions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        toUserId: targetUserId,
+                        text: text,
+                        isAnonymous: isAnonymous,
+                        fromUserId: currentUser._id
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(isAnonymous ? 'Soru anonim olarak gönderildi!' : 'Soru gönderildi!', 'success');
+                    document.getElementById('ask-question-modal').style.display = 'none';
+                } else {
+                    showError(data.error || 'Soru gönderilemedi');
                 }
                 
-                currentRoom = null;
+            } catch (error) {
+                console.error('Soru gönderme hatası:', error);
+                showError('Soru gönderilemedi');
+            }
+        }
+
+        // Show send message modal
+        function showSendMessageModal(user) {
+            document.getElementById('message-target-avatar').src = user.photoUrl;
+            document.getElementById('message-target-name').textContent = user.displayName;
+            document.getElementById('message-target-username').textContent = '@' + user.username;
+            
+            // Store target user ID in modal
+            document.getElementById('send-message-modal').dataset.targetUserId = user._id;
+            
+            // Reset form
+            document.getElementById('message-text').value = '';
+            document.getElementById('message-anonymous-toggle').querySelector('.toggle-track').classList.add('active');
+            
+            // Show modal
+            document.getElementById('send-message-modal').style.display = 'flex';
+        }
+
+        // Submit message from modal
+        async function submitMessage() {
+            const text = document.getElementById('message-text').value.trim();
+            const targetUserId = document.getElementById('send-message-modal').dataset.targetUserId;
+            const isAnonymous = document.getElementById('message-anonymous-toggle').querySelector('.toggle-track').classList.contains('active');
+            
+            if (!text) {
+                showError('Lütfen bir mesaj yazın');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        toUserId: targetUserId,
+                        text: text,
+                        isAnonymous: isAnonymous,
+                        fromUserId: currentUser._id
+                    })
+                });
                 
-                // Ekranları sıfırla
-                document.getElementById('chat-screen').classList.remove('active');
-                document.getElementById('register-screen').classList.add('active');
+                const data = await response.json();
                 
-                // Chat container'ı temizle
-                document.getElementById('message-container').innerHTML = `
-                    <div class="message incoming">
-                        Merhaba! Anonim sohbete hoş geldin. İstersen 'Eşleşdik' butonuyla profilleri açabiliriz. 👋
-                        <div class="message-time">Şimdi</div>
+                if (data.success) {
+                    showNotification(isAnonymous ? 'Mesaj anonim olarak gönderildi!' : 'Mesaj gönderildi!', 'success');
+                    document.getElementById('send-message-modal').style.display = 'none';
+                    
+                    // Open chat if not anonymous
+                    if (!isAnonymous) {
+                        // You might want to load the user details here
+                        setTimeout(() => {
+                            switchScreen('messages');
+                        }, 1000);
+                    }
+                } else {
+                    showError(data.error || 'Mesaj gönderilemedi');
+                }
+                
+            } catch (error) {
+                console.error('Mesaj gönderme hatası:', error);
+                showError('Mesaj gönderilemedi');
+            }
+        }
+
+        // Show answer question modal
+        function showAnswerQuestionModal(question) {
+            document.getElementById('question-content').textContent = question.text;
+            
+            if (question.isAnonymous) {
+                document.getElementById('question-asker-name').textContent = question.anonymousName;
+                document.getElementById('question-asker-avatar').src = 'https://ui-avatars.com/api/?name=A&background=94a3b8&color=fff&size=150';
+            } else if (question.fromUser) {
+                document.getElementById('question-asker-name').textContent = question.fromUser.displayName;
+                document.getElementById('question-asker-avatar').src = question.fromUser.photoUrl;
+            }
+            
+            document.getElementById('question-time').textContent = formatTimeAgo(new Date(question.createdAt));
+            
+            // Store question ID
+            document.getElementById('answer-question-modal').dataset.questionId = question._id;
+            
+            // Reset form
+            document.getElementById('answer-text').value = '';
+            
+            // Show modal
+            document.getElementById('answer-question-modal').style.display = 'flex';
+        }
+
+        // Submit answer
+        async function submitAnswer() {
+            const text = document.getElementById('answer-text').value.trim();
+            const questionId = document.getElementById('answer-question-modal').dataset.questionId;
+            
+            if (!text) {
+                showError('Lütfen bir yanıt yazın');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/questions/${questionId}/answer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        answerText: text,
+                        userId: currentUser._id
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Yanıt gönderildi!', 'success');
+                    document.getElementById('answer-question-modal').style.display = 'none';
+                    
+                    // Reload questions
+                    loadQuestions('unanswered');
+                } else {
+                    showError(data.error || 'Yanıt gönderilemedi');
+                }
+                
+            } catch (error) {
+                console.error('Yanıt gönderme hatası:', error);
+                showError('Yanıt gönderilemedi');
+            }
+        }
+
+        // Load notifications
+        async function loadNotifications() {
+            if (!currentUser) return;
+            
+            try {
+                const response = await fetch(`/api/notifications/${currentUser._id}`);
+                const data = await response.json();
+                
+                const notificationsList = document.getElementById('notifications-list');
+                
+                if (data.success && data.notifications.length > 0) {
+                    notificationsList.innerHTML = '';
+                    notificationsCount = data.notifications.filter(n => !n.isRead).length;
+                    
+                    data.notifications.forEach(notification => {
+                        const notificationElement = createNotificationElement(notification);
+                        notificationsList.appendChild(notificationElement);
+                    });
+                    
+                    updateNotificationBadge();
+                } else {
+                    notificationsList.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-bell-slash"></i></div><h3>Bildirim yok</h3><p>Yeni bildirimler burada görünecek</p></div>';
+                    notificationsCount = 0;
+                    updateNotificationBadge();
+                }
+                
+            } catch (error) {
+                console.error('Bildirimler yükleme hatası:', error);
+                showError('Bildirimler yüklenemedi');
+            }
+        }
+
+        // Create notification element
+        function createNotificationElement(notification) {
+            const div = document.createElement('div');
+            div.className = `conversation-item ${notification.isRead ? '' : 'unread'}`;
+            div.dataset.notificationId = notification._id;
+            
+            let icon = '🔔';
+            let title = 'Bildirim';
+            
+            switch (notification.type) {
+                case 'new_question':
+                    icon = '❓';
+                    title = 'Yeni Soru';
+                    break;
+                case 'question_answered':
+                    icon = '✅';
+                    title = 'Yanıt';
+                    break;
+                case 'new_message':
+                    icon = '💬';
+                    title = 'Yeni Mesaj';
+                    break;
+            }
+            
+            const timeAgo = formatTimeAgo(new Date(notification.createdAt));
+            
+            let fromUser = '';
+            if (notification.fromUser) {
+                fromUser = `<div style="font-size: 12px; color: var(--gray-500);">${notification.fromUser.displayName}</div>`;
+            } else if (notification.fromUsername) {
+                fromUser = `<div style="font-size: 12px; color: var(--gray-500);">${notification.fromUsername}</div>`;
+            }
+            
+            div.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 15px; width: 100%;">
+                    <div style="font-size: 24px;">${icon}</div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <div style="font-weight: 600;">${title}</div>
+                            <div style="font-size: 12px; color: var(--gray-500);">${timeAgo}</div>
+                        </div>
+                        ${fromUser}
+                        <div style="font-size: 14px; color: var(--gray-600); margin-top: 5px;">${notification.text}</div>
                     </div>
-                `;
-                
-                // Profil görünümünü sıfırla
-                document.getElementById('partner-avatar').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+';
-                document.getElementById('partner-avatar').classList.add('blurred');
-                document.getElementById('partner-name').textContent = '********';
-                document.getElementById('partner-name').className = 'name anon-name';
-                document.getElementById('partner-status').textContent = 'Profil gizli';
-                document.getElementById('revealed-info').style.display = 'none';
-                
-                // Butonları sıfırla
-                document.getElementById('reveal-btn').disabled = false;
-                document.getElementById('reveal-btn').innerHTML = '<span>👤</span><span>Eşleşdik</span>';
-                
-                // Input'u temizle
-                document.getElementById('message-input').value = '';
-                
-                showNotification('Lobiye döndünüz. Yeni eşleşme aranıyor...', 2000);
-            }
-
-            // Bildirim göster
-            function showNotification(message, duration = 3000) {
-                // Önceki bildirimi temizle
-                const existingNotification = document.querySelector('.notification');
-                if (existingNotification) {
-                    existingNotification.classList.add('hide');
-                    setTimeout(() => existingNotification.remove(), 400);
-                }
-                
-                if (notificationTimeout) {
-                    clearTimeout(notificationTimeout);
-                }
-                
-                // Yeni bildirim oluştur
-                const notification = document.createElement('div');
-                notification.className = 'notification';
-                
-                // Mesaj tipine göre ikon seç
-                let icon = '💬';
-                if (message.includes('🎉')) icon = '🎉';
-                if (message.includes('⚠️')) icon = '⚠️';
-                if (message.includes('⏰')) icon = '⏰';
-                if (message.includes('👋')) icon = '👋';
-                if (message.includes('📨')) icon = '📨';
-                if (message.includes('✅')) icon = '✅';
-                if (message.includes('🎊')) icon = '🎊';
-                
-                notification.innerHTML = `
-                    <div class="notification-icon">${icon}</div>
-                    <div class="notification-content">
-                        <div class="notification-message">${message.replace(/[🎉⚠️⏰👋📨✅🎊]/g, '')}</div>
-                    </div>
-                `;
-                
-                document.body.appendChild(notification);
-                
-                // Süre sonunda kaldır
-                notificationTimeout = setTimeout(() => {
-                    notification.classList.add('hide');
-                    setTimeout(() => notification.remove(), 400);
-                }, duration);
-            }
-
-            // Sayfa kapatılırken
-            window.addEventListener('beforeunload', () => {
-                if (socket && currentRoom) {
-                    socket.emit('end_chat', { roomId: currentRoom });
-                }
+                </div>
+            `;
+            
+            // Add click event to mark as read
+            div.addEventListener('click', async () => {
+                await markNotificationAsRead(notification._id);
+                div.classList.remove('unread');
             });
+            
+            return div;
+        }
 
-            // Telegram butonu animasyonu
-            document.getElementById('start-btn').addEventListener('click', function() {
-                this.classList.add('match-animation');
-                setTimeout(() => this.classList.remove('match-animation'), 1500);
+        // Mark notification as read
+        async function markNotificationAsRead(notificationId) {
+            try {
+                const response = await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    notificationsCount = Math.max(0, notificationsCount - 1);
+                    updateNotificationBadge();
+                }
+            } catch (error) {
+                console.error('Bildirim okundu işaretleme hatası:', error);
+            }
+        }
+
+        // Show notifications modal
+        async function showNotificationsModal() {
+            await loadNotifications();
+            document.getElementById('notifications-modal').style.display = 'flex';
+        }
+
+        // Show settings modal
+        function showSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        // Update user setting
+        async function updateUserSetting(setting, value) {
+            if (!currentUser) return;
+            
+            try {
+                // Update locally
+                currentUser.settings[setting] = value;
+                
+                // You can add API call here to update on server
+                showNotification('Ayarlar güncellendi', 'success');
+                
+            } catch (error) {
+                console.error('Ayar güncelleme hatası:', error);
+                showError('Ayar güncellenemedi');
+            }
+        }
+
+        // Search users
+        async function searchUsers() {
+            const searchTerm = document.getElementById('user-search').value.trim();
+            await loadExploreUsers(searchTerm);
+        }
+
+        // Switch between screens
+        function switchScreen(screenName) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
             });
+            
+            // Show selected screen
+            document.getElementById(`${screenName}-screen`).classList.add('active');
+            
+            // Update header title
+            const titles = {
+                'profile': 'Profilim',
+                'explore': 'Keşfet',
+                'messages': 'Mesajlar',
+                'chat': 'Sohbet'
+            };
+            
+            document.getElementById('header-title').textContent = titles[screenName] || 'AskTelegram';
+        }
 
-            // Sayfa yüklendiğinde
+        // Update notification badge
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notification-badge');
+            const messagesBadge = document.getElementById('messages-badge');
+            const totalBadge = document.getElementById('notification-badge');
+            
+            const totalNotifications = notificationsCount + unreadMessagesCount;
+            
+            if (totalNotifications > 0) {
+                totalBadge.textContent = totalNotifications > 99 ? '99+' : totalNotifications;
+                totalBadge.style.display = 'block';
+            } else {
+                totalBadge.style.display = 'none';
+            }
+            
+            if (unreadMessagesCount > 0) {
+                messagesBadge.textContent = unreadMessagesCount > 99 ? '99+' : unreadMessagesCount;
+                messagesBadge.style.display = 'block';
+            } else {
+                messagesBadge.style.display = 'none';
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--primary)'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: var(--radius);
+                box-shadow: var(--shadow-lg);
+                z-index: 1000;
+                animation: slideDown 0.3s ease;
+                max-width: 90%;
+                text-align: center;
+                font-weight: 600;
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
             setTimeout(() => {
-                if (!currentUser) {
-                    document.getElementById('loading-screen').classList.remove('active');
-                    document.getElementById('register-screen').classList.add('active');
-                    showNotification('Telegram WebApp tespit edilemedi. Manuel moda geçildi.');
-                }
-            }, 5000);
-        </script>
-    </body>
+                notification.style.animation = 'slideUp 0.3s ease forwards';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Show error message
+        function showError(message) {
+            showNotification(message, 'error');
+        }
+
+        // Format time ago
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+            
+            if (diffSec < 60) return 'az önce';
+            if (diffMin < 60) return `${diffMin} dakika önce`;
+            if (diffHour < 24) return `${diffHour} saat önce`;
+            if (diffDay < 7) return `${diffDay} gün önce`;
+            
+            return date.toLocaleDateString('tr-TR');
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Add slideUp animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from { transform: translate(-50%, -100%); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translate(-50%, 0); opacity: 1; }
+                to { transform: translate(-50%, -100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
 </html>
