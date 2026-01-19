@@ -3,114 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Vision Pro - Object Detection</title>
+    <title>AI Vision Pro - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        video { position: absolute; width: 100%; height: 100%; object-fit: cover; }
-        canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 10; }
-        
-        #ui-layer { position: absolute; bottom: 30px; z-index: 20; display: flex; flex-direction: column; align-items: center; width: 100%; }
-        
-        .btn {
-            background: rgba(255, 0, 0, 0.8); color: white; border: none; padding: 15px 30px;
-            font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer;
-            transition: 0.3s; box-shadow: 0 4px 15px rgba(255,0,0,0.3);
-        }
-        .btn:hover { background: #ff0000; transform: scale(1.05); }
-        .btn:disabled { background: #555; cursor: not-allowed; }
-
-        #status { margin-top: 15px; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; font-size: 14px; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden; }
+        #ui-layer { position: absolute; top: 20px; width: 100%; text-align: center; z-index: 100; }
+        #video-container { position: relative; width: 100vw; height: 100vh; }
+        video, canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+        .btn { padding: 20px 40px; font-size: 20px; background: red; color: white; border: none; border-radius: 10px; cursor: pointer; }
+        #error-log { color: #ff4444; background: rgba(0,0,0,0.8); margin: 10px; display: none; padding: 10px; border: 1px solid red; }
     </style>
 </head>
 <body>
 
-<div id="container">
+<div id="ui-layer">
+    <button id="startBtn" class="btn">KAMERAYI AÇ VE BAŞLAT</button>
+    <div id="error-log"></div>
+</div>
+
+<div id="video-container">
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-
-    <div id="ui-layer">
-        <button id="startBtn" class="btn">KAMERAYI BAŞLAT</button>
-        <div id="status">Sistem hazır. Modeli yüklemek için butona basın.</div>
-    </div>
 </div>
 
 <script>
     const video = document.getElementById('webcam');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const errorLog = document.getElementById('error-log');
     const startBtn = document.getElementById('startBtn');
-    const statusText = document.getElementById('status');
-    let model = undefined;
 
-    // Tam ekran ve kamera başlatma
-    startBtn.addEventListener('click', async () => {
-        startBtn.disabled = true;
-        statusText.innerText = "Model yükleniyor ve kamera açılıyor...";
+    startBtn.onclick = async () => {
+        startBtn.innerText = "Yükleniyor...";
         
         try {
-            // Modeli yükle
-            model = await cocoSsd.load();
-            
-            // Kamera erişimi
+            // 1. Kamera Erişimi Denemesi
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" }, // Arka kamerayı tercih et
-                audio: false 
+                video: { facingMode: "environment" } 
             });
             video.srcObject = stream;
             
-            // Tam ekran yapma
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            }
-
+            // 2. Model Yükleme
+            const model = await cocoSsd.load();
+            
+            startBtn.style.display = "none";
+            errorLog.style.display = "none";
+            
             video.onloadedmetadata = () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                statusText.innerText = "Sistem Aktif: Nesneler taranıyor...";
-                startBtn.style.display = "none";
-                predict();
+                detect(model);
             };
         } catch (err) {
-            statusText.innerText = "Hata: " + err.message;
-            startBtn.disabled = false;
+            errorLog.style.display = "block";
+            errorLog.innerText = "HATA: " + err.name + " - " + err.message + 
+                                 "\n(Not: Dosyayı sunucuya yüklemeden kamera çalışmaz!)";
+            startBtn.innerText = "TEKRAR DENE";
         }
-    });
+    };
 
-    async function predict() {
+    async function detect(model) {
         const predictions = await model.detect(video);
-        
-        // Çizim alanını temizle
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        predictions.forEach(prediction => {
-            // Profesyonel görünüm: Kırmızı Neon Çizgiler
+        predictions.forEach(p => {
             ctx.strokeStyle = "#FF0000";
-            ctx.lineWidth = 5;
-            ctx.lineJoin = "round";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(...p.bbox);
             
-            // Kutuyu çiz
-            const [x, y, width, height] = prediction.bbox;
-            ctx.strokeRect(x, y, width, height);
-
-            // Etiket arka planı
             ctx.fillStyle = "#FF0000";
-            const textWidth = ctx.measureText(prediction.class).width;
-            ctx.fillRect(x, y - 30, textWidth + 60, 30);
-
-            // Metni yaz
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "bold 20px Arial";
-            ctx.fillText(
-                `${prediction.class.toUpperCase()} %${Math.round(prediction.score * 100)}`,
-                x + 5, y - 7
-            );
+            ctx.font = "bold 24px sans-serif";
+            ctx.fillText(p.class.toUpperCase(), p.bbox[0], p.bbox[1] - 10);
         });
-
-        // Sürekli döngü
-        window.requestAnimationFrame(predict);
+        requestAnimationFrame(() => detect(model));
     }
 </script>
 </body>
