@@ -3,6 +3,7 @@ const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -14,21 +15,34 @@ const io = socketIo(server, {
   }
 });
 
-// MongoDB bağlantısı - Render Environment Variables kullan
+// MongoDB bağlantısı - SADECE MONGO_URI kullan
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://xaliqmustafayev7313_db_user:R4Cno5z1Enhtr09u@sayt.1oqunne.mongodb.net/telegram_askfm?retryWrites=true&w=majority";
-const client = new MongoClient(MONGO_URI, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
 
-let db, usersCollection, questionsCollection, messagesCollection, notificationsCollection;
+let db = null;
+let usersCollection = null;
+let questionsCollection = null;
+let messagesCollection = null;
+let notificationsCollection = null;
+let isDbConnected = false;
 
+// MongoDB'ye bağlan
 async function connectDB() {
   try {
+    console.log('⏳ MongoDB bağlantısı kuruluyor...');
+    
+    const client = new MongoClient(MONGO_URI, {
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000
+    });
+    
     await client.connect();
+    console.log('✅ MongoDB bağlantısı başarılı!');
+    
     db = client.db();
     
     // Koleksiyonları oluştur
@@ -41,42 +55,116 @@ async function connectDB() {
     await usersCollection.createIndex({ telegramId: 1 }, { unique: true });
     await questionsCollection.createIndex({ toUserId: 1, createdAt: -1 });
     await messagesCollection.createIndex({ participants: 1, createdAt: -1 });
+    await notificationsCollection.createIndex({ userId: 1, createdAt: -1 });
     
-    console.log('✅ MongoDB bağlantısı başarılı.');
+    isDbConnected = true;
+    console.log('📊 Koleksiyonlar hazır!');
+    
   } catch (err) {
-    console.error('❌ MongoDB bağlantı hatası:', err);
-    process.exit(1);
+    console.error('❌ MongoDB bağlantı hatası:', err.message);
+    isDbConnected = false;
+    
+    // 10 saniye sonra tekrar dene
+    setTimeout(connectDB, 10000);
   }
 }
+
+// Bağlantıyı başlat
 connectDB();
+
+// Sunucu durumunu kontrol et
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    dbConnected: isDbConnected,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Veritabanı bağlantı kontrol middleware
+app.use((req, res, next) => {
+  if (!isDbConnected && req.path !== '/api/health') {
+    return res.status(503).json({ 
+      error: 'Veritabanı bağlantısı kuruluyor. Lütfen bekleyin...',
+      retryAfter: 10
+    });
+  }
+  next();
+});
 
 app.use(cors());
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Telegram kullanıcı işleme
+// Telegram WebApp veri doğrulama
+function validateTelegramData(initData) {
+  try {
+    // Basit doğrulama - production'da daha güvenli doğrulama yapmalısınız
+    const params = new URLSearchParams(initData);
+    const userStr = params.get('user');
+    
+    if (!userStr) return null;
+    
+    const user = JSON.parse(userStr);
+    if (!user.id || !user.first_name) return null;
+    
+    return user;
+  } catch (error) {
+    console.error('Telegram data validation error:', error);
+    return null;
+  }
+}
+
+// Telegram kullanıcı işleme (BASİT VERSİYON)
 app.post('/api/auth/telegram', async (req, res) => {
   try {
-    const { id, first_name, last_name, username, photo_url, auth_date, hash } = req.body;
+    console.log('📱 Telegram auth isteği geldi');
     
-    // Telegram WebApp data validation (basit versiyon)
-    if (!id || !first_name) {
-      return res.status(400).json({ error: 'Geçersiz Telegram verisi' });
+    const { initData, user: userData } = req.body;
+    
+    // Test modu için kontrol
+    let telegramUser;
+    if (initData && initData !== 'test') {
+      telegramUser = validateTelegramData(initData);
+    } else {
+      // Test modu - demo kullanıcı
+      telegramUser = userData || {
+        id: Date.now(),
+        first_name: 'Test',
+        last_name: 'Kullanıcı',
+        username: 'testuser',
+        photo_url: 'https://ui-avatars.com/api/?name=Test+Kullanıcı&background=667eea&color=fff&size=150'
+      };
     }
     
+    if (!telegramUser) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Geçersiz Telegram verisi',
+        debug: req.body
+      });
+    }
+    
+    console.log('🔍 Kullanıcı bulunuyor:', telegramUser.id);
+    
     // Kullanıcı adını oluştur
-    const displayName = `${first_name}${last_name ? ' ' + last_name : ''}`;
+    const displayName = `${telegramUser.first_name}${telegramUser.last_name ? ' ' + telegramUser.last_name : ''}`;
     
-    // Varsayılan avatar
-    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name)}&background=667eea&color=fff&size=150`;
+    // Avatar URL'sini hazırla
+    let photoUrl = telegramUser.photo_url;
+    if (!photoUrl || photoUrl === '') {
+      const initials = telegramUser.first_name.charAt(0) + (telegramUser.last_name ? telegramUser.last_name.charAt(0) : '');
+      photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=667eea&color=fff&size=150`;
+    }
     
-    const userData = {
-      telegramId: String(id),
-      firstName: first_name,
-      lastName: last_name || '',
-      username: username || '',
-      photoUrl: photo_url || defaultAvatar,
+    // Kullanıcı verileri
+    const userToSave = {
+      telegramId: String(telegramUser.id),
+      firstName: telegramUser.first_name,
+      lastName: telegramUser.last_name || '',
+      username: telegramUser.username || `user_${telegramUser.id}`,
+      photoUrl: photoUrl,
       displayName: displayName,
       bio: '',
       stats: {
@@ -89,49 +177,76 @@ app.post('/api/auth/telegram', async (req, res) => {
         allowAnonymousMessages: true,
         showOnlineStatus: true
       },
-      isOnline: false,
+      isOnline: true,
       lastSeen: new Date(),
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    // Kullanıcıyı bul veya oluştur
-    const result = await usersCollection.updateOne(
-      { telegramId: String(id) },
-      { 
-        $setOnInsert: userData,
-        $set: { 
-          lastSeen: new Date(),
-          updatedAt: new Date(),
-          photoUrl: photo_url || userData.photoUrl
-        }
-      },
-      { upsert: true }
-    );
+    console.log('💾 Kullanıcı kaydediliyor:', userToSave.telegramId);
     
-    // Kullanıcıyı getir
-    const user = await usersCollection.findOne({ telegramId: String(id) });
+    // Kullanıcıyı bul veya oluştur
+    let user;
+    try {
+      const result = await usersCollection.findOneAndUpdate(
+        { telegramId: String(telegramUser.id) },
+        { 
+          $setOnInsert: userToSave,
+          $set: { 
+            lastSeen: new Date(),
+            updatedAt: new Date(),
+            photoUrl: photoUrl,
+            username: telegramUser.username || userToSave.username
+          }
+        },
+        { 
+          upsert: true,
+          returnDocument: 'after'
+        }
+      );
+      
+      user = result.value;
+      console.log('✅ Kullanıcı işlendi:', user._id);
+      
+    } catch (dbError) {
+      console.error('❌ DB hatası:', dbError);
+      
+      // Fallback: basit insert
+      const insertResult = await usersCollection.insertOne(userToSave);
+      user = { ...userToSave, _id: insertResult.insertedId };
+    }
+    
+    // Yanıtı hazırla
+    const responseUser = {
+      _id: user._id,
+      telegramId: user.telegramId,
+      displayName: user.displayName,
+      username: user.username,
+      photoUrl: user.photoUrl,
+      bio: user.bio || '',
+      stats: user.stats,
+      settings: user.settings,
+      isOnline: user.isOnline,
+      lastSeen: user.lastSeen
+    };
     
     res.json({ 
       success: true, 
-      user: {
-        _id: user._id,
-        telegramId: user.telegramId,
-        displayName: user.displayName,
-        username: user.username,
-        photoUrl: user.photoUrl,
-        bio: user.bio || '',
-        stats: user.stats
-      }
+      user: responseUser,
+      message: 'Giriş başarılı!'
     });
     
   } catch (error) {
-    console.error('Telegram auth error:', error);
-    res.status(500).json({ error: 'Sunucu hatası' });
+    console.error('🔥 Telegram auth hatası:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Sunucu hatası',
+      details: error.message 
+    });
   }
 });
 
-// Tüm kullanıcıları getir (keşfet sayfası için)
+// Tüm kullanıcıları getir
 app.get('/api/users', async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '' } = req.query;
@@ -182,79 +297,7 @@ app.get('/api/users', async (req, res) => {
     
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ error: 'Kullanıcılar yüklenemedi' });
-  }
-});
-
-// Belirli bir kullanıcıyı getir
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const userId = req.params.id;
-    let query;
-    
-    if (ObjectId.isValid(userId)) {
-      query = { _id: new ObjectId(userId) };
-    } else {
-      query = { username: userId };
-    }
-    
-    const user = await usersCollection.findOne(query, {
-      projection: {
-        telegramId: 0 // Güvenlik için telegramId'yi gizle
-      }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
-    }
-    
-    // Kullanıcının sorularını getir (cevaplanmış olanlar)
-    const questions = await questionsCollection.find({
-      toUserId: user._id,
-      answered: true
-    })
-    .sort({ answeredAt: -1 })
-    .limit(50)
-    .toArray();
-    
-    // Soruları düzenle
-    const formattedQuestions = await Promise.all(questions.map(async (question) => {
-      let fromUser = null;
-      if (question.fromUserId && !question.isAnonymous) {
-        fromUser = await usersCollection.findOne(
-          { _id: new ObjectId(question.fromUserId) },
-          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
-        );
-      }
-      
-      return {
-        _id: question._id,
-        text: question.text,
-        answerText: question.answerText,
-        isAnonymous: question.isAnonymous,
-        anonymousName: question.anonymousName,
-        fromUser: fromUser ? {
-          displayName: fromUser.displayName,
-          username: fromUser.username,
-          photoUrl: fromUser.photoUrl
-        } : null,
-        createdAt: question.createdAt,
-        answeredAt: question.answeredAt,
-        likes: question.likes || 0
-      };
-    }));
-    
-    res.json({
-      success: true,
-      user: {
-        ...user,
-        questions: formattedQuestions
-      }
-    });
-    
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Kullanıcı bilgileri yüklenemedi' });
+    res.status(500).json({ success: false, error: 'Kullanıcılar yüklenemedi' });
   }
 });
 
@@ -264,7 +307,7 @@ app.post('/api/questions', async (req, res) => {
     const { toUserId, text, isAnonymous, fromUserId } = req.body;
     
     if (!text || !text.trim() || !toUserId) {
-      return res.status(400).json({ error: 'Soru metni ve alıcı gereklidir' });
+      return res.status(400).json({ success: false, error: 'Soru metni ve alıcı gereklidir' });
     }
     
     // Alıcıyı kontrol et
@@ -273,12 +316,7 @@ app.post('/api/questions', async (req, res) => {
     });
     
     if (!toUser) {
-      return res.status(404).json({ error: 'Alıcı bulunamadı' });
-    }
-    
-    // Anonim soru izni kontrolü
-    if (isAnonymous && !toUser.settings.allowAnonymousQuestions) {
-      return res.status(403).json({ error: 'Bu kullanıcı anonim soru kabul etmiyor' });
+      return res.status(404).json({ success: false, error: 'Alıcı bulunamadı' });
     }
     
     const questionData = {
@@ -303,15 +341,19 @@ app.post('/api/questions', async (req, res) => {
       questionId: result.insertedId,
       fromUserId: isAnonymous ? null : (fromUserId ? new ObjectId(fromUserId) : null),
       fromUsername: isAnonymous ? questionData.anonymousName : null,
-      text: `Yeni bir ${isAnonymous ? 'anonim' : ''} soru aldın`,
+      text: `Yeni bir ${isAnonymous ? 'anonim' : ''} soru aldın: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
       isRead: false,
       createdAt: new Date()
     };
     
     await notificationsCollection.insertOne(notification);
     
-    // Alıcı online ise bildirim gönder
-    io.to(`user_${toUserId}`).emit('new_notification', notification);
+    // Gerçek zamanlı bildirim
+    io.to(`user_${toUserId}`).emit('new_question', {
+      ...questionData,
+      _id: result.insertedId,
+      notification: notification
+    });
     
     // İstatistikleri güncelle
     await usersCollection.updateOne(
@@ -327,15 +369,15 @@ app.post('/api/questions', async (req, res) => {
     
   } catch (error) {
     console.error('Send question error:', error);
-    res.status(500).json({ error: 'Soru gönderilemedi' });
+    res.status(500).json({ success: false, error: 'Soru gönderilemedi' });
   }
 });
 
-// Kullanıcının aldığı soruları getir (cevaplanmamış)
+// Kullanıcının sorularını getir
 app.get('/api/users/:id/questions', async (req, res) => {
   try {
     const userId = req.params.id;
-    const { type = 'unanswered' } = req.query; // unanswered, answered, all
+    const { type = 'unanswered' } = req.query;
     
     let query = { toUserId: new ObjectId(userId) };
     
@@ -347,33 +389,14 @@ app.get('/api/users/:id/questions', async (req, res) => {
     
     const questions = await questionsCollection.find(query)
       .sort({ createdAt: -1 })
+      .limit(50)
       .toArray();
     
-    // Soruları zenginleştir
-    const enrichedQuestions = await Promise.all(questions.map(async (question) => {
-      let fromUser = null;
-      if (question.fromUserId && !question.isAnonymous) {
-        fromUser = await usersCollection.findOne(
-          { _id: new ObjectId(question.fromUserId) },
-          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
-        );
-      }
-      
-      return {
-        ...question,
-        fromUser: fromUser ? {
-          displayName: fromUser.displayName,
-          username: fromUser.username,
-          photoUrl: fromUser.photoUrl
-        } : null
-      };
-    }));
-    
-    res.json({ success: true, questions: enrichedQuestions });
+    res.json({ success: true, questions });
     
   } catch (error) {
     console.error('Get questions error:', error);
-    res.status(500).json({ error: 'Sorular yüklenemedi' });
+    res.status(500).json({ success: false, error: 'Sorular yüklenemedi' });
   }
 });
 
@@ -384,26 +407,12 @@ app.post('/api/questions/:id/answer', async (req, res) => {
     const { answerText, userId } = req.body;
     
     if (!answerText || !answerText.trim()) {
-      return res.status(400).json({ error: 'Yanıt metni gereklidir' });
-    }
-    
-    // Soruyu bul ve yetki kontrolü
-    const question = await questionsCollection.findOne({
-      _id: new ObjectId(questionId),
-      toUserId: new ObjectId(userId)
-    });
-    
-    if (!question) {
-      return res.status(404).json({ error: 'Soru bulunamadı veya yanıtlama yetkiniz yok' });
-    }
-    
-    if (question.answered) {
-      return res.status(400).json({ error: 'Bu soru zaten yanıtlandı' });
+      return res.status(400).json({ success: false, error: 'Yanıt metni gereklidir' });
     }
     
     // Soruyu güncelle
-    await questionsCollection.updateOne(
-      { _id: new ObjectId(questionId) },
+    const result = await questionsCollection.updateOne(
+      { _id: new ObjectId(questionId), toUserId: new ObjectId(userId) },
       { 
         $set: { 
           answered: true,
@@ -413,60 +422,34 @@ app.post('/api/questions/:id/answer', async (req, res) => {
       }
     );
     
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Soru bulunamadı' });
+    }
+    
     // İstatistikleri güncelle
     await usersCollection.updateOne(
       { _id: new ObjectId(userId) },
       { $inc: { 'stats.questionsAnswered': 1 } }
     );
     
-    // Soruyu soran kişi anonim değilse bildirim gönder
-    if (question.fromUserId && !question.isAnonymous) {
-      const notification = {
-        userId: question.fromUserId,
-        type: 'question_answered',
-        questionId: new ObjectId(questionId),
-        fromUserId: new ObjectId(userId),
-        text: 'Soruunu yanıtladı',
-        isRead: false,
-        createdAt: new Date()
-      };
-      
-      await notificationsCollection.insertOne(notification);
-      io.to(`user_${question.fromUserId.toString()}`).emit('new_notification', notification);
-    }
-    
     res.json({ success: true });
     
   } catch (error) {
     console.error('Answer question error:', error);
-    res.status(500).json({ error: 'Yanıt kaydedilemedi' });
+    res.status(500).json({ success: false, error: 'Yanıt kaydedilemedi' });
   }
 });
 
-// Direkt mesaj gönder
+// Mesaj gönder
 app.post('/api/messages', async (req, res) => {
   try {
     const { toUserId, text, isAnonymous, fromUserId } = req.body;
     
     if (!text || !text.trim() || !toUserId) {
-      return res.status(400).json({ error: 'Mesaj metni ve alıcı gereklidir' });
+      return res.status(400).json({ success: false, error: 'Mesaj metni ve alıcı gereklidir' });
     }
     
-    // Alıcıyı kontrol et
-    const toUser = await usersCollection.findOne({ 
-      _id: new ObjectId(toUserId) 
-    });
-    
-    if (!toUser) {
-      return res.status(404).json({ error: 'Alıcı bulunamadı' });
-    }
-    
-    // Anonim mesaj izni kontrolü
-    if (isAnonymous && !toUser.settings.allowAnonymousMessages) {
-      return res.status(403).json({ error: 'Bu kullanıcı anonim mesaj kabul etmiyor' });
-    }
-    
-    // Konuşma ID'sini oluştur (sıralı)
+    // Konuşma ID'sini oluştur
     const participants = [
       new ObjectId(fromUserId).toString(),
       new ObjectId(toUserId).toString()
@@ -488,34 +471,6 @@ app.post('/api/messages', async (req, res) => {
     
     const result = await messagesCollection.insertOne(messageData);
     
-    // Bildirim oluştur
-    const notification = {
-      userId: new ObjectId(toUserId),
-      type: 'new_message',
-      messageId: result.insertedId,
-      fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
-      fromUsername: isAnonymous ? messageData.anonymousName : null,
-      text: `Yeni bir ${isAnonymous ? 'anonim' : ''} mesajın var`,
-      isRead: false,
-      createdAt: new Date()
-    };
-    
-    await notificationsCollection.insertOne(notification);
-    
-    // Gerçek zamanlı mesaj gönder
-    io.to(`user_${toUserId}`).emit('new_message', {
-      ...messageData,
-      _id: result.insertedId
-    });
-    
-    // İstatistikleri güncelle
-    if (!isAnonymous) {
-      await usersCollection.updateOne(
-        { _id: new ObjectId(fromUserId) },
-        { $inc: { 'stats.messagesSent': 1 } }
-      );
-    }
-    
     res.json({ 
       success: true, 
       messageId: result.insertedId,
@@ -525,16 +480,15 @@ app.post('/api/messages', async (req, res) => {
     
   } catch (error) {
     console.error('Send message error:', error);
-    res.status(500).json({ error: 'Mesaj gönderilemedi' });
+    res.status(500).json({ success: false, error: 'Mesaj gönderilemedi' });
   }
 });
 
-// Kullanıcının konuşmalarını getir
+// Konuşmaları getir
 app.get('/api/conversations/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     
-    // Son mesajlaşma yapılan kişileri bul
     const conversations = await messagesCollection.aggregate([
       {
         $match: {
@@ -550,96 +504,33 @@ app.get('/api/conversations/:userId', async (req, res) => {
           lastMessage: { $first: "$$ROOT" },
           unreadCount: {
             $sum: {
-              $cond: [{ $eq: ["$isRead", false] }, 1, 0]
+              $cond: [
+                { 
+                  $and: [
+                    { $eq: ["$toUserId", new ObjectId(userId)] },
+                    { $eq: ["$isRead", false] }
+                  ]
+                }, 
+                1, 
+                0
+              ]
             }
           }
         }
       },
       {
         $sort: { "lastMessage.createdAt": -1 }
+      },
+      {
+        $limit: 50
       }
     ]).toArray();
     
-    // Konuşmaları zenginleştir
-    const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
-      const otherParticipantId = conv.lastMessage.participants.find(
-        id => id.toString() !== userId
-      );
-      
-      const otherUser = await usersCollection.findOne(
-        { _id: otherParticipantId },
-        { projection: { displayName: 1, username: 1, photoUrl: 1, isOnline: 1 } }
-      );
-      
-      return {
-        conversationId: conv._id,
-        otherUser: otherUser ? {
-          _id: otherUser._id,
-          displayName: otherUser.displayName,
-          username: otherUser.username,
-          photoUrl: otherUser.photoUrl,
-          isOnline: otherUser.isOnline
-        } : null,
-        lastMessage: {
-          text: conv.lastMessage.text,
-          isAnonymous: conv.lastMessage.isAnonymous,
-          anonymousName: conv.lastMessage.anonymousName,
-          createdAt: conv.lastMessage.createdAt,
-          isRead: conv.lastMessage.isRead
-        },
-        unreadCount: conv.unreadCount
-      };
-    }));
-    
-    res.json({ success: true, conversations: enrichedConversations });
+    res.json({ success: true, conversations });
     
   } catch (error) {
     console.error('Get conversations error:', error);
-    res.status(500).json({ error: 'Konuşmalar yüklenemedi' });
-  }
-});
-
-// Bir konuşmanın mesajlarını getir
-app.get('/api/conversations/:conversationId/messages', async (req, res) => {
-  try {
-    const { conversationId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const messages = await messagesCollection.find({ conversationId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .toArray();
-    
-    // Mesajları ters çevir (eskiden yeniye)
-    messages.reverse();
-    
-    // Gönderen bilgilerini ekle (anonim olmayanlar için)
-    const enrichedMessages = await Promise.all(messages.map(async (msg) => {
-      let fromUser = null;
-      if (msg.fromUserId && !msg.isAnonymous) {
-        fromUser = await usersCollection.findOne(
-          { _id: msg.fromUserId },
-          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
-        );
-      }
-      
-      return {
-        ...msg,
-        fromUser: fromUser ? {
-          displayName: fromUser.displayName,
-          username: fromUser.username,
-          photoUrl: fromUser.photoUrl
-        } : null
-      };
-    }));
-    
-    res.json({ success: true, messages: enrichedMessages });
-    
-  } catch (error) {
-    console.error('Get messages error:', error);
-    res.status(500).json({ error: 'Mesajlar yüklenemedi' });
+    res.status(500).json({ success: false, error: 'Konuşmalar yüklenemedi' });
   }
 });
 
@@ -655,49 +546,96 @@ app.get('/api/notifications/:userId', async (req, res) => {
     .limit(50)
     .toArray();
     
-    // Bildirimleri zenginleştir
-    const enrichedNotifications = await Promise.all(notifications.map(async (notif) => {
-      let fromUser = null;
-      if (notif.fromUserId) {
-        fromUser = await usersCollection.findOne(
-          { _id: notif.fromUserId },
-          { projection: { displayName: 1, username: 1, photoUrl: 1 } }
-        );
-      }
-      
-      return {
-        ...notif,
-        fromUser: fromUser ? {
-          displayName: fromUser.displayName,
-          username: fromUser.username,
-          photoUrl: fromUser.photoUrl
-        } : null
-      };
-    }));
-    
-    res.json({ success: true, notifications: enrichedNotifications });
+    res.json({ success: true, notifications });
     
   } catch (error) {
     console.error('Get notifications error:', error);
-    res.status(500).json({ error: 'Bildirimler yüklenemedi' });
+    res.status(500).json({ success: false, error: 'Bildirimler yüklenemedi' });
   }
 });
 
-// Bildirimi okundu olarak işaretle
-app.put('/api/notifications/:id/read', async (req, res) => {
+// Test endpoint - MongoDB bağlantısını kontrol et
+app.get('/api/test/db', async (req, res) => {
   try {
-    const notificationId = req.params.id;
+    if (!isDbConnected) {
+      return res.json({ 
+        success: false, 
+        message: 'MongoDB bağlı değil',
+        connected: false 
+      });
+    }
     
-    await notificationsCollection.updateOne(
-      { _id: new ObjectId(notificationId) },
-      { $set: { isRead: true } }
-    );
+    // Basit bir test sorgusu
+    const usersCount = await usersCollection.countDocuments();
+    const questionsCount = await questionsCollection.countDocuments();
     
-    res.json({ success: true });
+    res.json({
+      success: true,
+      connected: true,
+      stats: {
+        users: usersCount,
+        questions: questionsCount,
+        messages: await messagesCollection.countDocuments(),
+        notifications: await notificationsCollection.countDocuments()
+      },
+      collections: {
+        users: usersCollection.collectionName,
+        questions: questionsCollection.collectionName,
+        messages: messagesCollection.collectionName,
+        notifications: notificationsCollection.collectionName
+      }
+    });
     
   } catch (error) {
-    console.error('Mark notification read error:', error);
-    res.status(500).json({ error: 'Bildirim güncellenemedi' });
+    res.json({
+      success: false,
+      connected: false,
+      error: error.message
+    });
+  }
+});
+
+// Test kullanıcı oluştur
+app.post('/api/test/create-user', async (req, res) => {
+  try {
+    const { name = 'Test User' } = req.body;
+    
+    const testUser = {
+      telegramId: `test_${Date.now()}`,
+      firstName: name.split(' ')[0],
+      lastName: name.split(' ')[1] || '',
+      username: `test_${Date.now()}`,
+      photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=667eea&color=fff&size=150`,
+      displayName: name,
+      bio: 'Test kullanıcısı',
+      stats: {
+        questionsReceived: Math.floor(Math.random() * 10),
+        questionsAnswered: Math.floor(Math.random() * 8),
+        messagesSent: Math.floor(Math.random() * 20)
+      },
+      settings: {
+        allowAnonymousQuestions: true,
+        allowAnonymousMessages: true,
+        showOnlineStatus: true
+      },
+      isOnline: true,
+      lastSeen: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await usersCollection.insertOne(testUser);
+    
+    res.json({
+      success: true,
+      user: {
+        ...testUser,
+        _id: result.insertedId
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -708,20 +646,17 @@ app.get('*', (req, res) => {
 
 // Socket.io bağlantıları
 io.on('connection', (socket) => {
-  console.log('Yeni socket bağlantısı:', socket.id);
+  console.log('🔌 Yeni socket bağlantısı:', socket.id);
   
-  // Kullanıcı giriş yaptığında
   socket.on('user_online', async (userId) => {
     if (userId) {
       socket.join(`user_${userId}`);
       
-      // Online durumunu güncelle
       await usersCollection.updateOne(
         { _id: new ObjectId(userId) },
         { $set: { isOnline: true, lastSeen: new Date() } }
       );
       
-      // Diğer kullanıcılara bildir
       socket.broadcast.emit('user_status_changed', {
         userId,
         isOnline: true
@@ -729,53 +664,57 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Mesaj okundu işaretleme
-  socket.on('mark_message_read', async (data) => {
-    const { messageId, userId } = data;
-    
-    await messagesCollection.updateOne(
-      { _id: new ObjectId(messageId), toUserId: new ObjectId(userId) },
-      { $set: { isRead: true } }
-    );
-    
-    // Karşı tarafa bildir
-    socket.broadcast.emit('message_read', { messageId });
-  });
-  
-  // Canlı mesajlaşma
   socket.on('send_private_message', async (data) => {
-    const { conversationId, fromUserId, toUserId, text, isAnonymous } = data;
-    
-    const messageData = {
-      conversationId,
-      participants: [new ObjectId(fromUserId), new ObjectId(toUserId)].sort(),
-      fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
-      toUserId: new ObjectId(toUserId),
-      text: text.trim(),
-      isAnonymous: Boolean(isAnonymous),
-      anonymousName: isAnonymous ? `Anonim${Math.floor(1000 + Math.random() * 9000)}` : null,
-      isRead: false,
-      createdAt: new Date()
-    };
-    
-    const result = await messagesCollection.insertOne(messageData);
-    messageData._id = result.insertedId;
-    
-    // Alıcıya gönder
-    io.to(`user_${toUserId}`).emit('new_private_message', messageData);
-    
-    // Gönderene onay gönder
-    socket.emit('message_sent', { success: true, messageId: result.insertedId });
+    try {
+      const { conversationId, fromUserId, toUserId, text, isAnonymous } = data;
+      
+      const messageData = {
+        conversationId,
+        participants: [new ObjectId(fromUserId), new ObjectId(toUserId)].sort(),
+        fromUserId: isAnonymous ? null : new ObjectId(fromUserId),
+        toUserId: new ObjectId(toUserId),
+        text: text.trim(),
+        isAnonymous: Boolean(isAnonymous),
+        anonymousName: isAnonymous ? `Anonim${Math.floor(1000 + Math.random() * 9000)}` : null,
+        isRead: false,
+        createdAt: new Date()
+      };
+      
+      const result = await messagesCollection.insertOne(messageData);
+      messageData._id = result.insertedId;
+      
+      // Alıcıya gönder
+      io.to(`user_${toUserId}`).emit('new_private_message', messageData);
+      
+      // Gönderene onay
+      socket.emit('message_sent', { 
+        success: true, 
+        messageId: result.insertedId,
+        message: messageData
+      });
+      
+    } catch (error) {
+      console.error('Socket message error:', error);
+      socket.emit('message_error', { error: 'Mesaj gönderilemedi' });
+    }
   });
   
-  // Bağlantı kesildiğinde
-  socket.on('disconnect', async () => {
-    console.log('Socket bağlantısı kesildi:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('🔌 Socket bağlantısı kesildi:', socket.id);
   });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Sunucu ${PORT} portunda çalışıyor`);
-  console.log(`🌐 Telegram WebApp hazır`);
+  console.log(`🌐 http://localhost:${PORT}`);
+  console.log(`📊 MongoDB durumu: ${isDbConnected ? '✅ Bağlı' : '❌ Bağlantı bekleniyor'}`);
+  
+  // Periyodik olarak bağlantıyı kontrol et
+  setInterval(() => {
+    if (!isDbConnected) {
+      console.log('🔄 MongoDB bağlantısı yeniden deneniyor...');
+      connectDB();
+    }
+  }, 30000);
 });
