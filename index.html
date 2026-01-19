@@ -2,374 +2,891 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonim Sohbet - Tinder Tarzı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anonim Sohbet • Telegram</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
+            overflow-x: hidden;
         }
         
-        .screen { 
+        .screen {
             display: none;
             width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
+            max-width: 100%;
             min-height: 100vh;
-            background: white;
-            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            background: #fff;
+            position: relative;
         }
         
-        .screen.active { display: block; }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
         
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .container {
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        /* Header Styles */
         .header {
             text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #eee;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 0 0 30px 30px;
             margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
         .logo {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
         
         .subtitle {
-            color: #666;
-            font-size: 14px;
+            font-size: 15px;
+            opacity: 0.9;
+            font-weight: 400;
         }
         
-        .form-group {
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
             margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
-        label {
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
             color: #444;
+            font-size: 15px;
+        }
+        
+        .select-wrapper, .input-wrapper {
+            position: relative;
         }
         
         select, input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
+            padding: 16px 20px;
+            border: 2px solid #eef2f7;
+            border-radius: 15px;
             font-size: 16px;
-            transition: border 0.3s;
+            background: #f8fafc;
+            color: #333;
+            appearance: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
         }
         
         select:focus, input:focus {
-            border-color: #667eea;
             outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
+        select:disabled {
+            background: #f5f7fa;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        .select-wrapper::after {
+            content: "▼";
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #667eea;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        
+        /* Button Styles */
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
+            display: block;
+            width: 100%;
             padding: 18px;
-            border-radius: 12px;
-            font-size: 18px;
+            border: none;
+            border-radius: 15px;
+            font-size: 17px;
             font-weight: 600;
             cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-        
-        .profile-card {
+            transition: all 0.3s ease;
             text-align: center;
-            padding: 40px 20px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            margin: 20px 0;
             position: relative;
             overflow: hidden;
         }
         
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #e2e8f0;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #ed64a6 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38b2ac 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* Profile Card */
+        .profile-card {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f6f9ff 0%, #f0f4ff 100%);
+            border-radius: 25px;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .profile-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
         .avatar {
-            width: 120px;
-            height: 120px;
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 20px;
-            border: 5px solid white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 0 auto 25px;
+            border: 8px solid white;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.5s ease;
         }
         
         .avatar.blurred {
-            filter: blur(15px);
+            filter: blur(20px) brightness(1.2);
+            transform: scale(1.05);
         }
         
         .name {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
             margin-bottom: 10px;
-            letter-spacing: 2px;
+            color: #1e293b;
+            letter-spacing: 1px;
         }
         
         .anon-name {
-            font-size: 28px;
+            font-size: 32px;
             letter-spacing: 4px;
+            color: #64748b;
         }
         
+        .status {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 25px;
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        /* Chat Container */
         .chat-container {
             height: 400px;
             overflow-y: auto;
             padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
+            background: #f8fafc;
+            border-radius: 20px;
             margin: 20px 0;
+            border: 2px solid #eef2f7;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
         }
         
         .message {
-            max-width: 70%;
-            padding: 12px 18px;
-            border-radius: 20px;
+            max-width: 80%;
+            padding: 14px 20px;
+            border-radius: 22px;
             margin-bottom: 15px;
             clear: both;
-            animation: fadeIn 0.3s;
+            position: relative;
+            animation: messageIn 0.3s ease;
+            line-height: 1.4;
+            word-wrap: break-word;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .message.outgoing {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             float: right;
-            border-bottom-right-radius: 5px;
+            border-bottom-right-radius: 8px;
         }
         
         .message.incoming {
-            background: #e9ecef;
-            color: #333;
+            background: white;
+            color: #334155;
             float: left;
-            border-bottom-left-radius: 5px;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .message-input-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            padding: 0 5px;
         }
         
         .message-input {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .message-input input {
             flex: 1;
+            padding: 18px 25px;
+            border: 2px solid #e2e8f0;
             border-radius: 25px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s ease;
         }
         
-        .message-input button {
-            padding: 15px 25px;
-            border-radius: 25px;
+        .message-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
+        .send-btn {
+            padding: 18px 30px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .action-btn {
+            padding: 20px;
+            border-radius: 18px;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .reveal-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+        }
+        
+        .reveal-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+        }
+        
+        .next-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .next-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* Notification */
         .notification {
             position: fixed;
             top: 20px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #ff6b6b;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.3);
+            transform: translateX(-50%) translateY(-100px);
+            background: white;
+            color: #334155;
+            padding: 18px 25px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
             z-index: 1000;
-            animation: slideDown 0.3s;
-        }
-        
-        @keyframes slideDown {
-            from { transform: translate(-50%, -100%); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-        
-        .actions {
+            max-width: 90%;
+            width: 400px;
+            border-left: 6px solid #667eea;
+            animation: slideIn 0.4s ease forwards;
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            align-items: center;
+            gap: 15px;
         }
         
-        .actions button {
+        @keyframes slideIn {
+            to {
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        .notification.hide {
+            animation: slideOut 0.4s ease forwards;
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(-50%) translateY(0);
+            }
+            to {
+                transform: translateX(-50%) translateY(-100px);
+            }
+        }
+        
+        .notification-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .notification-content {
             flex: 1;
         }
         
-        .reveal-btn {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 16px;
         }
         
-        .next-btn {
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+        .notification-message {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.4;
         }
         
-        .telegram-widget {
-            background: #0088cc;
+        /* Loading Animation */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px;
-            border-radius: 12px;
             text-align: center;
-            margin: 20px 0;
-            cursor: pointer;
+            padding: 30px;
         }
         
-        .loading {
-            text-align: center;
-            padding: 50px;
-            font-size: 18px;
-            color: #666;
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 6px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
         }
         
-        .pulse {
-            animation: pulse 1.5s infinite;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
+        
+        .loading-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+        }
+        
+        .loading-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            max-width: 300px;
+            line-height: 1.5;
+        }
+        
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 30px;
+        }
+        
+        .loading-dot {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            animation: pulse 1.4s infinite;
+        }
+        
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
         
         @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
         }
         
-        /* Mobil uyum */
-        @media (max-width: 600px) {
-            .screen {
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
                 padding: 15px;
-                max-width: 100%;
             }
             
-            .profile-card {
-                padding: 30px 15px;
+            .header {
+                padding: 25px 15px;
+                border-radius: 0 0 25px 25px;
+            }
+            
+            .logo {
+                font-size: 28px;
             }
             
             .avatar {
-                width: 100px;
-                height: 100px;
+                width: 120px;
+                height: 120px;
             }
+            
+            .name {
+                font-size: 24px;
+            }
+            
+            .anon-name {
+                font-size: 28px;
+            }
+            
+            .chat-container {
+                height: 350px;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Telegram Info */
+        .telegram-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: linear-gradient(135deg, #0088cc 0%, #006699 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 18px;
+            margin-bottom: 25px;
+        }
+        
+        .telegram-icon {
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+        
+        .telegram-content h3 {
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        
+        .telegram-content p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        /* Revealed Profile */
+        .revealed-profile {
+            background: linear-gradient(135deg, #f0fff4 0%, #dcffe4 100%);
+            border: 2px solid #86efac;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .revealed-profile .avatar {
+            border-color: #86efac;
+        }
+        
+        .telegram-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #0088cc;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .telegram-link:hover {
+            background: #006699;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,136,204,0.3);
+        }
+        
+        /* Animation for match */
+        @keyframes matchPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .match-animation {
+            animation: matchPulse 0.5s ease 3;
         }
     </style>
 </head>
 <body>
-    <!-- Kayıt Ekranı -->
-    <div id="register-screen" class="screen active">
+    <!-- Telegram WebApp SDK -->
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
+    </script>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen active">
+        <div class="loading-spinner"></div>
+        <div class="loading-title">Anonim Sohbet</div>
+        <div class="loading-subtitle">Telegram profilinizle güvenli ve anonim sohbet</div>
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div id="register-screen" class="screen">
         <div class="header">
             <div class="logo">AnonimSohbet</div>
             <div class="subtitle">Telegram ile güvenli, anonim eşleşmeler</div>
         </div>
         
-        <!-- Telegram Simülasyonu -->
-        <div class="telegram-widget" onclick="simulateTelegramLogin()">
-            <div style="font-size: 24px;">📱</div>
-            <div style="font-weight: 600; margin: 10px 0;">Telegram ile Giriş Yap</div>
-            <div style="font-size: 14px; opacity: 0.9;">Profil bilgileriniz otomatik alınacak</div>
+        <div class="container">
+            <!-- Telegram User Info -->
+            <div id="telegram-info" class="telegram-info" style="display: none;">
+                <div class="telegram-icon">📱</div>
+                <div class="telegram-content">
+                    <h3 id="tg-user-name">Telegram Kullanıcısı</h3>
+                    <p id="tg-user-details">Profil bilgileriniz yükleniyor...</p>
+                </div>
+            </div>
+            
+            <!-- Gender Selection -->
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">Kiminle sohbet etmek istersiniz?</label>
+                    <div class="select-wrapper">
+                        <select id="gender-select" class="form-select">
+                            <option value="any">Farketmez</option>
+                            <option value="male">Erkekler</option>
+                            <option value="female">Kadınlar</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Country Selection -->
+                <div class="form-group">
+                    <label class="form-label">Ülke</label>
+                    <div class="select-wrapper">
+                        <select id="country-select" class="form-select" onchange="loadCities()">
+                            <option value="">Tüm Ülkeler</option>
+                            <option value="turkiye">🇹🇷 Türkiye</option>
+                            <option value="azerbaycan">🇦🇿 Azerbaycan</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- City Selection -->
+                <div class="form-group">
+                    <label class="form-label">Şehir</label>
+                    <div class="select-wrapper">
+                        <select id="city-select" class="form-select" disabled>
+                            <option value="">Önce ülke seçin</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Start Button -->
+            <button id="start-btn" class="btn btn-primary" onclick="startChat()" disabled>
+                <span id="btn-text">Eşleşme Bul 🔍</span>
+            </button>
         </div>
-        
-        <div class="form-group">
-            <label>Cinsiyet Tercihi</label>
-            <select id="gender">
-                <option value="">Farketmez</option>
-                <option value="male">Erkek</option>
-                <option value="female">Kadın</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>Ülke</label>
-            <select id="country" onchange="loadCities()">
-                <option value="">Seçiniz</option>
-                <option value="turkiye">Türkiye</option>
-                <option value="azerbaycan">Azerbaycan</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>Şehir</label>
-            <select id="city" disabled>
-                <option value="">Önce ülke seçin</option>
-            </select>
-        </div>
-        
-        <button class="btn" onclick="startChat()" id="start-btn" disabled>
-            <span class="pulse">Eşleşme Bul 🔍</span>
-        </button>
     </div>
-    
-    <!-- Yükleniyor Ekranı -->
-    <div id="loading-screen" class="screen">
-        <div class="loading">
-            <div style="font-size: 48px; margin-bottom: 20px;">💬</div>
-            <div style="font-size: 20px; font-weight: 600; margin-bottom: 10px;">Eşleşme Aranıyor</div>
-            <div class="pulse">Sizinle eşleşecek birini arıyoruz...</div>
-            <div style="margin-top: 30px; font-size: 14px; color: #999;">
-                <div>📱 Mobil uyumlu</div>
-                <div>🔒 Tamamen anonim</div>
-                <div>⚡ Gerçek zamanlı</div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen" class="screen">
+        <div class="header">
+            <div class="logo" style="font-size: 24px;">Anonim Sohbet</div>
+            <div class="subtitle">Profiller iki tarafın onayıyla açılır</div>
+        </div>
+        
+        <div class="container">
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <img id="partner-avatar" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+" 
+                     class="avatar blurred" alt="Profil">
+                <div id="partner-name" class="name anon-name">********</div>
+                <div class="status" id="partner-status">Profil gizli</div>
+                
+                <!-- Revealed Profile Info -->
+                <div id="revealed-info" style="display: none;">
+                    <a id="telegram-link" class="telegram-link" target="_blank">
+                        <span>📱 Telegram'da aç</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn reveal-btn" onclick="requestReveal()" id="reveal-btn">
+                    <span>👤</span>
+                    <span>Eşleşdik</span>
+                </button>
+                <button class="action-btn next-btn" onclick="nextChat()" id="next-btn">
+                    <span>🔄</span>
+                    <span>Sonraki</span>
+                </button>
+            </div>
+            
+            <!-- Chat Container -->
+            <div class="chat-container" id="message-container">
+                <div class="message incoming">
+                    Merhaba! Anonim sohbete hoş geldin. İstersen 'Eşleşdik' butonuyla profilleri açabiliriz. 👋
+                    <div class="message-time">Şimdi</div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="message-input-container">
+                <input type="text" id="message-input" class="message-input" 
+                       placeholder="Mesajınızı yazın..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">Gönder</button>
             </div>
         </div>
     </div>
-    
-    <!-- Sohbet Ekranı -->
-    <div id="chat-screen" class="screen">
-        <div class="header">
-            <div class="logo" style="font-size: 22px;">Anonim Sohbet</div>
-            <div class="subtitle">Eşleştiniz! Profiller iki tarafın onayıyla açılır</div>
-        </div>
-        
-        <div class="profile-card">
-            <img id="partner-avatar" src="blurred.jpg" class="avatar blurred" alt="Profil">
-            <div id="partner-name" class="name anon-name">********</div>
-            <div style="color: #666; font-size: 14px;">Profil gizli</div>
-        </div>
-        
-        <div class="actions">
-            <button class="btn reveal-btn" onclick="requestReveal()">
-                👤 Eşleşdik Butonu
-            </button>
-            <button class="btn next-btn" onclick="nextChat()">
-                🔄 Sonraki
-            </button>
-        </div>
-        
-        <div class="chat-container" id="message-container">
-            <!-- Mesajlar buraya gelecek -->
-            <div class="message incoming">Merhaba! Nasılsın? 👋</div>
-        </div>
-        
-        <div class="message-input">
-            <input type="text" id="message-input" placeholder="Mesajınızı yazın..." 
-                   onkeypress="if(event.key=='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">Gönder</button>
-        </div>
-    </div>
-    
+
     <script>
-        let socket;
-        let currentUser = {};
+        let socket = null;
+        let currentUser = null;
         let currentRoom = null;
-        
+        let revealTimeout = null;
+        let notificationTimeout = null;
+
+        // Uygulama başladığında
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeApp();
+        });
+
+        // Uygulamayı başlat
+        async function initializeApp() {
+            try {
+                // Telegram WebApp kontrolü
+                if (typeof Telegram !== 'undefined' && Telegram.WebApp.initData) {
+                    await loadTelegramUser();
+                } else {
+                    // Telegram olmadan test modu
+                    showNotification('Telegram WebApp tespit edilemedi. Test modunda çalışıyorsunuz.');
+                    simulateTelegramUser();
+                }
+            } catch (error) {
+                console.error('Başlatma hatası:', error);
+                showNotification('Başlatma hatası. Sayfayı yenileyin.');
+            }
+        }
+
+        // Telegram kullanıcısını yükle
+        async function loadTelegramUser() {
+            try {
+                const initData = Telegram.WebApp.initData;
+                
+                const response = await fetch('/api/telegram-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ initData })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    currentUser = data.user;
+                    
+                    // Kullanıcı bilgilerini göster
+                    document.getElementById('telegram-info').style.display = 'flex';
+                    document.getElementById('tg-user-name').textContent = 
+                        currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
+                    document.getElementById('tg-user-details').textContent = 
+                        currentUser.username ? `@${currentUser.username}` : 'Telegram kullanıcısı';
+                    
+                    // Butonu aktif et
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('btn-text').textContent = 'Eşleşme Bul 🔍';
+                    
+                    // Loading ekranını kapat
+                    document.getElementById('loading-screen').classList.remove('active');
+                    document.getElementById('register-screen').classList.add('active');
+                    
+                    showNotification(`Hoş geldin ${currentUser.first_name}!`, 2000);
+                } else {
+                    throw new Error(data.error || 'Kullanıcı yüklenemedi');
+                }
+            } catch (error) {
+                console.error('Telegram yükleme hatası:', error);
+                showNotification('Telegram bağlantı hatası. Test moduna geçiliyor.');
+                simulateTelegramUser();
+            }
+        }
+
+        // Test için simüle kullanıcı
+        function simulateTelegramUser() {
+            currentUser = {
+                telegram_id: 'test_' + Date.now(),
+                first_name: 'Test',
+                last_name: 'Kullanıcı',
+                username: 'testuser',
+                photo_url: '',
+                gender: 'any',
+                country: '',
+                city: ''
+            };
+            
+            document.getElementById('telegram-info').style.display = 'flex';
+            document.getElementById('tg-user-name').textContent = 'Test Kullanıcı';
+            document.getElementById('tg-user-details').textContent = 'Test modu aktif';
+            
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('btn-text').textContent = 'Test Modunda Başla 🔍';
+            
+            document.getElementById('loading-screen').classList.remove('active');
+            document.getElementById('register-screen').classList.add('active');
+            
+            showNotification('Test modu aktif. Telegram bilgileri simüle ediliyor.', 2000);
+        }
+
         // Şehirleri yükle
-        function loadCities() {
-            const country = document.getElementById('country').value;
-            const citySelect = document.getElementById('city');
+        async function loadCities() {
+            const countrySelect = document.getElementById('country-select');
+            const citySelect = document.getElementById('city-select');
+            const country = countrySelect.value;
             
             if (!country) {
                 citySelect.disabled = true;
@@ -377,54 +894,62 @@
                 return;
             }
             
-            fetch(`/cities/${country}`)
-                .then(res => res.json())
-                .then(cities => {
+            try {
+                const response = await fetch(`/api/cities/${country}`);
+                const data = await response.json();
+                
+                if (data.success) {
                     citySelect.disabled = false;
-                    citySelect.innerHTML = '<option value="">Şehir seçin</option>';
-                    cities.forEach(city => {
-                        citySelect.innerHTML += `<option value="${city}">${city}</option>`;
+                    citySelect.innerHTML = '<option value="">Tüm Şehirler</option>';
+                    
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city;
+                        option.textContent = city;
+                        citySelect.appendChild(option);
                     });
+                }
+            } catch (error) {
+                console.error('Şehir yükleme hatası:', error);
+                showNotification('Şehirler yüklenemedi');
+            }
+        }
+
+        // Tercihleri güncelle
+        async function updatePreferences() {
+            if (!currentUser) return;
+            
+            const gender = document.getElementById('gender-select').value;
+            const country = document.getElementById('country-select').value;
+            const city = document.getElementById('city-select').value;
+            
+            try {
+                await fetch('/api/update-preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        telegram_id: currentUser.telegram_id,
+                        gender: gender,
+                        country: country,
+                        city: city
+                    })
                 });
+            } catch (error) {
+                console.error('Tercih güncelleme hatası:', error);
+            }
         }
-        
-        // Telegram giriş simülasyonu
-        function simulateTelegramLogin() {
-            const randomNames = ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya', 'Zeynep Şahin', 'Can Öztürk'];
-            const randomPhotos = [
-                'https://i.pravatar.cc/150?img=1',
-                'https://i.pravatar.cc/150?img=2',
-                'https://i.pravatar.cc/150?img=3',
-                'https://i.pravatar.cc/150?img=4',
-                'https://i.pravatar.cc/150?img=5'
-            ];
-            
-            currentUser = {
-                name: randomNames[Math.floor(Math.random() * randomNames.length)],
-                photo: randomPhotos[Math.floor(Math.random() * randomPhotos.length)],
-                telegram_id: `tg_${Date.now()}`
-            };
-            
-            document.getElementById('start-btn').disabled = false;
-            document.querySelector('.telegram-widget').innerHTML = `
-                <div style="font-size: 24px;">✅</div>
-                <div style="font-weight: 600; margin: 10px 0;">${currentUser.name}</div>
-                <div style="font-size: 14px; opacity: 0.9;">Telegram ile giriş yapıldı</div>
-            `;
-            
-            showNotification('Telegram bilgileriniz alındı!');
-        }
-        
+
         // Sohbeti başlat
-        function startChat() {
-            if (!currentUser.name) {
+        async function startChat() {
+            if (!currentUser) {
                 showNotification('Önce Telegram ile giriş yapın!');
                 return;
             }
             
-            currentUser.gender = document.getElementById('gender').value;
-            currentUser.country = document.getElementById('country').value;
-            currentUser.city = document.getElementById('city').value;
+            // Tercihleri güncelle
+            await updatePreferences();
             
             // Socket bağlantısı
             socket = io();
@@ -437,154 +962,258 @@
             document.getElementById('loading-screen').classList.add('active');
             
             // Socket olayları
-            socket.on('registered', (user) => {
-                console.log('Kayıt oldu:', user);
-            });
-            
             socket.on('matched', (data) => {
                 currentRoom = data.roomId;
+                
                 document.getElementById('loading-screen').classList.remove('active');
                 document.getElementById('chat-screen').classList.add('active');
                 
                 // Partner bilgilerini göster
                 document.getElementById('partner-avatar').src = data.partner.photo;
                 document.getElementById('partner-name').textContent = data.partner.name;
+                document.getElementById('partner-name').classList.add('anon-name');
+                document.getElementById('partner-avatar').classList.add('blurred');
                 
-                showNotification('Eşleştiniz! Mesajlaşmaya başlayabilirsiniz.');
+                showNotification('🎉 Eşleştiniz! Mesajlaşmaya başlayabilirsiniz.', 3000);
             });
             
             socket.on('receive_message', (data) => {
-                const container = document.getElementById('message-container');
-                const isOwn = data.sender === socket.id;
-                
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${isOwn ? 'outgoing' : 'incoming'}`;
-                messageDiv.textContent = data.message;
-                
-                container.appendChild(messageDiv);
-                container.scrollTop = container.scrollHeight;
+                addMessage(data.message, 'incoming');
             });
             
             socket.on('reveal_requested', (data) => {
-                showNotification('Partneriniz profilinizi açmak istiyor. 7 saniye içinde onaylayın.', 7000);
+                showNotification('⚠️ Partneriniz profilleri açmak istiyor. 7 saniye içinde onaylayın.', 7000);
                 
                 // Onay butonu göster
                 const confirmBtn = document.createElement('button');
-                confirmBtn.className = 'btn reveal-btn';
+                confirmBtn.className = 'btn btn-success';
                 confirmBtn.style.marginTop = '10px';
-                confirmBtn.textContent = '✅ Evet, açılsın';
+                confirmBtn.style.width = '100%';
+                confirmBtn.innerHTML = '✅ Evet, profiller açılsın';
                 confirmBtn.onclick = () => {
                     socket.emit('reveal_confirm', { roomId: currentRoom });
                     confirmBtn.remove();
+                    showNotification('Onayınız gönderildi!');
                 };
                 
-                document.querySelector('.actions').appendChild(confirmBtn);
+                const actionsDiv = document.querySelector('.action-buttons');
+                actionsDiv.insertBefore(confirmBtn, actionsDiv.firstChild);
                 
                 // 7 saniye sonra butonu kaldır
-                setTimeout(() => {
+                revealTimeout = setTimeout(() => {
                     if (confirmBtn.parentNode) {
                         confirmBtn.remove();
-                        showNotification('Profil açma isteği zaman aşımına uğradı.');
+                        showNotification('⏰ Profil açma isteği zaman aşımına uğradı.');
                     }
                 }, 7000);
             });
             
+            socket.on('reveal_timeout', () => {
+                showNotification('⏰ Profil açma isteği zaman aşımına uğradı.');
+            });
+            
             socket.on('profiles_revealed', (data) => {
-                // Profilleri göster
-                const isUser1 = data.user1.telegram_id === currentUser.telegram_id;
+                // Profilleri aç
+                const isUser1 = data.user1.username === currentUser.username;
                 const partner = isUser1 ? data.user2 : data.user1;
                 
-                document.getElementById('partner-avatar').src = partner.photo;
+                document.getElementById('partner-avatar').src = partner.photo || 
+                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2N2VlYSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+';
                 document.getElementById('partner-avatar').classList.remove('blurred');
                 document.getElementById('partner-name').textContent = partner.name;
                 document.getElementById('partner-name').classList.remove('anon-name');
+                document.getElementById('partner-status').textContent = 'Profil görünür';
                 
                 // Telegram linki göster
-                const telegramLink = document.createElement('div');
-                telegramLink.innerHTML = `
-                    <div style="margin-top: 10px;">
-                        <a href="https://t.me/${partner.telegram_id}" target="_blank" 
-                           style="color: #0088cc; text-decoration: none; font-weight: 600;">
-                            📱 Telegram: @${partner.telegram_id}
-                        </a>
-                    </div>
-                `;
+                if (partner.username) {
+                    document.getElementById('revealed-info').style.display = 'block';
+                    document.getElementById('telegram-link').href = `https://t.me/${partner.username}`;
+                }
                 
-                document.querySelector('.profile-card').appendChild(telegramLink);
+                // Butonu devre dışı bırak
+                document.getElementById('reveal-btn').disabled = true;
+                document.getElementById('reveal-btn').innerHTML = '<span>✅</span><span>Profiller Açıldı</span>';
                 
-                showNotification('Profiller açıldı! Artık birbirinizi görebilirsiniz.');
+                showNotification('🎊 Profiller açıldı! Artık birbirinizi görebilirsiniz.', 3000);
             });
             
             socket.on('partner_left', () => {
-                showNotification('Partneriniz sohbeti bitirdi. Lobiye yönlendiriliyorsunuz...');
+                showNotification('👋 Partneriniz sohbeti bitirdi. Lobiye yönlendiriliyorsunuz...');
                 setTimeout(() => {
-                    document.getElementById('chat-screen').classList.remove('active');
-                    document.getElementById('register-screen').classList.add('active');
-                }, 3000);
+                    resetToLobby();
+                }, 2000);
+            });
+            
+            socket.on('chat_ended', () => {
+                resetToLobby();
             });
         }
-        
+
         // Mesaj gönder
         function sendMessage() {
             const input = document.getElementById('message-input');
             const message = input.value.trim();
             
-            if (message && currentRoom) {
+            if (message && currentRoom && socket) {
                 socket.emit('send_message', {
                     roomId: currentRoom,
                     message: message
                 });
                 
-                // Kendi mesajını göster
-                const container = document.getElementById('message-container');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message outgoing';
-                messageDiv.textContent = message;
-                container.appendChild(messageDiv);
-                container.scrollTop = container.scrollHeight;
-                
+                addMessage(message, 'outgoing');
                 input.value = '';
+                input.focus();
             }
         }
-        
-        // Profil açma isteği
-        function requestReveal() {
-            if (currentRoom) {
-                socket.emit('reveal_request', { roomId: currentRoom });
-                showNotification('Profil açma isteği gönderildi. Partneriniz onaylamalı.');
-            }
-        }
-        
-        // Sonraki sohbet
-        function nextChat() {
-            if (currentRoom) {
-                socket.emit('end_chat', { roomId: currentRoom });
-                document.getElementById('chat-screen').classList.remove('active');
-                document.getElementById('register-screen').classList.add('active');
-                document.getElementById('message-container').innerHTML = '<div class="message incoming">Merhaba! Nasılsın? 👋</div>';
-            }
-        }
-        
-        // Bildirim göster
-        function showNotification(message, duration = 3000) {
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideDown 0.3s reverse';
-                setTimeout(() => notification.remove(), 300);
-            }, duration);
-        }
-        
+
         // Enter tuşu ile mesaj gönder
-        document.getElementById('message-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
                 sendMessage();
             }
-        });
-    </script>
-</body>
+        }
+
+        // Mesaj ekle
+        function addMessage(text, type) {
+            const container = document.getElementById('message-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const time = new Date().toLocaleTimeString('tr-TR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.innerHTML = `
+                ${text}
+                <div class="message-time">${time}</div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Profil açma isteği
+        function requestReveal() {
+            if (currentRoom && socket) {
+                socket.emit('reveal_request', { roomId: currentRoom });
+                showNotification('📨 Profil açma isteği gönderildi. Partneriniz onaylamalı.');
+            }
+        }
+
+        // Sonraki sohbet
+        function nextChat() {
+            if (currentRoom && socket) {
+                socket.emit('end_chat', { roomId: currentRoom });
+                showNotification('Sohbet bitiriliyor...');
+            }
+        }
+
+        // Lobiy
+        <!-- index.html devamı (kaldığımız yerden) -->
+            <!-- Lobiyee dön -->
+            function resetToLobby() {
+                if (revealTimeout) {
+                    clearTimeout(revealTimeout);
+                }
+                
+                currentRoom = null;
+                
+                // Ekranları sıfırla
+                document.getElementById('chat-screen').classList.remove('active');
+                document.getElementById('register-screen').classList.add('active');
+                
+                // Chat container'ı temizle
+                document.getElementById('message-container').innerHTML = `
+                    <div class="message incoming">
+                        Merhaba! Anonim sohbete hoş geldin. İstersen 'Eşleşdik' butonuyla profilleri açabiliriz. 👋
+                        <div class="message-time">Şimdi</div>
+                    </div>
+                `;
+                
+                // Profil görünümünü sıfırla
+                document.getElementById('partner-avatar').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+';
+                document.getElementById('partner-avatar').classList.add('blurred');
+                document.getElementById('partner-name').textContent = '********';
+                document.getElementById('partner-name').className = 'name anon-name';
+                document.getElementById('partner-status').textContent = 'Profil gizli';
+                document.getElementById('revealed-info').style.display = 'none';
+                
+                // Butonları sıfırla
+                document.getElementById('reveal-btn').disabled = false;
+                document.getElementById('reveal-btn').innerHTML = '<span>👤</span><span>Eşleşdik</span>';
+                
+                // Input'u temizle
+                document.getElementById('message-input').value = '';
+                
+                showNotification('Lobiye döndünüz. Yeni eşleşme aranıyor...', 2000);
+            }
+
+            // Bildirim göster
+            function showNotification(message, duration = 3000) {
+                // Önceki bildirimi temizle
+                const existingNotification = document.querySelector('.notification');
+                if (existingNotification) {
+                    existingNotification.classList.add('hide');
+                    setTimeout(() => existingNotification.remove(), 400);
+                }
+                
+                if (notificationTimeout) {
+                    clearTimeout(notificationTimeout);
+                }
+                
+                // Yeni bildirim oluştur
+                const notification = document.createElement('div');
+                notification.className = 'notification';
+                
+                // Mesaj tipine göre ikon seç
+                let icon = '💬';
+                if (message.includes('🎉')) icon = '🎉';
+                if (message.includes('⚠️')) icon = '⚠️';
+                if (message.includes('⏰')) icon = '⏰';
+                if (message.includes('👋')) icon = '👋';
+                if (message.includes('📨')) icon = '📨';
+                if (message.includes('✅')) icon = '✅';
+                if (message.includes('🎊')) icon = '🎊';
+                
+                notification.innerHTML = `
+                    <div class="notification-icon">${icon}</div>
+                    <div class="notification-content">
+                        <div class="notification-message">${message.replace(/[🎉⚠️⏰👋📨✅🎊]/g, '')}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Süre sonunda kaldır
+                notificationTimeout = setTimeout(() => {
+                    notification.classList.add('hide');
+                    setTimeout(() => notification.remove(), 400);
+                }, duration);
+            }
+
+            // Sayfa kapatılırken
+            window.addEventListener('beforeunload', () => {
+                if (socket && currentRoom) {
+                    socket.emit('end_chat', { roomId: currentRoom });
+                }
+            });
+
+            // Telegram butonu animasyonu
+            document.getElementById('start-btn').addEventListener('click', function() {
+                this.classList.add('match-animation');
+                setTimeout(() => this.classList.remove('match-animation'), 1500);
+            });
+
+            // Sayfa yüklendiğinde
+            setTimeout(() => {
+                if (!currentUser) {
+                    document.getElementById('loading-screen').classList.remove('active');
+                    document.getElementById('register-screen').classList.add('active');
+                    showNotification('Telegram WebApp tespit edilemedi. Manuel moda geçildi.');
+                }
+            }, 5000);
+        </script>
+    </body>
 </html>
