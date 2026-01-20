@@ -5,9 +5,17 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+// Use a more relaxed CORS for Render/Mobile/External connections
 const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] },
-    pingTimeout: 60000,
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    allowEIO3: true,
+    pingTimeout: 30000,
+    pingInterval: 10000
 });
 
 app.use(express.static(__dirname));
@@ -16,152 +24,142 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Data stores
-const users = new Map(); // socket.id -> profile
-const queues = {
-    'az': [],
-    'tr': [],
-    'ru': [],
-    'us': []
-};
-const activeChats = new Map(); // socket.id -> { partnerId, roomId }
+// State
+const users = new Map(); // socketId -> data
+const queues = { az: [], tr: [], ru: [], us: [] };
+const activeRooms = new Map(); // socketId -> roomInfo
 const revealStatus = new Map(); // roomId -> { id1: bool, id2: bool }
 
-// Track online stats
-let onlineCount = 0;
+let globalOnlineCount = 0;
 
 io.on('connection', (socket) => {
-    onlineCount++;
-    console.log(`[+] User connected: ${socket.id} (Online: ${onlineCount})`);
-    io.emit('online_stats', { count: onlineCount });
+    globalOnlineCount++;
+    console.log(`[+] User Joined: ${socket.id} | Total: ${globalOnlineCount}`);
 
-    socket.on('register_user', (profile) => {
-        users.set(socket.id, { ...profile, socketId: socket.id });
-        console.log(`[REG] Profile registered for ${socket.id}: ${profile.name}`);
+    // Immediate sync of online count
+    io.emit('stats_update', { online: globalOnlineCount });
+
+    socket.on('register_me', (userData) => {
+        users.set(socket.id, { ...userData, socketId: socket.id });
+        console.log(`[USER] Registered: ${userData.name} from ID: ${userData.id}`);
     });
 
-    socket.on('start_matchmaking', (region) => {
-        console.log(`[TRY] ${socket.id} looking for match in ${region}`);
+    socket.on('start_match', (region) => {
+        console.log(`[MATCH_REQ] ${socket.id} in ${region}`);
 
-        // Safety check - remove from any existing queues
+        // Remove from all queues first to avoid duplicates
         Object.keys(queues).forEach(r => {
             queues[r] = queues[r].filter(id => id !== socket.id);
         });
 
-        // 1. Try to find a valid partner in the same region
+        const targetQueue = queues[region];
+        if (!targetQueue) return;
+
+        // Try matching
         let partnerId = null;
-        while (queues[region].length > 0) {
-            const potentialPartnerId = queues[region].shift();
-            // Check if partner is still connected
-            if (io.sockets.sockets.has(potentialPartnerId) && potentialPartnerId !== socket.id) {
-                partnerId = potentialPartnerId;
+        while (targetQueue.length > 0) {
+            const pid = targetQueue.shift();
+            if (io.sockets.sockets.has(pid) && pid !== socket.id) {
+                partnerId = pid;
                 break;
             }
         }
 
         if (partnerId) {
-            // Match success!
             const partnerSocket = io.sockets.sockets.get(partnerId);
             const roomId = `room_${socket.id}_${partnerId}`;
 
             socket.join(roomId);
             partnerSocket.join(roomId);
 
-            activeChats.set(socket.id, { partnerId, roomId });
-            activeChats.set(partnerId, { partnerId: socket.id, roomId });
+            activeRooms.set(socket.id, { partnerId, roomId });
+            activeRooms.set(partnerId, { partnerId: socket.id, roomId });
             revealStatus.set(roomId, { [socket.id]: false, [partnerId]: false });
 
             io.to(roomId).emit('match_found');
-            console.log(`[MATCH] Success: ${socket.id} <-> ${partnerId} (Region: ${region})`);
+            console.log(`[SUCCESS] Room Created: ${roomId}`);
         } else {
-            // No partner, add self to queue
-            queues[region].push(socket.id);
-            socket.emit('waiting');
-            console.log(`[QUEUE] ${socket.id} is now waiting in ${region}`);
+            targetQueue.push(socket.id);
+            socket.emit('waiting_in_queue');
+            console.log(`[QUEUED] ${socket.id} at ${region}`);
         }
     });
 
-    socket.on('stop_matchmaking', () => {
+    socket.on('stop_match', () => {
         Object.keys(queues).forEach(r => {
             queues[r] = queues[r].filter(id => id !== socket.id);
         });
-        console.log(`[STOP] ${socket.id} stopped searching`);
     });
 
-    socket.on('send_msg', (text) => {
-        const chat = activeChats.get(socket.id);
-        if (chat) {
-            io.to(chat.roomId).emit('new_msg', {
+    socket.on('send_msg', (txt) => {
+        const room = activeRooms.get(socket.id);
+        if (room) {
+            io.to(room.roomId).emit('msg_receive', {
                 senderId: socket.id,
-                text,
+                text: txt,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
         }
     });
 
-    socket.on('request_reveal', () => {
-        const chat = activeChats.get(socket.id);
-        if (!chat) return;
+    socket.on('reveal_request', () => {
+        const room = activeRooms.get(socket.id);
+        if (!room) return;
+        const status = revealStatus.get(room.roomId);
+        if (!status) return;
 
-        const status = revealStatus.get(chat.roomId);
-        if (status) {
-            status[socket.id] = true;
-            if (status[chat.partnerId]) {
-                io.to(chat.roomId).emit('revealed', {
-                    [socket.id]: users.get(socket.id),
-                    [chat.partnerId]: users.get(chat.partnerId)
-                });
-            } else {
-                io.to(chat.partnerId).emit('reveal_request');
-                socket.emit('reveal_wait');
-            }
+        status[socket.id] = true;
+        if (status[room.partnerId]) {
+            io.to(room.roomId).emit('reveal_all', {
+                [socket.id]: users.get(socket.id),
+                [room.partnerId]: users.get(room.partnerId)
+            });
+        } else {
+            io.to(room.partnerId).emit('reveal_notifier');
+            socket.emit('reveal_wait_status');
         }
     });
 
-    socket.on('next_user', () => {
-        handleDisconnect(socket);
-        socket.emit('ready_for_next');
-        console.log(`[NEXT] ${socket.id} looking for someone new`);
+    socket.on('next_please', () => {
+        cleanupRoom(socket);
+        socket.emit('trigger_new_search');
     });
 
-    socket.on('leave_chat', () => {
-        handleDisconnect(socket);
-        socket.emit('to_lobby');
+    socket.on('exit_chat', () => {
+        cleanupRoom(socket);
+        socket.emit('go_to_lobby');
     });
 
-    const handleDisconnect = (sock) => {
-        const chat = activeChats.get(sock.id);
-        if (chat) {
-            const pId = chat.partnerId;
-            const rId = chat.roomId;
-
-            io.to(pId).emit('partner_left');
+    const cleanupRoom = (sock) => {
+        const room = activeRooms.get(sock.id);
+        if (room) {
+            const pId = room.partnerId;
+            const rId = room.roomId;
+            io.to(pId).emit('partner_left_room');
 
             const pSock = io.sockets.sockets.get(pId);
             if (pSock) pSock.leave(rId);
             sock.leave(rId);
 
-            activeChats.delete(sock.id);
-            activeChats.delete(pId);
+            activeRooms.delete(sock.id);
+            activeRooms.delete(pId);
             revealStatus.delete(rId);
         }
-
-        // Cleanup queues
         Object.keys(queues).forEach(r => {
             queues[r] = queues[r].filter(id => id !== sock.id);
         });
     };
 
     socket.on('disconnect', () => {
-        handleDisconnect(socket);
+        cleanupRoom(socket);
         users.delete(socket.id);
-        onlineCount--;
-        io.emit('online_stats', { count: Math.max(0, onlineCount) });
-        console.log(`[-] User disconnected: ${socket.id}`);
+        globalOnlineCount = Math.max(0, globalOnlineCount - 1);
+        io.emit('stats_update', { online: globalOnlineCount });
+        console.log(`[-] User Left: ${socket.id} | Remaining: ${globalOnlineCount}`);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server live on port ${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Server listening on Port: ${PORT}`);
 });
