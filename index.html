@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TinderMatch | Anonim Chat</title>
+    <title>Match.io | Anonim Chat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <link
@@ -15,7 +15,7 @@
             --tinder: #fd297b;
             --tinder-gradient: linear-gradient(135deg, #fd297b 0%, #ff5864 50%, #ff6b6b 100%);
             --bg: #000000;
-            --card: #121212;
+            --card: #141414;
             --text: #ffffff;
             --gray: #888888;
             --safe-top: env(safe-area-inset-top, 0px);
@@ -61,7 +61,7 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: scale(1.1);
+                transform: scale(1.05);
             }
 
             to {
@@ -71,16 +71,32 @@
         }
 
         /* Elements */
+        .logo-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
         .header-logo {
             font-family: 'Playfair Display', serif;
-            font-size: 4rem;
+            font-size: 4.5rem;
             font-style: italic;
             font-weight: 800;
             background: var(--tinder-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-align: center;
-            margin-bottom: 50px;
+        }
+
+        .online-badge {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            margin-top: -10px;
         }
 
         .btn-main {
@@ -102,36 +118,37 @@
             opacity: 0.9;
         }
 
-        /* Region Selection */
+        /* Region */
         .title {
-            font-size: 2.2rem;
+            font-size: 2.3rem;
             font-weight: 800;
-            margin-bottom: 30px;
-            line-height: 1.2;
+            margin-bottom: 25px;
+            line-height: 1.1;
             text-align: center;
         }
 
         .region-grid {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
 
         .region-btn {
             background: var(--card);
             border: 2px solid transparent;
-            padding: 20px;
+            padding: 22px;
             border-radius: 20px;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 20px;
+            transition: 0.2s;
         }
 
         .region-btn.selected {
             border-color: var(--tinder);
-            background: rgba(253, 41, 123, 0.1);
+            background: rgba(253, 41, 123, 0.08);
         }
 
         .flag {
@@ -145,19 +162,19 @@
             text-align: center;
         }
 
-        .radar {
-            width: 140px;
-            height: 140px;
+        .avatar-box {
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             background: var(--tinder-gradient);
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 60px;
+            margin-bottom: 50px;
         }
 
-        .radar img {
+        .avatar-box img {
             width: 100%;
             height: 100%;
             border-radius: 50%;
@@ -165,27 +182,27 @@
             object-fit: cover;
         }
 
-        .pulse {
+        .waves {
             position: absolute;
             inset: 0;
             border: 3px solid var(--tinder);
             border-radius: 50%;
-            animation: pulse-anim 2s infinite ease-out;
+            animation: wave-anim 2s infinite ease-out;
             opacity: 0;
         }
 
-        .pulse:nth-child(2) {
-            animation-delay: 0.5s;
+        .waves:nth-child(2) {
+            animation-delay: 0.6s;
         }
 
-        .pulse:nth-child(3) {
-            animation-delay: 1s;
+        .waves:nth-child(3) {
+            animation-delay: 1.2s;
         }
 
-        @keyframes pulse-anim {
+        @keyframes wave-anim {
             0% {
                 transform: scale(1);
-                opacity: 1;
+                opacity: 0.8;
             }
 
             100% {
@@ -197,7 +214,6 @@
         /* Chat */
         #chat {
             padding: 0;
-            height: 100%;
         }
 
         .chat-header {
@@ -209,7 +225,7 @@
             border-bottom: 1px solid #222;
         }
 
-        .av-box {
+        .p-av {
             width: 45px;
             height: 45px;
             border-radius: 50%;
@@ -218,11 +234,11 @@
             position: relative;
         }
 
-        .av-box.blurred img {
+        .p-av.blurry img {
             filter: blur(15px);
         }
 
-        .av-box img {
+        .p-av img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -234,7 +250,7 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .msg {
@@ -243,12 +259,12 @@
             border-radius: 20px;
             font-size: 1rem;
             line-height: 1.4;
-            animation: msg-pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            animation: pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        @keyframes msg-pop {
+        @keyframes pop {
             from {
-                transform: scale(0.7);
+                transform: scale(0.8);
                 opacity: 0;
             }
 
@@ -258,19 +274,19 @@
             }
         }
 
-        .msg.partner {
+        .msg.p {
             background: var(--card);
-            border-bottom-left-radius: 5px;
+            border-bottom-left-radius: 4px;
             align-self: flex-start;
         }
 
         .msg.me {
             background: var(--tinder-gradient);
-            border-bottom-right-radius: 5px;
+            border-bottom-right-radius: 4px;
             align-self: flex-end;
         }
 
-        .chat-input-area {
+        .chat-footer {
             padding: 10px 20px calc(15px + var(--safe-bottom));
             background: #000;
             border-top: 1px solid #222;
@@ -285,48 +301,47 @@
         }
 
         .action-btn {
-            width: 55px;
-            height: 55px;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             background: var(--card);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
-        .btn-left {
+        .btn-red {
             color: #FF4444;
             border: 2px solid #FF4444;
         }
 
-        .btn-rev {
+        .btn-blue {
+            color: #2196F3;
+            border: 2px solid #2196F3;
+        }
+
+        .btn-reve {
             flex: 1;
             margin: 0 15px;
             background: var(--tinder-gradient);
             color: white;
-            font-weight: 800;
+            font-weight: 900;
             border-radius: 30px;
             font-size: 0.9rem;
             text-transform: uppercase;
         }
 
-        .btn-next {
-            color: #2196F3;
-            border: 2px solid #2196F3;
-        }
-
-        .typing-row {
+        .input-box {
             display: flex;
             gap: 10px;
             background: var(--card);
             border-radius: 50px;
-            padding: 5px 5px 5px 20px;
+            padding: 6px 6px 6px 20px;
         }
 
-        .typing-row input {
+        .input-box input {
             flex: 1;
             background: transparent;
             border: none;
@@ -344,8 +359,8 @@
             color: white;
         }
 
-        /* End Overlay */
-        .end-overlay {
+        /* Overlays */
+        .overlay {
             position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0.95);
@@ -358,24 +373,22 @@
             text-align: center;
         }
 
-        .end-overlay.active {
+        .overlay.active {
             display: flex;
+            animation: fadeIn 0.3s ease;
         }
 
-        .overlay-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 15px;
-            color: var(--tinder);
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
-        .overlay-text {
-            color: var(--gray);
-            margin-bottom: 40px;
-        }
-
-        /* Match Overlay */
-        .match-overlay {
+        .m-modal {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.98);
@@ -388,7 +401,7 @@
             text-align: center;
         }
 
-        .match-card {
+        .m-card {
             background: var(--card);
             padding: 30px;
             border-radius: 30px;
@@ -397,7 +410,7 @@
             max-width: 320px;
         }
 
-        .match-img {
+        .m-img {
             width: 160px;
             height: 160px;
             border-radius: 50%;
@@ -406,7 +419,7 @@
             object-fit: cover;
         }
 
-        .match-link {
+        .m-link {
             display: block;
             margin-top: 15px;
             color: #2196F3;
@@ -428,7 +441,7 @@
             text-align: center;
             z-index: 1000;
             transform: translateY(-200%);
-            transition: transform 0.4s;
+            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
         #toast.active {
@@ -439,83 +452,92 @@
 
 <body>
 
-    <!-- 1. LANDING / REGION -->
+    <!-- 1. LANDING -->
     <div id="landing" class="screen active">
-        <div class="header-logo">Tinder</div>
-        <h2 class="title">Bir Ülke Seç ve <br>Sohbete Başla!</h2>
-        <div class="region-grid">
-            <div class="region-btn" onclick="selectRegion('az', this)"><span class="flag">🇦🇿</span> Azerbaycan</div>
-            <div class="region-btn" onclick="selectRegion('tr', this)"><span class="flag">🇹🇷</span> Türkiye</div>
-            <div class="region-btn" onclick="selectRegion('ru', this)"><span class="flag">🇷🇺</span> Rusya</div>
-            <div class="region-btn" onclick="selectRegion('us', this)"><span class="flag">🇺🇸</span> Amerika</div>
+        <div class="logo-box">
+            <div class="header-logo">Tinder</div>
+            <div class="online-badge" id="online-text">0 Çevrimiçi</div>
         </div>
-        <button class="btn-main" onclick="startMatchmaking()">Aramayı Başlat</button>
+        <h2 class="title" style="margin-bottom: 40px;">Bölgendeki İnsanlarla <br>Anonim Tanış!</h2>
+        <div class="region-grid">
+            <div class="region-btn" id="reg-az" onclick="selectReg('az', this)"><span class="flag">🇦🇿</span>
+                Azerbaycan</div>
+            <div class="region-btn" id="reg-tr" onclick="selectReg('tr', this)"><span class="flag">🇹🇷</span> Türkiye
+            </div>
+            <div class="region-btn" id="reg-ru" onclick="selectReg('ru', this)"><span class="flag">🇷🇺</span> Rusya
+            </div>
+            <div class="region-btn" id="reg-us" onclick="selectReg('us', this)"><span class="flag">🇺🇸</span> Amerika
+            </div>
+        </div>
+        <button class="btn-main" onclick="goSearching()">Sohbeti Başlat</button>
     </div>
 
     <!-- 2. SEARCHING -->
     <div id="searching" class="screen">
-        <div class="radar">
-            <div class="pulse"></div>
-            <div class="pulse"></div>
-            <div class="pulse"></div>
-            <img id="my-photo" src="">
+        <div class="avatar-box">
+            <div class="waves"></div>
+            <div class="waves"></div>
+            <div class="waves"></div>
+            <img id="my-av" src="">
         </div>
-        <h2 class="title" id="status-text">Eşleşme Aranıyor...</h2>
-        <p style="color:var(--gray)">Bulunduğun bölgeden kullanıcılar aranıyor.</p>
-        <button class="btn-main" style="background: #222; width: 150px;" onclick="stopMatchmaking()">İPTAL</button>
+        <h2 class="title" style="font-size: 1.8rem;">Eşleşme Bekleniyor...</h2>
+        <p style="color:var(--gray); margin-bottom: 40px;">Kriterlerine en uygun kullanıcı aranıyor.</p>
+        <button class="btn-main" style="background: #222; width: 150px; font-size: 0.9rem;"
+            onclick="stopMatch()">İPTAL</button>
     </div>
 
     <!-- 3. CHAT -->
     <div id="chat" class="screen">
         <div class="chat-header">
-            <div class="av-box blurred" id="p-av-wrap"><img id="p-av" src=""></div>
+            <div class="p-av blurry" id="p-av-wrap"><img id="p-img" src=""></div>
             <div>
-                <h3 id="p-name" style="font-weight: 800;">Anonim Partner</h3>
-                <p id="p-status" style="font-size: 0.75rem; color: #4ade80;">Çevrimiçi</p>
+                <h3 id="p-nick" style="font-weight: 800;">Anonim Partner</h3>
+                <p style="font-size: 0.75rem; color: #4ade80;">Çevrimiçi</p>
             </div>
         </div>
 
         <div id="toast">Partnerin profilini açmak istiyor!</div>
 
-        <div class="chat-msgs" id="chat-box">
-            <div class="msg partner">Merhaba! Seninle eşleştik, sohbete başlayabilirsin.</div>
+        <div class="chat-msgs" id="chat-msgs-box">
+            <div class="msg p">Harika! Birini bulduk. Sohbete başla. 👋</div>
         </div>
 
-        <div class="chat-input-area">
+        <div class="chat-footer">
             <div class="actions">
-                <button class="action-btn btn-left" onclick="confirmLeave()">✖</button>
-                <button class="action-btn btn-rev" id="rev-btn" onclick="socket.emit('request_reveal')">Eşleşdik
-                    (Profilleri Aç)</button>
-                <button class="action-btn btn-next" onclick="confirmNext()">⭐</button>
+                <button class="action-btn btn-red" onclick="cfLeave()">✖</button>
+                <button class="action-btn btn-reve" id="reve-btn" onclick="socket.emit('request_reveal')">Eşleşdik
+                    (Kamera Aç)</button>
+                <button class="action-btn btn-blue" onclick="cfNext()">⭐</button>
             </div>
-            <div class="typing-row">
+            <div class="input-box">
                 <input type="text" id="m-input" placeholder="Mesajını yaz..."
-                    onkeypress="if(event.key==='Enter') sendMsg()">
-                <button class="btn-send" onclick="sendMsg()">➤</button>
+                    onkeypress="if(event.key==='Enter') send()">
+                <button class="btn-send" onclick="send()">➤</button>
             </div>
         </div>
 
-        <!-- Ended State Overlay -->
-        <div id="end-overlay" class="end-overlay">
-            <div class="overlay-title">Sohbet Bitti!</div>
-            <p class="overlay-text">Partnerin sohbetten ayrıldı veya bağlantı koptu.</p>
+        <div id="end-panel" class="overlay">
+            <h2 style="font-size: 2.5rem; font-weight: 800; color: var(--tinder); margin-bottom: 10px;">Sohbet Bitti!
+            </h2>
+            <p style="color: var(--gray); margin-bottom: 40px;">Partnerin ayrıldı veya bağlantı koptu.</p>
             <div style="width: 100%; display: flex; gap: 15px;">
-                <button class="btn-main" style="background:#222; margin-top:0" onclick="toLobby()">DURDUR</button>
-                <button class="btn-main" style="margin-top:0" onclick="nextFast()">SIRADAKİ</button>
+                <button class="btn-main" style="background:#222; margin-top:0" onclick="toHome()">DURDUR</button>
+                <button class="btn-main" style="margin-top:0" onclick="nextQuick()">SIRADAKİ</button>
             </div>
         </div>
     </div>
 
     <!-- 4. MATCH MODAL -->
-    <div id="match-modal" class="match-overlay">
-        <div class="match-card">
+    <div id="match-modal" class="m-modal">
+        <div class="m-card">
             <h1
-                style="font-family:'Playfair Display'; color:var(--tinder); font-size: 3rem; margin-bottom: 10px; font-style: italic;">
+                style="font-family:'Playfair Display'; color:var(--tinder); font-size: 3rem; font-style: italic; margin-bottom: 15px;">
                 Match!</h1>
-            <img id="m-photo" class="match-img" src="">
-            <h2 id="m-name" style="font-size: 2rem; font-weight: 800;">İsim</h2>
-            <a id="m-link" class="match-link" href="#" target="_blank">PROFILI GÖR</a>
-            <button class="btn-main" style="margin-top: 30px;" onclick="hideMatch()">KAPAT</button>
+            <img id="m-av-img" class="m-img" src="">
+            <h2 id="m-user-name" style="font-size: 2rem; font-weight: 800;">İsim</h2>
+            <a id="m-user-link" class="m-link" href="#" target="_blank">PROFILI GÖR</a>
+            <button class="btn-main" style="margin-top: 30px;"
+                onclick="document.getElementById('match-modal').style.display='none'">KAPAT</button>
         </div>
     </div>
 
@@ -523,51 +545,53 @@
         const tg = window.Telegram.WebApp; tg.expand();
         const socket = io();
         let myData = {
-            id: tg.initDataUnsafe?.user?.id || 'G' + Math.floor(Math.random() * 9999),
-            name: tg.initDataUnsafe?.user?.first_name || 'Gizli Sevgili',
+            id: tg.initDataUnsafe?.user?.id || 'G' + Math.floor(Math.random() * 99999),
+            name: tg.initDataUnsafe?.user?.first_name || 'Gizli',
             photo: tg.initDataUnsafe?.user?.photo_url || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
             username: tg.initDataUnsafe?.user?.username || '',
             region: ''
         };
-        document.getElementById('my-photo').src = myData.photo;
+        document.getElementById('my-av').src = myData.photo;
 
-        function showScreen(id) {
+        function showS(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function selectRegion(r, el) {
+        function selectReg(r, el) {
             myData.region = r;
             document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
             el.classList.add('selected');
         }
 
-        function startMatchmaking() {
-            if (!myData.region) return alert('Lütfen bir ülke seçin!');
-            showScreen('searching');
+        function goSearching() {
+            if (!myData.region) return alert('Bir bölge seçmelisin!');
+            showS('searching');
             socket.emit('register_user', myData);
             socket.emit('start_matchmaking', myData.region);
         }
 
-        function stopMatchmaking() {
+        function stopMatch() {
             socket.emit('stop_matchmaking');
-            showPage('landing');
+            showS('landing');
         }
 
-        function showPage(id) { showScreen(id); }
+        socket.on('online_stats', (data) => {
+            document.getElementById('online-text').innerText = data.count + ' Çevrimiçi';
+        });
 
         socket.on('match_found', () => {
-            showScreen('chat');
-            document.getElementById('end-overlay').classList.remove('active');
-            resetChatUI();
+            showS('chat');
+            document.getElementById('end-panel').classList.remove('active');
+            resetUI();
         });
 
         socket.on('new_msg', (data) => {
-            const box = document.getElementById('chat-box');
+            const b = document.getElementById('chat-msgs-box');
             const d = document.createElement('div');
-            d.className = 'msg ' + (data.senderId === socket.id ? 'me' : 'partner');
+            d.className = 'msg ' + (data.senderId === socket.id ? 'me' : 'p');
             d.innerText = data.text;
-            box.appendChild(d); box.scrollTop = box.scrollHeight;
+            b.appendChild(d); b.scrollTop = b.scrollHeight;
         });
 
         socket.on('reveal_request', () => {
@@ -576,56 +600,55 @@
         });
 
         socket.on('reveal_wait', () => {
-            const b = document.getElementById('rev-btn');
+            const b = document.getElementById('reve-btn');
             b.innerText = 'BEKLENİYOR...'; b.disabled = true; b.style.opacity = '0.5';
         });
 
         socket.on('revealed', (profs) => {
-            const partnerId = Object.keys(profs).find(id => id !== socket.id);
-            const p = profs[partnerId];
+            const pId = Object.keys(profs).find(id => id !== socket.id);
+            const p = profs[pId];
             document.getElementById('match-modal').style.display = 'flex';
-            document.getElementById('m-photo').src = p.photo;
-            document.getElementById('m-name').innerText = p.name;
-            const l = document.getElementById('m-link');
+            document.getElementById('m-av-img').src = p.photo;
+            document.getElementById('m-user-name').innerText = p.name;
+            const l = document.getElementById('m-user-link');
             if (p.username) { l.href = 'https://t.me/' + p.username; l.innerText = '@' + p.username; }
             else { l.href = 'tg://user?id=' + p.id; l.innerText = 'TELEGRAM'; }
 
-            document.getElementById('p-name').innerText = p.name;
-            document.getElementById('p-av').src = p.photo;
-            document.getElementById('p-av-wrap').classList.remove('blurred');
-            document.getElementById('rev-btn').style.display = 'none';
+            document.getElementById('p-nick').innerText = p.name;
+            document.getElementById('p-img').src = p.photo;
+            document.getElementById('p-av-wrap').classList.remove('blurry');
+            document.getElementById('reve-btn').style.display = 'none';
         });
 
         socket.on('partner_left', () => {
-            document.getElementById('end-overlay').classList.add('active');
+            document.getElementById('end-panel').classList.add('active');
         });
 
         socket.on('ready_for_next', () => {
-            showScreen('searching');
+            showS('searching');
             socket.emit('start_matchmaking', myData.region);
         });
 
-        socket.on('to_lobby', () => toLobby());
+        socket.on('to_lobby', () => toHome());
 
-        function sendMsg() {
+        function send() {
             const i = document.getElementById('m-input');
             const v = i.value.trim(); if (!v) return;
             socket.emit('send_msg', v); i.value = '';
         }
 
-        function confirmNext() { if (confirm('Sıradaki kullanıcıya geçilsin mi?')) socket.emit('next_user'); }
-        function confirmLeave() { if (confirm('Sohbetten çıkılsın mı?')) socket.emit('leave_chat'); }
+        function cfNext() { if (confirm('Sıradaki kullanıcıya geçilsin mi?')) socket.emit('next_user'); }
+        function cfLeave() { if (confirm('Çıkmak istiyor musun?')) socket.emit('leave_chat'); }
+        function toHome() { showS('landing'); }
+        function nextQuick() { socket.emit('next_user'); }
 
-        function toLobby() { showScreen('landing'); }
-        function nextFast() { socket.emit('next_user'); }
-        function hideMatch() { document.getElementById('match-modal').style.display = 'none'; }
-
-        function resetChatUI() {
-            document.getElementById('chat-box').innerHTML = '<div class="msg partner">Sohbet başladı! Bol şans.</div>';
-            document.getElementById('p-name').innerText = 'Anonim Partner';
-            document.getElementById('p-av-wrap').classList.add('blurred');
-            const b = document.getElementById('rev-btn');
-            b.innerText = 'Eşleşdik (Profilleri Aç)'; b.disabled = false; b.style.opacity = '1'; b.style.display = 'flex';
+        function resetUI() {
+            document.getElementById('chat-msgs-box').innerHTML = '<div class="msg p">Harika! Birini bulduk. Sohbete başla. 👋</div>';
+            document.getElementById('p-nick').innerText = 'Anonim Partner';
+            document.getElementById('p-av-wrap').classList.add('blurry');
+            const b = document.getElementById('reve-badge'); // Fix
+            const btn = document.getElementById('reve-btn');
+            btn.innerText = 'Eşleşdik (Kamera Aç)'; btn.disabled = false; btn.style.opacity = '1'; btn.style.display = 'flex';
         }
     </script>
 </body>
