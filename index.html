@@ -4,21 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TinderChat | Anonim Sohbet</title>
+    <title>TinderMatch | Anonim Chat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Bebas+Neue&family=Playfair+Display:ital,wght@1,700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@1,800&display=swap"
         rel="stylesheet">
     <style>
         :root {
-            --tinder-pink: #FD297B;
-            --tinder-orange: #FF5864;
-            --tinder-gradient: linear-gradient(135deg, #FD297B 0%, #FF5864 50%, #FF6B6B 100%);
-            --bg: #010101;
-            --card: #111111;
-            --text: #FFFFFF;
-            --text-dim: #888888;
+            --tinder: #fd297b;
+            --tinder-gradient: linear-gradient(135deg, #fd297b 0%, #ff5864 50%, #ff6b6b 100%);
+            --bg: #000000;
+            --card: #121212;
+            --text: #ffffff;
+            --gray: #888888;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -42,28 +41,27 @@
             flex-direction: column;
         }
 
-        /* Screens */
         .screen {
             position: absolute;
             inset: 0;
             display: none;
             flex-direction: column;
-            background: var(--bg);
-            z-index: 10;
             padding: 20px;
             padding-top: calc(20px + var(--safe-top));
             padding-bottom: calc(20px + var(--safe-bottom));
+            background: var(--bg);
+            z-index: 10;
         }
 
         .screen.active {
             display: flex;
-            animation: fadeSlide 0.4s ease-out;
+            animation: slideIn 0.3s ease-out;
         }
 
-        @keyframes fadeSlide {
+        @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: scale(0.95);
+                transform: scale(1.1);
             }
 
             to {
@@ -72,108 +70,72 @@
             }
         }
 
-        /* Landing */
-        #landing {
-            background: linear-gradient(rgba(0, 0, 0, 0.4), #000), url('https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&q=80&w=1000') center/cover;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .logo {
+        /* Elements */
+        .header-logo {
             font-family: 'Playfair Display', serif;
-            font-size: 5rem;
+            font-size: 4rem;
             font-style: italic;
-            color: #fff;
-            margin-bottom: 5px;
-        }
-
-        .tagline {
-            color: var(--tinder-orange);
-            font-size: 1.2rem;
             font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            background: var(--tinder-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
             margin-bottom: 50px;
         }
 
-        .btn-tinder {
+        .btn-main {
             background: var(--tinder-gradient);
             color: white;
             border: none;
-            padding: 18px 40px;
+            padding: 18px;
             border-radius: 50px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 800;
             text-transform: uppercase;
-            width: 80%;
-            box-shadow: 0 10px 30px rgba(253, 41, 123, 0.4);
+            width: 100%;
+            box-shadow: 0 8px 25px rgba(253, 41, 123, 0.3);
+            margin-top: auto;
         }
 
-        .btn-tinder:active {
-            transform: scale(0.95);
+        .btn-main:active {
+            transform: scale(0.96);
+            opacity: 0.9;
         }
 
-        /* Setup Panels */
-        .panel-title {
+        /* Region Selection */
+        .title {
             font-size: 2.2rem;
             font-weight: 800;
             margin-bottom: 30px;
-            line-height: 1.1;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .option-box {
-            background: var(--card);
-            border: 2px solid transparent;
-            padding: 30px 10px;
-            border-radius: 20px;
+            line-height: 1.2;
             text-align: center;
-            transition: 0.2s;
         }
 
-        .option-box.selected {
-            border-color: var(--tinder-pink);
-            background: rgba(253, 41, 123, 0.1);
-        }
-
-        .option-box em {
-            font-size: 2.5rem;
-            display: block;
-            margin-bottom: 15px;
-            font-style: normal;
-        }
-
-        .region-list {
+        .region-grid {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-        }
-
-        .region-item {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            border: 2px solid transparent;
-            display: flex;
-            align-items: center;
             gap: 15px;
         }
 
-        .region-item.selected {
-            border-color: var(--tinder-pink);
+        .region-btn {
+            background: var(--card);
+            border: 2px solid transparent;
+            padding: 20px;
+            border-radius: 20px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .region-btn.selected {
+            border-color: var(--tinder);
             background: rgba(253, 41, 123, 0.1);
         }
 
         .flag {
-            font-size: 1.8rem;
+            font-size: 2rem;
         }
 
         /* Searching */
@@ -183,20 +145,19 @@
             text-align: center;
         }
 
-        .radar-center {
-            width: 130px;
-            height: 130px;
+        .radar {
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
             background: var(--tinder-gradient);
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            margin-bottom: 50px;
+            margin-bottom: 60px;
         }
 
-        .radar-center img {
+        .radar img {
             width: 100%;
             height: 100%;
             border-radius: 50%;
@@ -204,24 +165,24 @@
             object-fit: cover;
         }
 
-        .radar-wave {
+        .pulse {
             position: absolute;
             inset: 0;
-            border: 2px solid var(--tinder-pink);
+            border: 3px solid var(--tinder);
             border-radius: 50%;
-            animation: radar 2s infinite ease-out;
+            animation: pulse-anim 2s infinite ease-out;
             opacity: 0;
         }
 
-        .radar-wave:nth-child(2) {
-            animation-delay: 0.6s;
+        .pulse:nth-child(2) {
+            animation-delay: 0.5s;
         }
 
-        .radar-wave:nth-child(3) {
-            animation-delay: 1.2s;
+        .pulse:nth-child(3) {
+            animation-delay: 1s;
         }
 
-        @keyframes radar {
+        @keyframes pulse-anim {
             0% {
                 transform: scale(1);
                 opacity: 1;
@@ -236,57 +197,58 @@
         /* Chat */
         #chat {
             padding: 0;
+            height: 100%;
         }
 
-        .chat-top {
+        .chat-header {
             padding: calc(15px + var(--safe-top)) 20px 15px;
-            background: #000;
+            background: #111;
             display: flex;
             align-items: center;
             gap: 15px;
             border-bottom: 1px solid #222;
         }
 
-        .p-av-box {
-            width: 42px;
-            height: 42px;
+        .av-box {
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             background: #333;
             overflow: hidden;
+            position: relative;
         }
 
-        .p-av-box.blur img {
+        .av-box.blurred img {
             filter: blur(15px);
-            opacity: 0.6;
         }
 
-        .p-av-box img {
+        .av-box img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .chat-body {
+        .chat-msgs {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .bubble {
+        .msg {
             max-width: 80%;
             padding: 12px 18px;
             border-radius: 20px;
             font-size: 1rem;
             line-height: 1.4;
-            animation: pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            animation: msg-pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        @keyframes pop {
+        @keyframes msg-pop {
             from {
-                transform: scale(0.5);
+                transform: scale(0.7);
                 opacity: 0;
             }
 
@@ -296,31 +258,33 @@
             }
         }
 
-        .bubble.p {
+        .msg.partner {
             background: var(--card);
-            border-bottom-left-radius: 4px;
+            border-bottom-left-radius: 5px;
             align-self: flex-start;
         }
 
-        .bubble.me {
+        .msg.me {
             background: var(--tinder-gradient);
-            border-bottom-right-radius: 4px;
+            border-bottom-right-radius: 5px;
             align-self: flex-end;
         }
 
-        .chat-footer {
-            padding: 15px 20px calc(15px + var(--safe-bottom));
+        .chat-input-area {
+            padding: 10px 20px calc(15px + var(--safe-bottom));
             background: #000;
             border-top: 1px solid #222;
-        }
-
-        .action-row {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        .circ {
+        .actions {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .action-btn {
             width: 55px;
             height: 55px;
             border-radius: 50%;
@@ -328,33 +292,33 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             background: var(--card);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
-        .circ.red {
+        .btn-left {
             color: #FF4444;
             border: 2px solid #FF4444;
         }
 
-        .circ.blue {
+        .btn-rev {
+            flex: 1;
+            margin: 0 15px;
+            background: var(--tinder-gradient);
+            color: white;
+            font-weight: 800;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .btn-next {
             color: #2196F3;
             border: 2px solid #2196F3;
         }
 
-        .match-btn {
-            flex: 1;
-            margin: 0 15px;
-            border-radius: 30px;
-            background: var(--tinder-gradient);
-            color: white;
-            font-weight: 900;
-            font-size: 1rem;
-            text-transform: uppercase;
-        }
-
-        .input-row {
+        .typing-row {
             display: flex;
             gap: 10px;
             background: var(--card);
@@ -362,7 +326,7 @@
             padding: 5px 5px 5px 20px;
         }
 
-        .input-row input {
+        .typing-row input {
             flex: 1;
             background: transparent;
             border: none;
@@ -371,7 +335,7 @@
             font-size: 1rem;
         }
 
-        .btn-go {
+        .btn-send {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -380,11 +344,41 @@
             color: white;
         }
 
-        /* Match Result */
+        /* End Overlay */
+        .end-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .end-overlay.active {
+            display: flex;
+        }
+
+        .overlay-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: var(--tinder);
+        }
+
+        .overlay-text {
+            color: var(--gray);
+            margin-bottom: 40px;
+        }
+
+        /* Match Overlay */
         .match-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0, 0, 0, 0.98);
             z-index: 5000;
             display: none;
             flex-direction: column;
@@ -394,31 +388,34 @@
             text-align: center;
         }
 
-        .match-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 4rem;
-            font-style: italic;
-            color: var(--tinder-pink);
-            margin-bottom: 20px;
+        .match-card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 30px;
+            border: 2px solid var(--tinder);
+            width: 100%;
+            max-width: 320px;
         }
 
         .match-img {
-            width: 150px;
-            height: 150px;
+            width: 160px;
+            height: 160px;
             border-radius: 50%;
-            border: 5px solid var(--tinder-pink);
+            border: 5px solid var(--tinder);
             margin-bottom: 20px;
+            object-fit: cover;
         }
 
         .match-link {
+            display: block;
+            margin-top: 15px;
             color: #2196F3;
             font-weight: 800;
             text-decoration: none;
             font-size: 1.3rem;
-            margin-top: 10px;
         }
 
-        #reveal-msg {
+        #toast {
             position: fixed;
             top: calc(20px + var(--safe-top));
             left: 20px;
@@ -431,10 +428,10 @@
             text-align: center;
             z-index: 1000;
             transform: translateY(-200%);
-            transition: transform 0.5s;
+            transition: transform 0.4s;
         }
 
-        #reveal-msg.show {
+        #toast.active {
             transform: translateY(0);
         }
     </style>
@@ -442,85 +439,84 @@
 
 <body>
 
+    <!-- 1. LANDING / REGION -->
     <div id="landing" class="screen active">
-        <div class="logo">Tinder</div>
-        <div class="tagline">Anonim Sohbet Modu</div>
-        <button class="btn-tinder" onclick="showScreen('gender-screen')">Keşfetmeye Başla</button>
-    </div>
-
-    <!-- Gender -->
-    <div id="gender-screen" class="screen">
-        <h2 class="panel-title">Sen kimsin?</h2>
-        <div class="grid-2">
-            <div class="option-box" id="gen-m" onclick="pickGender('male')"><em>👨</em> Erkek</div>
-            <div class="option-box" id="gen-f" onclick="pickGender('female')"><em>👩</em> Kadın</div>
+        <div class="header-logo">Tinder</div>
+        <h2 class="title">Bir Ülke Seç ve <br>Sohbete Başla!</h2>
+        <div class="region-grid">
+            <div class="region-btn" onclick="selectRegion('az', this)"><span class="flag">🇦🇿</span> Azerbaycan</div>
+            <div class="region-btn" onclick="selectRegion('tr', this)"><span class="flag">🇹🇷</span> Türkiye</div>
+            <div class="region-btn" onclick="selectRegion('ru', this)"><span class="flag">🇷🇺</span> Rusya</div>
+            <div class="region-btn" onclick="selectRegion('us', this)"><span class="flag">🇺🇸</span> Amerika</div>
         </div>
-        <div style="flex:1"></div>
-        <button class="btn-tinder" style="width:100%" onclick="goNext('region-screen')">Devam Et</button>
+        <button class="btn-main" onclick="startMatchmaking()">Aramayı Başlat</button>
     </div>
 
-    <!-- Region -->
-    <div id="region-screen" class="screen">
-        <h2 class="panel-title">Neredesin?</h2>
-        <div class="region-list">
-            <div class="region-item" onclick="pickRegion('az', this)"><span class="flag">🇦🇿</span> Azerbaycan</div>
-            <div class="region-item" onclick="pickRegion('tr', this)"><span class="flag">🇹🇷</span> Türkiye</div>
-            <div class="region-item" onclick="pickRegion('ru', this)"><span class="flag">🇷🇺</span> Rusya</div>
-            <div class="region-item" onclick="pickRegion('us', this)"><span class="flag">🇺🇸</span> Amerika</div>
-        </div>
-        <div style="flex:1"></div>
-        <button class="btn-tinder" style="width:100%" onclick="startLaunch()">Aramayı Başlat</button>
-    </div>
-
-    <!-- Searching -->
+    <!-- 2. SEARCHING -->
     <div id="searching" class="screen">
-        <div class="radar-center">
-            <div class="radar-wave"></div>
-            <div class="radar-wave"></div>
-            <div class="radar-wave"></div>
-            <img id="my-img" src="">
+        <div class="radar">
+            <div class="pulse"></div>
+            <div class="pulse"></div>
+            <div class="pulse"></div>
+            <img id="my-photo" src="">
         </div>
-        <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:10px;">Eşleşme Bekleniyor...</h2>
-        <p style="color:var(--text-dim)">Kriterlerine en uygun kullanıcı aranıyor.</p>
-        <div style="flex:1"></div>
-        <button class="btn-tinder" style="background:#222; width:150px; font-size:0.9rem"
-            onclick="showScreen('landing'); socket.emit('stop_matchmaking');">İptal Et</button>
+        <h2 class="title" id="status-text">Eşleşme Aranıyor...</h2>
+        <p style="color:var(--gray)">Bulunduğun bölgeden kullanıcılar aranıyor.</p>
+        <button class="btn-main" style="background: #222; width: 150px;" onclick="stopMatchmaking()">İPTAL</button>
     </div>
 
-    <!-- Chat -->
+    <!-- 3. CHAT -->
     <div id="chat" class="screen">
-        <div class="chat-top">
-            <div class="p-av-box blur" id="p-av-wrap"><img id="p-av" src=""></div>
+        <div class="chat-header">
+            <div class="av-box blurred" id="p-av-wrap"><img id="p-av" src=""></div>
             <div>
-                <h3 id="p-nick">Anonim</h3>
-                <p style="font-size:0.75rem; color:#4ade80;">Aktif</p>
+                <h3 id="p-name" style="font-weight: 800;">Anonim Partner</h3>
+                <p id="p-status" style="font-size: 0.75rem; color: #4ade80;">Çevrimiçi</p>
             </div>
         </div>
-        <div id="reveal-msg">Partnerin profilini açmak istiyor!</div>
-        <div class="chat-body" id="chat-msgs">
-            <div class="bubble p">Sohbet başladı! Bol şans.</div>
+
+        <div id="toast">Partnerin profilini açmak istiyor!</div>
+
+        <div class="chat-msgs" id="chat-box">
+            <div class="msg partner">Merhaba! Seninle eşleştik, sohbete başlayabilirsin.</div>
         </div>
-        <div class="chat-footer">
-            <div class="action-row">
-                <button class="circ red" onclick="leaveChat()">✖</button>
-                <button class="circ match-btn" id="rev-btn" onclick="socket.emit('request_reveal')">Eşleşdik (Kamera
-                    Aç)</button>
-                <button class="circ blue" onclick="nextMatch()">⭐</button>
+
+        <div class="chat-input-area">
+            <div class="actions">
+                <button class="action-btn btn-left" onclick="confirmLeave()">✖</button>
+                <button class="action-btn btn-rev" id="rev-btn" onclick="socket.emit('request_reveal')">Eşleşdik
+                    (Profilleri Aç)</button>
+                <button class="action-btn btn-next" onclick="confirmNext()">⭐</button>
             </div>
-            <div class="input-row">
-                <input type="text" id="m-in" placeholder="Mesajını yaz..." onkeypress="if(event.key==='Enter') send()">
-                <button class="btn-go" onclick="send()">➤</button>
+            <div class="typing-row">
+                <input type="text" id="m-input" placeholder="Mesajını yaz..."
+                    onkeypress="if(event.key==='Enter') sendMsg()">
+                <button class="btn-send" onclick="sendMsg()">➤</button>
+            </div>
+        </div>
+
+        <!-- Ended State Overlay -->
+        <div id="end-overlay" class="end-overlay">
+            <div class="overlay-title">Sohbet Bitti!</div>
+            <p class="overlay-text">Partnerin sohbetten ayrıldı veya bağlantı koptu.</p>
+            <div style="width: 100%; display: flex; gap: 15px;">
+                <button class="btn-main" style="background:#222; margin-top:0" onclick="toLobby()">DURDUR</button>
+                <button class="btn-main" style="margin-top:0" onclick="nextFast()">SIRADAKİ</button>
             </div>
         </div>
     </div>
 
-    <div id="match-over" class="match-overlay">
-        <div class="match-title">It's a Match!</div>
-        <img id="over-img" class="match-img" src="">
-        <h2 id="over-name" style="font-size:2rem; font-weight:800;">İsim</h2>
-        <a id="over-link" class="match-link" href="#" target="_blank">TELEGRAM PROFİLİ</a>
-        <button class="btn-tinder" style="margin-top:40px; width:200px"
-            onclick="document.getElementById('match-over').style.display='none'">Geri Dön</button>
+    <!-- 4. MATCH MODAL -->
+    <div id="match-modal" class="match-overlay">
+        <div class="match-card">
+            <h1
+                style="font-family:'Playfair Display'; color:var(--tinder); font-size: 3rem; margin-bottom: 10px; font-style: italic;">
+                Match!</h1>
+            <img id="m-photo" class="match-img" src="">
+            <h2 id="m-name" style="font-size: 2rem; font-weight: 800;">İsim</h2>
+            <a id="m-link" class="match-link" href="#" target="_blank">PROFILI GÖR</a>
+            <button class="btn-main" style="margin-top: 30px;" onclick="hideMatch()">KAPAT</button>
+        </div>
     </div>
 
     <script>
@@ -528,53 +524,55 @@
         const socket = io();
         let myData = {
             id: tg.initDataUnsafe?.user?.id || 'G' + Math.floor(Math.random() * 9999),
-            name: tg.initDataUnsafe?.user?.first_name || 'Gizli',
+            name: tg.initDataUnsafe?.user?.first_name || 'Gizli Sevgili',
             photo: tg.initDataUnsafe?.user?.photo_url || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
             username: tg.initDataUnsafe?.user?.username || '',
-            gender: localStorage.getItem('t_gen') || '',
             region: ''
         };
-        document.getElementById('my-img').src = myData.photo;
+        document.getElementById('my-photo').src = myData.photo;
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function pickGender(g) {
-            myData.gender = g; localStorage.setItem('t_gen', g);
-            document.getElementById('gen-m').classList.toggle('selected', g === 'male');
-            document.getElementById('gen-f').classList.toggle('selected', g === 'female');
-        }
-
-        function goNext(id) { if (!myData.gender) return alert('Seçim yapın.'); showScreen(id); }
-
-        function pickRegion(r, el) {
+        function selectRegion(r, el) {
             myData.region = r;
-            document.querySelectorAll('.region-item').forEach(i => i.classList.remove('selected'));
+            document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
             el.classList.add('selected');
         }
 
-        function startLaunch() {
-            if (!myData.region) return alert('Bölge seçin.');
+        function startMatchmaking() {
+            if (!myData.region) return alert('Lütfen bir ülke seçin!');
             showScreen('searching');
             socket.emit('register_user', myData);
             socket.emit('start_matchmaking', myData.region);
         }
 
-        socket.on('match_found', () => { showScreen('chat'); resetUI(); });
+        function stopMatchmaking() {
+            socket.emit('stop_matchmaking');
+            showPage('landing');
+        }
+
+        function showPage(id) { showScreen(id); }
+
+        socket.on('match_found', () => {
+            showScreen('chat');
+            document.getElementById('end-overlay').classList.remove('active');
+            resetChatUI();
+        });
 
         socket.on('new_msg', (data) => {
-            const b = document.getElementById('chat-msgs');
+            const box = document.getElementById('chat-box');
             const d = document.createElement('div');
-            d.className = 'bubble ' + (data.senderId === socket.id ? 'me' : 'p');
+            d.className = 'msg ' + (data.senderId === socket.id ? 'me' : 'partner');
             d.innerText = data.text;
-            b.appendChild(d); b.scrollTop = b.scrollHeight;
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
         });
 
         socket.on('reveal_request', () => {
-            const m = document.getElementById('reveal-msg');
-            m.classList.add('show'); setTimeout(() => m.classList.remove('show'), 7000);
+            const t = document.getElementById('toast');
+            t.classList.add('active'); setTimeout(() => t.classList.remove('active'), 7000);
         });
 
         socket.on('reveal_wait', () => {
@@ -583,39 +581,51 @@
         });
 
         socket.on('revealed', (profs) => {
-            const pId = Object.keys(profs).find(id => id !== socket.id);
-            const p = profs[pId];
-            document.getElementById('match-over').style.display = 'flex';
-            document.getElementById('over-img').src = p.photo;
-            document.getElementById('over-name').innerText = p.name;
-            const l = document.getElementById('over-link');
-            if (p.username) { l.innerText = '@' + p.username; l.href = 'https://t.me/' + p.username; }
-            else { l.innerText = 'PROFİLİ GÖR'; l.href = 'tg://user?id=' + p.id; }
-            document.getElementById('p-nick').innerText = p.name;
+            const partnerId = Object.keys(profs).find(id => id !== socket.id);
+            const p = profs[partnerId];
+            document.getElementById('match-modal').style.display = 'flex';
+            document.getElementById('m-photo').src = p.photo;
+            document.getElementById('m-name').innerText = p.name;
+            const l = document.getElementById('m-link');
+            if (p.username) { l.href = 'https://t.me/' + p.username; l.innerText = '@' + p.username; }
+            else { l.href = 'tg://user?id=' + p.id; l.innerText = 'TELEGRAM'; }
+
+            document.getElementById('p-name').innerText = p.name;
             document.getElementById('p-av').src = p.photo;
-            document.getElementById('p-av-wrap').classList.remove('blur');
+            document.getElementById('p-av-wrap').classList.remove('blurred');
             document.getElementById('rev-btn').style.display = 'none';
         });
 
-        socket.on('partner_left', () => { alert('Partner ayrıldı.'); showScreen('landing'); });
-        socket.on('re-search', () => { showScreen('searching'); socket.emit('start_matchmaking', myData.region); });
-        socket.on('to_lobby', () => showScreen('landing'));
+        socket.on('partner_left', () => {
+            document.getElementById('end-overlay').classList.add('active');
+        });
 
-        function send() {
-            const i = document.getElementById('m-in');
+        socket.on('ready_for_next', () => {
+            showScreen('searching');
+            socket.emit('start_matchmaking', myData.region);
+        });
+
+        socket.on('to_lobby', () => toLobby());
+
+        function sendMsg() {
+            const i = document.getElementById('m-input');
             const v = i.value.trim(); if (!v) return;
             socket.emit('send_msg', v); i.value = '';
         }
 
-        function nextMatch() { if (confirm('Yeni birini bulalım mı?')) socket.emit('next_user'); }
-        function leaveChat() { if (confirm('Sohbetten çıkılsın mı?')) socket.emit('leave_chat'); }
+        function confirmNext() { if (confirm('Sıradaki kullanıcıya geçilsin mi?')) socket.emit('next_user'); }
+        function confirmLeave() { if (confirm('Sohbetten çıkılsın mı?')) socket.emit('leave_chat'); }
 
-        function resetUI() {
-            document.getElementById('chat-msgs').innerHTML = '<div class="bubble p">Sohbet başladı! Bol şans.</div>';
-            document.getElementById('p-nick').innerText = 'Anonim';
-            document.getElementById('p-av-wrap').classList.add('blur');
+        function toLobby() { showScreen('landing'); }
+        function nextFast() { socket.emit('next_user'); }
+        function hideMatch() { document.getElementById('match-modal').style.display = 'none'; }
+
+        function resetChatUI() {
+            document.getElementById('chat-box').innerHTML = '<div class="msg partner">Sohbet başladı! Bol şans.</div>';
+            document.getElementById('p-name').innerText = 'Anonim Partner';
+            document.getElementById('p-av-wrap').classList.add('blurred');
             const b = document.getElementById('rev-btn');
-            b.innerText = 'Eşleşdik (Kamera Aç)'; b.disabled = false; b.style.opacity = '1'; b.style.display = 'flex';
+            b.innerText = 'Eşleşdik (Profilleri Aç)'; b.disabled = false; b.style.opacity = '1'; b.style.display = 'flex';
         }
     </script>
 </body>
