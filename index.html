@@ -1,861 +1,314 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Otomatik Nesne Tespit Kamerası</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: #fff;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        header {
-            text-align: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #00c6ff, #0072ff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .subtitle {
-            font-size: 1.1rem;
-            opacity: 0.8;
-            max-width: 800px;
-            margin: 0 auto;
-            line-height: 1.5;
-        }
-        
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-        
-        @media (min-width: 992px) {
-            .main-content {
-                flex-direction: row;
-            }
-        }
-        
-        .camera-section {
-            flex: 3;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        
-        .info-section {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            border-radius: 10px;
-            overflow: hidden;
-            background-color: #000;
-            margin-bottom: 20px;
-        }
-        
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(90deg, #00c6ff, #0072ff);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .status {
-            text-align: center;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            background: rgba(0, 0, 0, 0.3);
-        }
-        
-        .status-active {
-            background: rgba(0, 255, 0, 0.1);
-            border-left: 5px solid #00ff00;
-        }
-        
-        .status-inactive {
-            background: rgba(255, 0, 0, 0.1);
-            border-left: 5px solid #ff0000;
-        }
-        
-        .status-detecting {
-            background: rgba(0, 114, 255, 0.1);
-            border-left: 5px solid #0072ff;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-        
-        .detections {
-            margin-top: 20px;
-        }
-        
-        .detections h3 {
-            margin-bottom: 15px;
-            color: #00c6ff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .detections-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .detection-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #0072ff;
-            animation: slideIn 0.3s ease;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(-10px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .detection-item-person {
-            border-left-color: #00ff88;
-        }
-        
-        .detection-item-vehicle {
-            border-left-color: #ffaa00;
-        }
-        
-        .detection-item-animal {
-            border-left-color: #ff5500;
-        }
-        
-        .detection-item-traffic {
-            border-left-color: #ff00ff;
-        }
-        
-        .detection-label {
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        
-        .detection-confidence {
-            background: rgba(0, 114, 255, 0.2);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .stat-box {
-            text-align: center;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            min-width: 120px;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: #00c6ff;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-        
-        .instructions {
-            background: rgba(0, 114, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 30px;
-            line-height: 1.6;
-        }
-        
-        .instructions h3 {
-            margin-bottom: 10px;
-            color: #00c6ff;
-        }
-        
-        .instructions ol {
-            padding-left: 20px;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
-        }
-        
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9rem;
-            opacity: 0.7;
-        }
-        
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
-            color: #00c6ff;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            background: #0072ff;
-            color: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            animation: slideInRight 0.3s ease;
-            display: none;
-        }
-        
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-        }
-        
-        .legend-text {
-            font-size: 0.9rem;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>Among Us - Mobil</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-robot"></i> Otomatik Nesne Tespit Kamerası</h1>
-            <p class="subtitle">Kamera açıldığında otomatik olarak nesneleri (insanlar, araçlar, hayvanlar, trafik ışıkları vb.) tespit eder ve işaretler. Hiçbir butona basmanıza gerek yok!</p>
-        </header>
-        
-        <div class="main-content">
-            <section class="camera-section">
-                <div class="video-container">
-                    <video id="video" autoplay playsinline></video>
-                    <canvas id="canvas"></canvas>
-                    <div class="loading" id="loading">
-                        <i class="fas fa-spinner fa-spin"></i> Model yükleniyor ve kamera başlatılıyor...
-                    </div>
-                </div>
-                
-                <div class="controls">
-                    <button id="toggleCameraBtn" class="btn btn-primary">
-                        <i class="fas fa-video"></i> Kamerayı Değiştir
-                    </button>
-                    <button id="snapshotBtn" class="btn btn-secondary">
-                        <i class="fas fa-camera"></i> Fotoğraf Çek
-                    </button>
-                </div>
-                
-                <div class="status status-inactive" id="status">
-                    <p><i class="fas fa-exclamation-circle"></i> Sistem başlatılıyor...</p>
-                </div>
-                
-                <div class="stats">
-                    <div class="stat-box">
-                        <div class="stat-value" id="personCount">0</div>
-                        <div class="stat-label">İnsan</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="vehicleCount">0</div>
-                        <div class="stat-label">Araç</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="animalCount">0</div>
-                        <div class="stat-label">Hayvan</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value" id="totalCount">0</div>
-                        <div class="stat-label">Toplam</div>
-                    </div>
-                </div>
-                
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #00ff88;"></div>
-                        <div class="legend-text">İnsan</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ffaa00;"></div>
-                        <div class="legend-text">Araç</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff5500;"></div>
-                        <div class="legend-text">Hayvan</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff00ff;"></div>
-                        <div class="legend-text">Trafik Işığı</div>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #0072ff;"></div>
-                        <div class="legend-text">Diğer Nesneler</div>
-                    </div>
-                </div>
-            </section>
-            
-            <section class="info-section">
-                <div class="detections">
-                    <h3><i class="fas fa-list"></i> Son Tespit Edilenler</h3>
-                    <div class="detections-list" id="detectionsList">
-                        <p style="text-align: center; padding: 20px; opacity: 0.7;">Nesne tespit başladığında burada görünecek...</p>
-                    </div>
-                </div>
-                
-                <div class="instructions">
-                    <h3><i class="fas fa-info-circle"></i> Sistem Özellikleri</h3>
-                    <ul style="padding-left: 20px;">
-                        <li>Kamera otomatik başlar ve nesne tespiti yapar</li>
-                        <li>İnsan, araba, kedi, köpek, trafik ışığı vb. nesneleri tanır</li>
-                        <li>Nesneleri renkli kutularla işaretler</li>
-                        <li>Gerçek zamanlı istatistikler gösterir</li>
-                        <li>Tamamen otomatik - buton gerekmez</li>
-                    </ul>
-                </div>
-            </section>
-        </div>
-        
-        <footer>
-            <p>TensorFlow.js COCO-SSD Modeli ile Otomatik Nesne Tespiti | GitHub Pages için Optimize Edilmiştir</p>
-            <p>© 2023 Otomatik Nesne Tespit Sistemi | Kamera açıldığında otomatik başlar</p>
-        </footer>
-    </div>
-    
-    <div class="notification" id="notification"></div>
 
-    <script>
-        // DOM Elementleri
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
-        const snapshotBtn = document.getElementById('snapshotBtn');
-        const statusDiv = document.getElementById('status');
-        const loadingDiv = document.getElementById('loading');
-        const detectionsList = document.getElementById('detectionsList');
-        const notification = document.getElementById('notification');
-        
-        // İstatistik elementleri
-        const personCountEl = document.getElementById('personCount');
-        const vehicleCountEl = document.getElementById('vehicleCount');
-        const animalCountEl = document.getElementById('animalCount');
-        const totalCountEl = document.getElementById('totalCount');
-        
-        // Değişkenler
-        let model = null;
-        let isDetecting = true; // Her zaman aktif
-        let detectionInterval = null;
-        let currentFacingMode = "environment"; // "user" (ön kamera) veya "environment" (arka kamera)
-        let stream = null;
-        
-        // Tespit edilen nesnelerin geçmişi
-        let detectionHistory = [];
-        let currentFrameCounts = {
-            person: 0,
-            vehicle: 0,
-            animal: 0,
-            traffic: 0,
-            other: 0,
-            total: 0
-        };
-        
-        // Modeli yükle ve kamerayı başlat
-        async function initializeSystem() {
-            try {
-                loadingDiv.style.display = 'block';
-                loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI modeli yükleniyor...`;
-                
-                // Önce modeli yükle
-                model = await cocoSsd.load();
-                
-                loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Model yüklendi, kamera başlatılıyor...`;
-                
-                // Model yüklendikten sonra kamerayı başlat
-                await startCamera();
-                
-                // Otomatik tespiti başlat
-                startAutoDetection();
-                
-                loadingDiv.style.display = 'none';
-                showNotification("Sistem başlatıldı! Nesne tespiti otomatik olarak başladı.", "success");
-                
-            } catch (error) {
-                console.error("Sistem başlatma hatası:", error);
-                loadingDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Hata: ${error.message}`;
-                statusDiv.className = "status status-inactive";
-                statusDiv.innerHTML = `<p><i class="fas fa-exclamation-triangle"></i> Sistem başlatılamadı: ${error.message}</p>`;
-                showNotification("Sistem başlatılamadı!", "error");
-            }
-        }
-        
-        // Kamera akışını başlat
-        async function startCamera() {
-            try {
-                // Mevcut stream varsa durdur
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                
-                const constraints = {
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: currentFacingMode
-                    }
-                };
-                
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
-                
-                // Video yüklendiğinde canvas boyutlarını ayarla
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        
-                        // Durumu güncelle
-                        statusDiv.className = "status status-detecting";
-                        statusDiv.innerHTML = `<p><i class="fas fa-eye"></i> Kamera başlatıldı. Nesne tespiti aktif. Çözünürlük: ${video.videoWidth}x${video.videoHeight}</p>`;
-                        
-                        resolve();
-                    };
-                });
-            } catch (error) {
-                console.error("Kamera erişim hatası:", error);
-                throw error;
-            }
-        }
-        
-        // Kamerayı değiştir (ön/arka)
-        async function toggleCamera() {
-            currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-            toggleCameraBtn.innerHTML = `<i class="fas fa-sync-alt"></i> ${currentFacingMode === "environment" ? "Arka Kameraya Geç" : "Ön Kameraya Geç"}`;
-            
-            loadingDiv.style.display = 'block';
-            loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Kamera değiştiriliyor...`;
-            
-            await startCamera();
-            
-            loadingDiv.style.display = 'none';
-            showNotification(`Kamera değiştirildi: ${currentFacingMode === "environment" ? "Arka Kamera" : "Ön Kamera"}`, "success");
-        }
-        
-        // Otomatik tespiti başlat
-        function startAutoDetection() {
-            if (!model) {
-                showNotification("Model henüz yüklenmedi!", "error");
-                return;
-            }
-            
-            isDetecting = true;
-            
-            // Tespit döngüsünü başlat (her 150ms'de bir)
-            detectionInterval = setInterval(detectFrame, 150);
-        }
-        
-        // Video karesinde nesne tespiti yap
-        async function detectFrame() {
-            if (!isDetecting || !video.srcObject) return;
-            
-            try {
-                // Video karesinden tahmin yap
-                const predictions = await model.detect(video);
-                
-                // Canvas'ı temizle
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Mevcut frame sayılarını sıfırla
-                resetCurrentFrameCounts();
-                
-                // Tespit edilen her nesne için kutucuk çiz
-                predictions.forEach(prediction => {
-                    // Sınırlayıcı kutuyu çiz
-                    const [x, y, width, height] = prediction.bbox;
-                    
-                    // Nesne türüne göre renk ve sınıf belirle
-                    const detectionInfo = getDetectionInfo(prediction.class);
-                    const color = detectionInfo.color;
-                    const detectionClass = detectionInfo.class;
-                    
-                    // İstatistikleri güncelle
-                    updateFrameCounts(detectionClass);
-                    
-                    // Kutuyu çiz
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x, y, width, height);
-                    
-                    // Kutunun üzerine arka plan çiz
-                    ctx.fillStyle = color;
-                    ctx.font = '18px Arial';
-                    const text = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
-                    const textWidth = ctx.measureText(text).width;
-                    
-                    // Metin arka planı
-                    ctx.fillRect(x, y - 25, textWidth + 10, 25);
-                    
-                    // Metin
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillText(text, x + 5, y - 5);
-                    
-                    // Tespit geçmişine ekle (yüksek güvenilirlikli tespitler için)
-                    if (prediction.score > 0.5) {
-                        addDetectionToHistory(prediction.class, prediction.score, detectionClass);
-                    }
-                });
-                
-                // İstatistikleri güncelle
-                updateStats();
-                
-            } catch (error) {
-                console.error("Tespit sırasında hata:", error);
-            }
-        }
-        
-        // Nesne türüne göre renk ve sınıf bilgisi al
-        function getDetectionInfo(className) {
-            className = className.toLowerCase();
-            
-            // İnsan tespiti
-            if (className === 'person') {
-                return { color: '#00ff88', class: 'person' };
-            }
-            
-            // Araç tespiti
-            const vehicles = ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'airplane', 'train'];
-            if (vehicles.includes(className)) {
-                return { color: '#ffaa00', class: 'vehicle' };
-            }
-            
-            // Hayvan tespiti
-            const animals = ['dog', 'cat', 'bird', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe'];
-            if (animals.includes(className)) {
-                return { color: '#ff5500', class: 'animal' };
-            }
-            
-            // Trafik ışığı tespiti
-            if (className === 'traffic light') {
-                return { color: '#ff00ff', class: 'traffic' };
-            }
-            
-            // Diğer nesneler
-            return { color: '#0072ff', class: 'other' };
-        }
-        
-        // Frame sayılarını sıfırla
-        function resetCurrentFrameCounts() {
-            currentFrameCounts.person = 0;
-            currentFrameCounts.vehicle = 0;
-            currentFrameCounts.animal = 0;
-            currentFrameCounts.traffic = 0;
-            currentFrameCounts.other = 0;
-            currentFrameCounts.total = 0;
-        }
-        
-        // Frame sayılarını güncelle
-        function updateFrameCounts(detectionClass) {
-            currentFrameCounts[detectionClass]++;
-            currentFrameCounts.total++;
-        }
-        
-        // Tespit geçmişine ekle
-        function addDetectionToHistory(className, score, detectionClass) {
-            const timestamp = new Date().toLocaleTimeString();
-            const confidence = Math.round(score * 100);
-            
-            // Sadece son 1 dakika içindeki benzer tespitleri kontrol et
-            const oneMinuteAgo = Date.now() - 60000;
-            const similarRecentDetection = detectionHistory.find(det => 
-                det.class === className && 
-                det.time > oneMinuteAgo &&
-                Math.abs(det.confidence - confidence) < 10
-            );
-            
-            // Eğer çok benzer bir tespit son 1 dakikada varsa, ekleme
-            if (similarRecentDetection) {
-                return;
-            }
-            
-            // Yeni tespiti geçmişin başına ekle
-            detectionHistory.unshift({
-                class: className,
-                confidence: confidence,
-                time: timestamp,
-                detectionClass: detectionClass,
-                timestamp: Date.now()
-            });
-            
-            // Sadece son 15 tespiti tut
-            if (detectionHistory.length > 15) {
-                detectionHistory = detectionHistory.slice(0, 15);
-            }
-            
-            // Tespit listesini güncelle
-            updateDetectionsList();
-        }
-        
-        // Tespit listesini güncelle
-        function updateDetectionsList() {
-            if (detectionHistory.length === 0) {
-                detectionsList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">Henüz tespit yapılmadı</p>';
-                return;
-            }
-            
-            let html = '';
-            detectionHistory.forEach(detection => {
-                const classNames = {
-                    'person': 'detection-item-person',
-                    'vehicle': 'detection-item-vehicle',
-                    'animal': 'detection-item-animal',
-                    'traffic': 'detection-item-traffic',
-                    'other': ''
-                };
-                
-                const detectionClass = classNames[detection.detectionClass] || '';
-                
-                html += `
-                    <div class="detection-item ${detectionClass}">
-                        <div>
-                            <div class="detection-label">${detection.class}</div>
-                            <div style="font-size: 0.8rem; opacity: 0.7;">${detection.time}</div>
-                        </div>
-                        <div class="detection-confidence">%${detection.confidence}</div>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <div class="crewmate-loading"></div>
+            </div>
+            <div class="loading-text" id="loading-text">Yükleniyor...</div>
+            <div class="loading-status" id="loading-status">Sunucuya bağlanıyor...</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen hidden">
+        <div class="main-menu-bg">
+            <!-- User Name at Top -->
+            <div class="welcome-section">
+                <div class="welcome-text">Hoş Geldin</div>
+                <div id="user-name-display" class="user-name-display">Guest</div>
+            </div>
+
+            <!-- Game Title -->
+            <h1 class="game-title-main">AMONG US</h1>
+
+            <!-- Main Buttons -->
+            <div class="main-menu-buttons">
+                <button class="btn-main btn-main-primary" id="btn-quick-match">
+                    <div class="btn-main-icon">🎮</div>
+                    <div class="btn-main-text">Rastgele Oyna</div>
+                </button>
+
+                <button class="btn-main btn-main-secondary" id="btn-join-room">
+                    <div class="btn-main-icon">🏠</div>
+                    <div class="btn-main-text">Odalar</div>
+                </button>
+
+                <button class="btn-main btn-main-tertiary" id="btn-create-room">
+                    <div class="btn-main-icon">➕</div>
+                    <div class="btn-main-text">Oda Kur</div>
+                </button>
+            </div>
+
+            <!-- Online Count -->
+            <div class="online-status">
+                <span class="status-indicator"></span>
+                <span id="online-players">0</span> Oyuncu Çevrimiçi
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Room Screen -->
+    <div id="create-room-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-back-from-create">←</button>
+            <h2>Oda Oluştur</h2>
+        </div>
+
+        <div class="room-settings">
+            <div class="setting-group">
+                <label>Oda Adı</label>
+                <input type="text" id="room-name" placeholder="Oda adını girin" maxlength="20">
+            </div>
+
+            <div class="setting-group">
+                <label>Şifre (İsteğe Bağlı)</label>
+                <input type="password" id="room-password" placeholder="Şifre belirleyin">
+            </div>
+
+            <div class="setting-group">
+                <label>Maksimum Oyuncu: <span id="max-players-value">10</span></label>
+                <input type="range" id="max-players" min="3" max="10" value="10">
+            </div>
+
+            <div class="setting-group">
+                <label>İmposter Sayısı: <span id="imposter-count-value">2</span></label>
+                <input type="range" id="imposter-count" min="1" max="3" value="2">
+            </div>
+
+            <div class="setting-group">
+                <label>Polis Sayısı: <span id="police-count-value">1</span></label>
+                <input type="range" id="police-count" min="0" max="2" value="1">
+            </div>
+
+            <div class="setting-group">
+                <label>Görev Sayısı: <span id="task-count-value">5</span></label>
+                <input type="range" id="task-count" min="3" max="10" value="5">
+            </div>
+
+            <div class="setting-group">
+                <label>Acil Toplantı Sayısı: <span id="emergency-count-value">1</span></label>
+                <input type="range" id="emergency-count" min="0" max="3" value="1">
+            </div>
+
+            <div class="setting-group">
+                <label>Tartışma Süresi (sn): <span id="discussion-time-value">45</span></label>
+                <input type="range" id="discussion-time" min="15" max="120" step="15" value="45">
+            </div>
+
+            <div class="setting-group">
+                <label>Oylama Süresi (sn): <span id="voting-time-value">60</span></label>
+                <input type="range" id="voting-time" min="30" max="120" step="15" value="60">
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-large" id="btn-create-room-confirm">
+            Oda Oluştur
+        </button>
+    </div>
+
+    <!-- Join Room Screen -->
+    <div id="join-room-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-back-from-join">←</button>
+            <h2>Odaya Katıl</h2>
+        </div>
+
+        <div class="room-list" id="room-list">
+            <!-- Rooms will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Room Lobby Screen -->
+    <div id="room-lobby-screen" class="screen hidden">
+        <div class="screen-header">
+            <button class="btn-back" id="btn-leave-room">←</button>
+            <h2 id="lobby-room-name">Oda</h2>
+        </div>
+
+        <div class="lobby-info">
+            <div class="lobby-code">
+                Kod: <span id="lobby-code">XXXXXX</span>
+            </div>
+            <div class="lobby-settings-summary" id="lobby-settings">
+                <!-- Settings summary -->
+            </div>
+        </div>
+
+        <div class="players-grid" id="players-grid">
+            <!-- Players will be dynamically added here -->
+        </div>
+
+        <div class="lobby-footer">
+            <div class="ready-status" id="ready-status">
+                <span id="ready-count">0</span>/<span id="total-count">10</span> Hazır
+            </div>
+            <button class="btn btn-primary btn-large" id="btn-ready">
+                Hazır
+            </button>
+            <button class="btn btn-success btn-large hidden" id="btn-start-game">
+                Oyunu Başlat
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <!-- Role Reveal -->
+        <div id="role-reveal" class="role-reveal hidden">
+            <div class="role-content">
+                <h2 id="role-title">Rolün</h2>
+                <div id="role-icon" class="role-icon"></div>
+                <p id="role-description"></p>
+            </div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Game UI Overlay -->
+        <div class="game-ui">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="alive-count">
+                    <span class="crewmate-icon">👤</span>
+                    <span id="alive-crewmates">8</span>
+                </div>
+                <div class="task-progress">
+                    <div class="task-bar">
+                        <div class="task-fill" id="task-fill"></div>
                     </div>
-                `;
-            });
-            
-            detectionsList.innerHTML = html;
-        }
-        
-        // İstatistikleri güncelle
-        function updateStats() {
-            personCountEl.textContent = currentFrameCounts.person;
-            vehicleCountEl.textContent = currentFrameCounts.vehicle;
-            animalCountEl.textContent = currentFrameCounts.animal;
-            totalCountEl.textContent = currentFrameCounts.total;
-        }
-        
-        // Fotoğraf çek
-        function takeSnapshot() {
-            if (!video.srcObject) {
-                showNotification("Kamera başlatılmadı!", "error");
-                return;
-            }
-            
-            // Canvas'a video karesini çiz
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Fotoğrafı indirme bağlantısı oluştur
-            const link = document.createElement('a');
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            link.download = `nesne-tespit-${timestamp}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            
-            showNotification("Fotoğraf kaydedildi!", "success");
-        }
-        
-        // Bildirim göster
-        function showNotification(message, type = "info") {
-            const colors = {
-                success: "#00C851",
-                error: "#ff4444",
-                info: "#0072ff",
-                warning: "#ffbb33"
-            };
-            
-            notification.textContent = message;
-            notification.style.backgroundColor = colors[type] || colors.info;
-            notification.style.display = "block";
-            
-            setTimeout(() => {
-                notification.style.display = "none";
-            }, 3000);
-        }
-        
-        // Sistem performansını izle
-        function monitorPerformance() {
-            let frameCount = 0;
-            let lastCheck = Date.now();
-            
-            setInterval(() => {
-                const now = Date.now();
-                const elapsed = (now - lastCheck) / 1000;
-                const fps = Math.round(frameCount / elapsed);
-                
-                // Düşük FPS uyarısı
-                if (fps < 5 && isDetecting) {
-                    console.warn(`Düşük FPS: ${fps}. Tespit hızı düşürülebilir.`);
-                }
-                
-                frameCount = 0;
-                lastCheck = now;
-            }, 2000);
-            
-            // Her frame için sayacı artır
-            const originalDetectFrame = detectFrame;
-            detectFrame = async function() {
-                frameCount++;
-                return originalDetectFrame.apply(this, arguments);
-            };
-        }
-        
-        // Olay dinleyicileri
-        toggleCameraBtn.addEventListener('click', toggleCamera);
-        snapshotBtn.addEventListener('click', takeSnapshot);
-        
-        // Sayfa yüklendiğinde sistemi başlat
-        window.addEventListener('load', () => {
-            initializeSystem();
-            monitorPerformance();
-        });
-        
-        // Sayfa kapanırken stream'i temizle
-        window.addEventListener('beforeunload', () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            if (detectionInterval) {
-                clearInterval(detectionInterval);
-            }
-        });
-    </script>
+                    <span id="task-text">0/5</span>
+                </div>
+            </div>
+
+            <!-- Joystick -->
+            <div class="joystick-container" id="joystick-container">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="joystick-stick"></div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-btn" id="btn-use">
+                    <span>Kullan</span>
+                </button>
+                <button class="action-btn" id="btn-report">
+                    <span>Bildir</span>
+                </button>
+                <button class="action-btn hidden" id="btn-kill">
+                    <span>Öldür</span>
+                </button>
+                <button class="action-btn hidden" id="btn-sabotage">
+                    <span>Sabotaj</span>
+                </button>
+                <button class="action-btn" id="btn-emergency">
+                    <span>Acil</span>
+                </button>
+            </div>
+
+            <!-- Map -->
+            <div class="minimap" id="minimap">
+                <canvas id="minimap-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meeting Screen -->
+    <div id="meeting-screen" class="screen hidden">
+        <div class="meeting-header">
+            <h2 id="meeting-title">Acil Toplantı</h2>
+            <div class="meeting-timer" id="meeting-timer">45</div>
+        </div>
+
+        <div class="meeting-body" id="meeting-body">
+            <!-- Dead body info or emergency caller -->
+        </div>
+
+        <div class="players-voting" id="players-voting">
+            <!-- Players for voting -->
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Chat messages -->
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." maxlength="100">
+                <button id="btn-send-chat">Gönder</button>
+            </div>
+        </div>
+
+        <div class="voting-results hidden" id="voting-results">
+            <!-- Voting results -->
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen hidden">
+        <div class="game-over-content">
+            <h1 id="game-over-title">Crewmates Kazandı!</h1>
+            <div id="game-over-reason"></div>
+
+            <div class="winners-list" id="winners-list">
+                <!-- Winners -->
+            </div>
+
+            <button class="btn btn-primary btn-large" id="btn-back-to-menu">
+                Ana Menüye Dön
+            </button>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Şifre Gerekli</h3>
+            <input type="password" id="modal-password" placeholder="Şifreyi girin">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="btn-cancel-password">İptal</button>
+                <button class="btn btn-primary" id="btn-submit-password">Katıl</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Freeze Overlay -->
+    <div id="freeze-overlay" class="freeze-overlay hidden">
+        <div class="freeze-content">
+            <div class="freeze-spinner"></div>
+            <h2 id="freeze-title">Bağlantı Kesildi</h2>
+            <p id="freeze-status">Yeniden bağlanılıyor...</p>
+            <button class="btn btn-primary" id="btn-reconnect" style="margin-top: 20px; display: none;">Tekrar
+                Dene</button>
+            <p id="freeze-url" style="font-size: 10px; color: #555; margin-top: 15px; opacity: 0.5;"></p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="telegram.js"></script>
+    <script src="network.js"></script>
+    <script src="game3d.js"></script>
+    <script src="game.js"></script>
+    <script src="ui.js"></script>
+    <script src="main.js"></script>
 </body>
+
 </html>
