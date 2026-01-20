@@ -37,18 +37,18 @@ io.on('connection', (socket) => {
         const user = users.get(socket.id);
         if (!user || !queues[region]) return;
 
-        // Ensure not in other queues
+        // Clean up from all queues first
         Object.keys(queues).forEach(r => {
             const idx = queues[r].indexOf(socket.id);
             if (idx > -1) queues[r].splice(idx, 1);
         });
 
-        // Try to find partner in same region queue
+        // Try to find a partner
         if (queues[region].length > 0) {
             const partnerId = queues[region].shift();
             const partnerSocket = io.sockets.sockets.get(partnerId);
 
-            if (partnerSocket) {
+            if (partnerSocket && partnerSocket.id !== socket.id) {
                 const roomId = `room_${socket.id}_${partnerId}`;
                 socket.join(roomId);
                 partnerSocket.join(roomId);
@@ -60,7 +60,7 @@ io.on('connection', (socket) => {
                 io.to(roomId).emit('match_found');
                 console.log(`[Match] ${socket.id} & ${partnerId} in ${region}`);
             } else {
-                // Partner gone, add self to queue
+                // Partner gone or self, try again or add to queue
                 queues[region].push(socket.id);
                 socket.emit('waiting');
             }
@@ -111,7 +111,7 @@ io.on('connection', (socket) => {
 
     socket.on('next_user', () => {
         handleDisconnect(socket);
-        socket.emit('re-search');
+        socket.emit('ready_for_next');
     });
 
     socket.on('leave_chat', () => {
@@ -124,7 +124,8 @@ io.on('connection', (socket) => {
         if (chat) {
             const pId = chat.partnerId;
             const rId = chat.roomId;
-            io.to(pId).emit('partner_left');
+
+            io.to(pId).emit('partner_left'); // Notify partner
 
             const pSock = io.sockets.sockets.get(pId);
             if (pSock) pSock.leave(rId);
