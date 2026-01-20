@@ -15,134 +15,115 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Data persistence (Memory only for now as requested)
-const users = new Map(); // socket.id -> { id, name, photo, gender, country, city, username }
-const waitingList = []; // Array of socket.ids
+// Data persistence
+const users = new Map(); // socket.id -> profile
+const queues = {
+    'az': [],
+    'tr': [],
+    'ru': [],
+    'us': []
+};
 const activeChats = new Map(); // socket.id -> { partnerId, roomId }
-const revealRequests = new Map(); // roomId -> { id1: bool, id2: bool }
+const revealStatus = new Map(); // roomId -> { id1: bool, id2: bool }
 
 io.on('connection', (socket) => {
-    console.log(`[CONN] ${socket.id}`);
+    console.log(`[+] Connected: ${socket.id}`);
 
-    // Update/Register user profile
-    socket.on('update_profile', (profile) => {
+    socket.on('register_user', (profile) => {
         users.set(socket.id, { ...profile, socketId: socket.id });
-        console.log(`[USER] ${profile.name} (${profile.gender}) joined from ${profile.city || profile.country || 'Global'}`);
     });
 
-    // Matchmaking Request
-    socket.on('find_partner', () => {
-        const me = users.get(socket.id);
-        if (!me) return;
+    socket.on('start_matchmaking', (region) => {
+        const user = users.get(socket.id);
+        if (!user || !queues[region]) return;
 
-        // Clean up from queue if already there
-        const oldIdx = waitingList.indexOf(socket.id);
-        if (oldIdx > -1) waitingList.splice(oldIdx, 1);
-
-        // Try to find a match
-        const partnerId = waitingList.find(id => {
-            const p = users.get(id);
-            if (!p) return false;
-            if (id === socket.id) return false;
-
-            // STRIKT FILTRELEME (İsteğe bağlı): 
-            // Eğer şehir/ülke seçilmişse sadece oradan olanlarla eşleştir.
-            // "Azerbaycana dokundukda Bakı sumqayıt Xırdalan yazsın... o şehirler"
-            if (me.country && p.country && me.country !== p.country) return false;
-            if (me.city && p.city && me.city !== p.city) return false;
-
-            // Cinsiyet Karşılaştırması (Opsiyonel: Farklı cinsiyet aramayı tercih edebiliriz)
-            // if (me.gender === p.gender) return false; 
-
-            return true;
+        // Ensure not in other queues
+        Object.keys(queues).forEach(r => {
+            const idx = queues[r].indexOf(socket.id);
+            if (idx > -1) queues[r].splice(idx, 1);
         });
 
-        if (partnerId) {
-            // Match found!
-            const partnerIdx = waitingList.indexOf(partnerId);
-            waitingList.splice(partnerIdx, 1);
-
-            const roomId = `room_${socket.id}_${partnerId}`;
+        // Try to find partner in same region queue
+        if (queues[region].length > 0) {
+            const partnerId = queues[region].shift();
             const partnerSocket = io.sockets.sockets.get(partnerId);
 
             if (partnerSocket) {
+                const roomId = `room_${socket.id}_${partnerId}`;
                 socket.join(roomId);
                 partnerSocket.join(roomId);
 
                 activeChats.set(socket.id, { partnerId, roomId });
                 activeChats.set(partnerId, { partnerId: socket.id, roomId });
-                revealRequests.set(roomId, { [socket.id]: false, [partnerId]: false });
+                revealStatus.set(roomId, { [socket.id]: false, [partnerId]: false });
 
-                socket.emit('match_found');
-                partnerSocket.emit('match_found');
-                console.log(`[MATCH] ${socket.id} <-> ${partnerId}`);
+                io.to(roomId).emit('match_found');
+                console.log(`[Match] ${socket.id} & ${partnerId} in ${region}`);
             } else {
-                // Partner disconnected, retry
-                socket.emit('searching');
-                waitingList.push(socket.id);
+                // Partner gone, add self to queue
+                queues[region].push(socket.id);
+                socket.emit('waiting');
             }
         } else {
-            // No match found, add to waiting list
-            waitingList.push(socket.id);
-            socket.emit('searching');
-            console.log(`[QUEUED] ${socket.id}. Queue size: ${waitingList.length}`);
+            // Queue empty, add self
+            queues[region].push(socket.id);
+            socket.emit('waiting');
+            console.log(`[Queue] ${socket.id} added to ${region}`);
         }
     });
 
-    socket.on('stop_searching', () => {
-        const idx = waitingList.indexOf(socket.id);
-        if (idx > -1) waitingList.splice(idx, 1);
+    socket.on('stop_matchmaking', () => {
+        Object.keys(queues).forEach(r => {
+            const idx = queues[r].indexOf(socket.id);
+            if (idx > -1) queues[r].splice(idx, 1);
+        });
     });
 
-    // Messaging
-    socket.on('chat_message', (msg) => {
-        const myChat = activeChats.get(socket.id);
-        if (myChat) {
-            io.to(myChat.roomId).emit('chat_message', {
+    socket.on('send_msg', (text) => {
+        const chat = activeChats.get(socket.id);
+        if (chat) {
+            io.to(chat.roomId).emit('new_msg', {
                 senderId: socket.id,
-                text: msg,
+                text,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
         }
     });
 
-    // Profile Disclosure (Eşleşdik sistemi)
     socket.on('request_reveal', () => {
-        const myChat = activeChats.get(socket.id);
-        if (!myChat) return;
+        const chat = activeChats.get(socket.id);
+        if (!chat) return;
 
-        const status = revealRequests.get(myChat.roomId);
-        if (!status) return;
-
-        status[socket.id] = true;
-        const partnerId = myChat.partnerId;
-
-        if (status[partnerId]) {
-            // Both reveal!
-            io.to(myChat.roomId).emit('profiles_revealed', {
-                [socket.id]: users.get(socket.id),
-                [partnerId]: users.get(partnerId)
-            });
-        } else {
-            // One requested
-            socket.emit('reveal_sent');
-            io.to(partnerId).emit('partner_wants_reveal');
+        const status = revealStatus.get(chat.roomId);
+        if (status) {
+            status[socket.id] = true;
+            if (status[chat.partnerId]) {
+                io.to(chat.roomId).emit('revealed', {
+                    [socket.id]: users.get(socket.id),
+                    [chat.partnerId]: users.get(chat.partnerId)
+                });
+            } else {
+                io.to(chat.partnerId).emit('reveal_request');
+                socket.emit('reveal_wait');
+            }
         }
     });
 
-    // Next/Exit
-    socket.on('next_partner', () => {
-        disconnectPartner(socket);
-        // Automatically find new
-        socket.emit('start_new_search');
+    socket.on('next_user', () => {
+        handleDisconnect(socket);
+        socket.emit('re-search');
     });
 
-    const disconnectPartner = (sock) => {
-        const myChat = activeChats.get(sock.id);
-        if (myChat) {
-            const pId = myChat.partnerId;
-            const rId = myChat.roomId;
+    socket.on('leave_chat', () => {
+        handleDisconnect(socket);
+        socket.emit('to_lobby');
+    });
 
+    const handleDisconnect = (sock) => {
+        const chat = activeChats.get(sock.id);
+        if (chat) {
+            const pId = chat.partnerId;
+            const rId = chat.roomId;
             io.to(pId).emit('partner_left');
 
             const pSock = io.sockets.sockets.get(pId);
@@ -151,21 +132,23 @@ io.on('connection', (socket) => {
 
             activeChats.delete(sock.id);
             activeChats.delete(pId);
-            revealRequests.delete(rId);
+            revealStatus.delete(rId);
         }
-        // Always remove from waiting list on any exit
-        const idx = waitingList.indexOf(sock.id);
-        if (idx > -1) waitingList.splice(idx, 1);
+        // Remove from all queues
+        Object.keys(queues).forEach(r => {
+            const idx = queues[r].indexOf(sock.id);
+            if (idx > -1) queues[r].splice(idx, 1);
+        });
     };
 
     socket.on('disconnect', () => {
-        disconnectPartner(socket);
+        handleDisconnect(socket);
         users.delete(socket.id);
-        console.log(`[DISC] ${socket.id}`);
+        console.log(`[-] Disconnected: ${socket.id}`);
     });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+    console.log(`Server live on ${PORT}`);
 });
