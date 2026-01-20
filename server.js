@@ -6,7 +6,8 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    cors: { origin: "*", methods: ["GET", "POST"] },
+    pingTimeout: 60000,
 });
 
 app.use(express.static(__dirname));
@@ -15,7 +16,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Data persistence
+// Data stores
 const users = new Map(); // socket.id -> profile
 const queues = {
     'az': [],
@@ -26,57 +27,65 @@ const queues = {
 const activeChats = new Map(); // socket.id -> { partnerId, roomId }
 const revealStatus = new Map(); // roomId -> { id1: bool, id2: bool }
 
+// Track online stats
+let onlineCount = 0;
+
 io.on('connection', (socket) => {
-    console.log(`[+] Connected: ${socket.id}`);
+    onlineCount++;
+    console.log(`[+] User connected: ${socket.id} (Online: ${onlineCount})`);
+    io.emit('online_stats', { count: onlineCount });
 
     socket.on('register_user', (profile) => {
         users.set(socket.id, { ...profile, socketId: socket.id });
+        console.log(`[REG] Profile registered for ${socket.id}: ${profile.name}`);
     });
 
     socket.on('start_matchmaking', (region) => {
-        const user = users.get(socket.id);
-        if (!user || !queues[region]) return;
+        console.log(`[TRY] ${socket.id} looking for match in ${region}`);
 
-        // Clean up from all queues first
+        // Safety check - remove from any existing queues
         Object.keys(queues).forEach(r => {
-            const idx = queues[r].indexOf(socket.id);
-            if (idx > -1) queues[r].splice(idx, 1);
+            queues[r] = queues[r].filter(id => id !== socket.id);
         });
 
-        // Try to find a partner
-        if (queues[region].length > 0) {
-            const partnerId = queues[region].shift();
-            const partnerSocket = io.sockets.sockets.get(partnerId);
-
-            if (partnerSocket && partnerSocket.id !== socket.id) {
-                const roomId = `room_${socket.id}_${partnerId}`;
-                socket.join(roomId);
-                partnerSocket.join(roomId);
-
-                activeChats.set(socket.id, { partnerId, roomId });
-                activeChats.set(partnerId, { partnerId: socket.id, roomId });
-                revealStatus.set(roomId, { [socket.id]: false, [partnerId]: false });
-
-                io.to(roomId).emit('match_found');
-                console.log(`[Match] ${socket.id} & ${partnerId} in ${region}`);
-            } else {
-                // Partner gone or self, try again or add to queue
-                queues[region].push(socket.id);
-                socket.emit('waiting');
+        // 1. Try to find a valid partner in the same region
+        let partnerId = null;
+        while (queues[region].length > 0) {
+            const potentialPartnerId = queues[region].shift();
+            // Check if partner is still connected
+            if (io.sockets.sockets.has(potentialPartnerId) && potentialPartnerId !== socket.id) {
+                partnerId = potentialPartnerId;
+                break;
             }
+        }
+
+        if (partnerId) {
+            // Match success!
+            const partnerSocket = io.sockets.sockets.get(partnerId);
+            const roomId = `room_${socket.id}_${partnerId}`;
+
+            socket.join(roomId);
+            partnerSocket.join(roomId);
+
+            activeChats.set(socket.id, { partnerId, roomId });
+            activeChats.set(partnerId, { partnerId: socket.id, roomId });
+            revealStatus.set(roomId, { [socket.id]: false, [partnerId]: false });
+
+            io.to(roomId).emit('match_found');
+            console.log(`[MATCH] Success: ${socket.id} <-> ${partnerId} (Region: ${region})`);
         } else {
-            // Queue empty, add self
+            // No partner, add self to queue
             queues[region].push(socket.id);
             socket.emit('waiting');
-            console.log(`[Queue] ${socket.id} added to ${region}`);
+            console.log(`[QUEUE] ${socket.id} is now waiting in ${region}`);
         }
     });
 
     socket.on('stop_matchmaking', () => {
         Object.keys(queues).forEach(r => {
-            const idx = queues[r].indexOf(socket.id);
-            if (idx > -1) queues[r].splice(idx, 1);
+            queues[r] = queues[r].filter(id => id !== socket.id);
         });
+        console.log(`[STOP] ${socket.id} stopped searching`);
     });
 
     socket.on('send_msg', (text) => {
@@ -112,6 +121,7 @@ io.on('connection', (socket) => {
     socket.on('next_user', () => {
         handleDisconnect(socket);
         socket.emit('ready_for_next');
+        console.log(`[NEXT] ${socket.id} looking for someone new`);
     });
 
     socket.on('leave_chat', () => {
@@ -125,7 +135,7 @@ io.on('connection', (socket) => {
             const pId = chat.partnerId;
             const rId = chat.roomId;
 
-            io.to(pId).emit('partner_left'); // Notify partner
+            io.to(pId).emit('partner_left');
 
             const pSock = io.sockets.sockets.get(pId);
             if (pSock) pSock.leave(rId);
@@ -135,21 +145,23 @@ io.on('connection', (socket) => {
             activeChats.delete(pId);
             revealStatus.delete(rId);
         }
-        // Remove from all queues
+
+        // Cleanup queues
         Object.keys(queues).forEach(r => {
-            const idx = queues[r].indexOf(sock.id);
-            if (idx > -1) queues[r].splice(idx, 1);
+            queues[r] = queues[r].filter(id => id !== sock.id);
         });
     };
 
     socket.on('disconnect', () => {
         handleDisconnect(socket);
         users.delete(socket.id);
-        console.log(`[-] Disconnected: ${socket.id}`);
+        onlineCount--;
+        io.emit('online_stats', { count: Math.max(0, onlineCount) });
+        console.log(`[-] User disconnected: ${socket.id}`);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server live on ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server live on port ${PORT}`);
 });
