@@ -4,313 +4,821 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>Among Us - Mobil</title>
-    <link rel="stylesheet" href="style.css">
+    <title>RandomChat - Match & Chat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF4B6B;
+            --primary-dark: #E03554;
+            --accent: #FF8F6B;
+            --bg: #0F0F13;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #FFFFFF;
+            --text-dim: #A0A0B0;
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 5px solid var(--card-bg);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Welcome / Config Screen */
+        .screen {
+            flex: 1;
+            display: none;
+            padding: 20px;
+            padding-top: calc(20px + var(--safe-area-top));
+            padding-bottom: calc(20px + var(--safe-area-bottom));
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 25px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: var(--text-dim);
+            margin-bottom: 15px;
+        }
+
+        .selection-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .select-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .select-btn i {
+            font-size: 2rem;
+        }
+
+        .select-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(255, 75, 107, 0.3);
+            transform: scale(1.05);
+        }
+
+        .main-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 30px;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(255, 75, 107, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .main-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Matching Screen */
+        .matching-anim {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .pulse {
+            position: absolute;
+            inset: 0;
+            background: var(--primary);
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: pulse 2s infinite;
+        }
+
+        .pulse:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .pulse:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        .user-photo-large {
+            position: absolute;
+            inset: 20px;
+            background: #222;
+            border-radius: 50%;
+            z-index: 10;
+            overflow: hidden;
+            border: 4px solid var(--primary);
+        }
+
+        .user-photo-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        /* Chat Screen */
+        #chat-screen {
+            padding: 0;
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #chat-screen.active {
+            display: flex;
+        }
+
+        .chat-header {
+            padding: calc(15px + var(--safe-area-top)) 20px 15px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .partner-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #333;
+            overflow: hidden;
+            transition: filter 0.5s ease;
+        }
+
+        .partner-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .partner-avatar.blurred {
+            filter: blur(8px);
+        }
+
+        .partner-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .partner-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .partner-status {
+            font-size: 0.8rem;
+            color: #4ade80;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            animation: fadeInMsg 0.3s ease forwards;
+            position: relative;
+        }
+
+        @keyframes fadeInMsg {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg.received {
+            align-self: flex-start;
+            background: var(--card-bg);
+            border-bottom-left-radius: 5px;
+        }
+
+        .msg.sent {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .msg-time {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 5px;
+            display: block;
+            text-align: right;
+        }
+
+        .chat-input-area {
+            padding: 15px 20px calc(15px + var(--safe-area-bottom));
+            background: var(--bg);
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .send-btn {
+            width: 45px;
+            height: 45px;
+            background: var(--primary);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Reveal Notification */
+        #reveal-toast {
+            position: fixed;
+            top: calc(85px + var(--safe-area-top));
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #FF8F6B, #FF4B6B);
+            border-radius: 15px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-150%);
+            transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            z-index: 200;
+        }
+
+        #reveal-toast.active {
+            transform: translateY(0);
+        }
+
+        /* Action Buttons Wrapper */
+        .action-btns {
+            position: absolute;
+            bottom: calc(85px + var(--safe-area-bottom));
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 0 20px;
+            z-index: 50;
+        }
+
+        .circle-action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .circle-action-btn:active {
+            transform: scale(0.9);
+        }
+
+        .circle-action-btn.reveal {
+            background: #4ade80;
+            color: #000;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-align: center;
+            line-height: 1;
+            border-color: #4ade80;
+        }
+
+        .circle-action-btn.next {
+            background: #6366f1;
+            color: white;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        .circle-action-btn.leave {
+            background: #f87171;
+            color: white;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        /* Profile Modal Reveal */
+        .reveal-data {
+            display: none;
+            margin-top: 5px;
+        }
+
+        .reveal-data.visible {
+            display: block;
+        }
+
+        .tg-link {
+            color: #5bc0de;
+            text-decoration: none;
+            font-size: 0.8rem;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Custom Selector for Countries/Cities */
+        #location-screen .select-btn {
+            padding: 12px;
+        }
+
+        .location-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .loc-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .loc-item:active {
+            background: var(--primary);
+        }
+    </style>
 </head>
 
 <body>
-    <!-- Loading Screen -->
+
     <div id="loading-screen">
-        <div class="loading-content">
-            <div class="loading-logo">
-                <div class="crewmate-loading"></div>
+        <div class="logo">RandomChat</div>
+        <div class="loader"></div>
+        <p style="margin-top: 20px;">Bağlanıyor...</p>
+    </div>
+
+    <!-- Gender Selection -->
+    <div id="gender-screen" class="screen">
+        <div class="logo">RandomChat</div>
+        <div class="card">
+            <h2>Hoşgeldin!</h2>
+            <p>Eşleşmeye başlamadan önce cinsiyetini seç.</p>
+            <div class="selection-grid">
+                <div class="select-btn" onclick="selectGender('male', this)">
+                    <span style="font-size: 2.5rem;">👨</span>
+                    <span>Erkek</span>
+                </div>
+                <div class="select-btn" onclick="selectGender('female', this)">
+                    <span style="font-size: 2.5rem;">👩</span>
+                    <span>Kadın</span>
+                </div>
             </div>
-            <div class="loading-text" id="loading-text">Yükleniyor...</div>
-            <div class="loading-status" id="loading-status">Sunucuya bağlanıyor...</div>
-            <div class="loading-bar">
-                <div class="loading-progress"></div>
-            </div>
-            <button id="loading-retry-btn" class="btn btn-primary" style="display: none; margin-top: 20px;">Tekrar
-                Dene</button>
+            <button class="main-btn" onclick="goToLocation()">Devam Et</button>
         </div>
     </div>
 
-    <!-- Main Menu -->
-    <div id="main-menu" class="screen hidden">
-        <div class="main-menu-bg">
-            <!-- User Name at Top -->
-            <div class="welcome-section">
-                <div class="welcome-text">Hoş Geldin</div>
-                <div id="user-name-display" class="user-name-display">Guest</div>
+    <!-- Location Selection -->
+    <div id="location-screen" class="screen">
+        <div class="card" id="country-view">
+            <h2>Ülke Seç</h2>
+            <p>Hangi ülkeden birileriyle tanışmak istersin?</p>
+            <div class="location-list">
+                <div class="loc-item" onclick="selectCountry('Azerbaycan')">🇦🇿 Azerbaycan</div>
+                <div class="loc-item" onclick="selectCountry('Türkiye')">🇹🇷 Türkiye</div>
+                <div class="loc-item" onclick="selectCountry('Diğer')">🌍 Diğer (Tümü)</div>
             </div>
-
-            <!-- Game Title -->
-            <h1 class="game-title-main">AMONG US</h1>
-
-            <!-- Main Buttons -->
-            <div class="main-menu-buttons">
-                <button class="btn-main btn-main-primary" id="btn-quick-match">
-                    <div class="btn-main-icon">🎮</div>
-                    <div class="btn-main-text">Rastgele Oyna</div>
-                </button>
-
-                <button class="btn-main btn-main-secondary" id="btn-join-room">
-                    <div class="btn-main-icon">🏠</div>
-                    <div class="btn-main-text">Odalar</div>
-                </button>
-
-                <button class="btn-main btn-main-tertiary" id="btn-create-room">
-                    <div class="btn-main-icon">➕</div>
-                    <div class="btn-main-text">Oda Kur</div>
-                </button>
+        </div>
+        <div class="card" id="city-view" style="display: none;">
+            <h2 id="city-title">Şehir Seç</h2>
+            <p>Hangi şehirden eşleşelim?</p>
+            <div class="location-list" id="city-list">
+                <!-- Cities injected here -->
             </div>
-
-            <!-- Online Count -->
-            <div class="online-status">
-                <span class="status-indicator"></span>
-                <span id="online-players">0</span> Oyuncu Çevrimiçi
-            </div>
+            <button class="main-btn"
+                style="background: var(--card-bg); color: white; margin-top:15px; font-size: 0.9rem;"
+                onclick="backToCountry()">← Geri</button>
         </div>
     </div>
 
-    <!-- Create Room Screen -->
-    <div id="create-room-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-back-from-create">←</button>
-            <h2>Oda Oluştur</h2>
-        </div>
-
-        <div class="room-settings">
-            <div class="setting-group">
-                <label>Oda Adı</label>
-                <input type="text" id="room-name" placeholder="Oda adını girin" maxlength="20">
-            </div>
-
-            <div class="setting-group">
-                <label>Şifre (İsteğe Bağlı)</label>
-                <input type="password" id="room-password" placeholder="Şifre belirleyin">
-            </div>
-
-            <div class="setting-group">
-                <label>Maksimum Oyuncu: <span id="max-players-value">10</span></label>
-                <input type="range" id="max-players" min="3" max="10" value="10">
-            </div>
-
-            <div class="setting-group">
-                <label>İmposter Sayısı: <span id="imposter-count-value">2</span></label>
-                <input type="range" id="imposter-count" min="1" max="3" value="2">
-            </div>
-
-            <div class="setting-group">
-                <label>Polis Sayısı: <span id="police-count-value">1</span></label>
-                <input type="range" id="police-count" min="0" max="2" value="1">
-            </div>
-
-            <div class="setting-group">
-                <label>Görev Sayısı: <span id="task-count-value">5</span></label>
-                <input type="range" id="task-count" min="3" max="10" value="5">
-            </div>
-
-            <div class="setting-group">
-                <label>Acil Toplantı Sayısı: <span id="emergency-count-value">1</span></label>
-                <input type="range" id="emergency-count" min="0" max="3" value="1">
-            </div>
-
-            <div class="setting-group">
-                <label>Tartışma Süresi (sn): <span id="discussion-time-value">45</span></label>
-                <input type="range" id="discussion-time" min="15" max="120" step="15" value="45">
-            </div>
-
-            <div class="setting-group">
-                <label>Oylama Süresi (sn): <span id="voting-time-value">60</span></label>
-                <input type="range" id="voting-time" min="30" max="120" step="15" value="60">
+    <!-- Matching Screen -->
+    <div id="matching-screen" class="screen">
+        <div class="matching-anim">
+            <div class="pulse"></div>
+            <div class="pulse"></div>
+            <div class="pulse"></div>
+            <div class="user-photo-large">
+                <img id="my-profile-pic" src="https://via.placeholder.com/150" alt="Me">
             </div>
         </div>
-
-        <button class="btn btn-primary btn-large" id="btn-create-room-confirm">
-            Oda Oluştur
-        </button>
+        <h2>Eşleşme Aranıyor...</h2>
+        <p>Senin için en uygun aday aranıyor.</p>
+        <button class="main-btn" style="background: #333; margin-top: 50px;" onclick="cancelSearch()">Vazgeç</button>
     </div>
 
-    <!-- Join Room Screen -->
-    <div id="join-room-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-back-from-join">←</button>
-            <h2>Odaya Katıl</h2>
-        </div>
-
-        <div class="room-list" id="room-list">
-            <!-- Rooms will be dynamically added here -->
-        </div>
-    </div>
-
-    <!-- Room Lobby Screen -->
-    <div id="room-lobby-screen" class="screen hidden">
-        <div class="screen-header">
-            <button class="btn-back" id="btn-leave-room">←</button>
-            <h2 id="lobby-room-name">Oda</h2>
-        </div>
-
-        <div class="lobby-info">
-            <div class="lobby-code">
-                Kod: <span id="lobby-code">XXXXXX</span>
+    <!-- Chat Screen -->
+    <div id="chat-screen">
+        <div class="chat-header">
+            <div class="partner-avatar blurred" id="p-avatar-wrap">
+                <img id="partner-photo" src="https://via.placeholder.com/50" alt="Partner">
             </div>
-            <div class="lobby-settings-summary" id="lobby-settings">
-                <!-- Settings summary -->
+            <div class="partner-info">
+                <div class="partner-name" id="partner-name">Anonim</div>
+                <div class="partner-status" id="partner-status">Çevrimiçi</div>
+                <div class="reveal-data" id="partner-reveal-data">
+                    <a href="#" id="tg-link" class="tg-link" target="_blank">Telegram Profili</a>
+                </div>
             </div>
         </div>
 
-        <div class="players-grid" id="players-grid">
-            <!-- Players will be dynamically added here -->
+        <div id="reveal-toast">Partnerin profilini sana açmak istiyor, sende istiyorsan dokun!</div>
+
+        <div class="chat-messages" id="chat-msgs">
+            <div class="msg received">Merhaba! Selamlaşmaya ne dersin?</div>
         </div>
 
-        <div class="lobby-footer">
-            <div class="ready-status" id="ready-status">
-                <span id="ready-count">0</span>/<span id="total-count">10</span> Hazır
-            </div>
-            <button class="btn btn-primary btn-large" id="btn-ready">
-                Hazır
-            </button>
-            <button class="btn btn-success btn-large hidden" id="btn-start-game">
-                Oyunu Başlat
+        <div class="action-btns" id="chat-actions">
+            <button class="circle-action-btn leave" onclick="leaveChat()">KAPAT</button>
+            <button class="circle-action-btn reveal" id="reveal-btn" onclick="requestReveal()">EŞLEŞDİK</button>
+            <button class="circle-action-btn next" onclick="nextMatch()">NEXT</button>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chat-input" placeholder="Mesaj yaz..."
+                onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
             </button>
         </div>
     </div>
 
-    <!-- Game Screen -->
-    <div id="game-screen" class="screen hidden">
-        <!-- Role Reveal -->
-        <div id="role-reveal" class="role-reveal hidden">
-            <div class="role-content">
-                <h2 id="role-title">Rolün</h2>
-                <div id="role-icon" class="role-icon"></div>
-                <p id="role-description"></p>
-            </div>
-        </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
 
-        <!-- Game Canvas -->
-        <canvas id="game-canvas"></canvas>
+        const socket = io();
+        let myData = {
+            id: 'guest_' + Math.floor(Math.random() * 1000000),
+            name: 'Kullanıcı',
+            photo: 'https://via.placeholder.com/150',
+            gender: '',
+            country: '',
+            city: '',
+            username: ''
+        };
 
-        <!-- Game UI Overlay -->
-        <div class="game-ui">
-            <!-- Top Bar -->
-            <div class="top-bar">
-                <div class="alive-count">
-                    <span class="crewmate-icon">👤</span>
-                    <span id="alive-crewmates">8</span>
-                </div>
-                <div class="task-progress">
-                    <div class="task-bar">
-                        <div class="task-fill" id="task-fill"></div>
-                    </div>
-                    <span id="task-text">0/5</span>
-                </div>
-            </div>
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            myData.id = user.id;
+            myData.name = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            myData.username = user.username || '';
+            if (user.photo_url) myData.photo = user.photo_url;
+        }
 
-            <!-- Joystick -->
-            <div class="joystick-container" id="joystick-container">
-                <div class="joystick-base">
-                    <div class="joystick-stick" id="joystick-stick"></div>
-                </div>
-            </div>
+        document.getElementById('my-profile-pic').src = myData.photo;
 
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="action-btn" id="btn-use">
-                    <span>Kullan</span>
-                </button>
-                <button class="action-btn" id="btn-report">
-                    <span>Bildir</span>
-                </button>
-                <button class="action-btn hidden" id="btn-kill">
-                    <span>Öldür</span>
-                </button>
-                <button class="action-btn hidden" id="btn-sabotage">
-                    <span>Sabotaj</span>
-                </button>
-                <button class="action-btn" id="btn-emergency">
-                    <span>Acil</span>
-                </button>
-            </div>
+        let currentScreen = 'gender-screen';
 
-            <!-- Map -->
-            <div class="minimap" id="minimap">
-                <canvas id="minimap-canvas"></canvas>
-            </div>
-        </div>
-    </div>
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('chat-screen').classList.remove('active');
 
-    <!-- Meeting Screen -->
-    <div id="meeting-screen" class="screen hidden">
-        <div class="meeting-header">
-            <h2 id="meeting-title">Acil Toplantı</h2>
-            <div class="meeting-timer" id="meeting-timer">45</div>
-        </div>
+            const target = document.getElementById(id);
+            if (target) target.classList.add('active');
+            currentScreen = id;
 
-        <div class="meeting-body" id="meeting-body">
-            <!-- Dead body info or emergency caller -->
-        </div>
+            if (id === 'loading-screen') {
+                target.style.display = 'flex';
+                target.style.opacity = '1';
+            } else {
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
+            }
+        }
 
-        <div class="players-voting" id="players-voting">
-            <!-- Players for voting -->
-        </div>
+        // Initialize
+        setTimeout(() => {
+            if (localStorage.getItem('user_gender')) {
+                myData.gender = localStorage.getItem('user_gender');
+                showScreen('location-screen');
+            } else {
+                showScreen('gender-screen');
+            }
+        }, 1500);
 
-        <div class="chat-container">
-            <div class="chat-messages" id="chat-messages">
-                <!-- Chat messages -->
-            </div>
-            <div class="chat-input-container">
-                <input type="text" id="chat-input" placeholder="Mesajınızı yazın..." maxlength="100">
-                <button id="btn-send-chat">Gönder</button>
-            </div>
-        </div>
+        function selectGender(g, el) {
+            myData.gender = g;
+            localStorage.setItem('user_gender', g);
+            document.querySelectorAll('#gender-screen .select-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+        }
 
-        <div class="voting-results hidden" id="voting-results">
-            <!-- Voting results -->
-        </div>
-    </div>
+        function goToLocation() {
+            if (!myData.gender) return alert('Lütfen seçim yapın!');
+            showScreen('location-screen');
+        }
 
-    <!-- Game Over Screen -->
-    <div id="game-over-screen" class="screen hidden">
-        <div class="game-over-content">
-            <h1 id="game-over-title">Crewmates Kazandı!</h1>
-            <div id="game-over-reason"></div>
+        const cities = {
+            'Azerbaycan': ['Bakı', 'Sumqayıt', 'Xırdalan', 'Gəncə', 'Mingəçevir', 'Naxçıvan'],
+            'Türkiye': ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Adana']
+        };
 
-            <div class="winners-list" id="winners-list">
-                <!-- Winners -->
-            </div>
+        function selectCountry(c) {
+            if (c === 'Diğer') {
+                myData.country = '';
+                myData.city = '';
+                startSearching();
+                return;
+            }
+            myData.country = c;
+            document.getElementById('country-view').style.display = 'none';
+            document.getElementById('city-view').style.display = 'block';
+            document.getElementById('city-title').innerText = c + ' - Şehir Seç';
 
-            <button class="btn btn-primary btn-large" id="btn-back-to-menu">
-                Ana Menüye Dön
-            </button>
-        </div>
-    </div>
+            const list = document.getElementById('city-list');
+            list.innerHTML = '';
+            cities[c].forEach(city => {
+                const item = document.createElement('div');
+                item.className = 'loc-item';
+                item.innerText = city;
+                item.onclick = () => {
+                    myData.city = city;
+                    startSearching();
+                };
+                list.appendChild(item);
+            });
+        }
 
-    <!-- Password Modal -->
-    <div id="password-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Şifre Gerekli</h3>
-            <input type="password" id="modal-password" placeholder="Şifreyi girin">
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" id="btn-cancel-password">İptal</button>
-                <button class="btn btn-primary" id="btn-submit-password">Katıl</button>
-            </div>
-        </div>
-    </div>
+        function backToCountry() {
+            document.getElementById('country-view').style.display = 'block';
+            document.getElementById('city-view').style.display = 'none';
+        }
 
-    <!-- Freeze Overlay -->
-    <div id="freeze-overlay" class="freeze-overlay hidden">
-        <div class="freeze-content">
-            <div class="freeze-spinner"></div>
-            <h2 id="freeze-title">Bağlantı Kesildi</h2>
-            <p id="freeze-status">Yeniden bağlanılıyor...</p>
-            <button class="btn btn-primary" id="btn-reconnect" style="margin-top: 20px; display: none;">Tekrar
-                Dene</button>
-            <p id="freeze-url" style="font-size: 10px; color: #555; margin-top: 15px; opacity: 0.5;"></p>
-        </div>
-    </div>
+        function startSearching() {
+            showScreen('matching-screen');
+            socket.emit('join_lobby', myData);
+        }
 
-    <!-- Scripts -->
-    <script src="config.js"></script>
-    <script src="telegram.js"></script>
-    <script src="network.js"></script>
-    <script src="game3d.js"></script>
-    <script src="game.js"></script>
-    <script src="ui.js"></script>
-    <script src="main.js"></script>
+        function cancelSearch() {
+            socket.emit('leave_lobby');
+            showScreen('location-screen');
+            backToCountry();
+        }
+
+        // Socket Events
+        socket.on('match_found', (data) => {
+            showScreen('chat-screen');
+            resetChatUI();
+        });
+
+        socket.on('waiting_for_match', () => {
+            console.log('Waiting...');
+        });
+
+        socket.on('new_message', (data) => {
+            const msgs = document.getElementById('chat-msgs');
+            const div = document.createElement('div');
+            div.className = 'msg ' + (data.senderId === socket.id ? 'sent' : 'received');
+            div.innerHTML = `${data.text}<span class="msg-time">${data.time}</span>`;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+        });
+
+        socket.on('reveal_requested_by_partner', () => {
+            const toast = document.getElementById('reveal-toast');
+            toast.classList.add('active');
+            setTimeout(() => toast.classList.remove('active'), 7000);
+        });
+
+        socket.on('reveal_request_sent', () => {
+            document.getElementById('reveal-btn').innerText = 'BEKLENİYOR';
+            document.getElementById('reveal-btn').disabled = true;
+            document.getElementById('reveal-btn').style.opacity = '0.5';
+        });
+
+        socket.on('profiles_revealed', (data) => {
+            const partnerId = Object.keys(data).find(id => id !== socket.id);
+            const partner = data[partnerId];
+
+            document.getElementById('partner-name').innerText = partner.name || 'Anonim';
+            document.getElementById('partner-photo').src = partner.photo;
+            document.getElementById('p-avatar-wrap').classList.remove('blurred');
+
+            const revealData = document.getElementById('partner-reveal-data');
+            revealData.classList.add('visible');
+            const link = document.getElementById('tg-link');
+            if (partner.username) {
+                link.innerText = '@' + partner.username;
+                link.href = 'https://t.me/' + partner.username;
+            } else {
+                link.innerText = 'Profil Bağlantısı';
+                link.href = 'tg://user?id=' + partner.id;
+            }
+
+            document.getElementById('reveal-btn').style.display = 'none';
+            document.getElementById('reveal-toast').classList.remove('active');
+        });
+
+        socket.on('partner_left', () => {
+            alert('Partnerin ayrıldı.');
+            showScreen('location-screen');
+            backToCountry();
+        });
+
+        socket.on('back_to_lobby', () => {
+            showScreen('location-screen');
+            backToCountry();
+        });
+
+        // Chat Actions
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            socket.emit('send_message', { text });
+            input.value = '';
+        }
+
+        function requestReveal() {
+            socket.emit('request_reveal');
+        }
+
+        function nextMatch() {
+            if (confirm('Bu sohbeti kapatıp yeni bir eşleşme aramak istiyor musun?')) {
+                socket.emit('next_match');
+                showScreen('matching-screen');
+            }
+        }
+
+        function leaveChat() {
+            if (confirm('Sohbetten çıkmak istiyor musun?')) {
+                socket.emit('leave_chat');
+            }
+        }
+
+        function resetChatUI() {
+            document.getElementById('chat-msgs').innerHTML = '<div class="msg received">Sohbet başladı! Bol şans.</div>';
+            document.getElementById('partner-name').innerText = 'Anonim';
+            document.getElementById('partner-photo').src = 'https://via.placeholder.com/50';
+            document.getElementById('p-avatar-wrap').classList.add('blurred');
+            document.getElementById('partner-reveal-data').classList.remove('visible');
+            document.getElementById('reveal-btn').innerText = 'EŞLEŞDİK';
+            document.getElementById('reveal-btn').style.display = 'flex';
+            document.getElementById('reveal-btn').disabled = false;
+            document.getElementById('reveal-btn').style.opacity = '1';
+            document.getElementById('reveal-toast').classList.remove('active');
+        }
+
+    </script>
 </body>
 
 </html>
