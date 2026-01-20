@@ -39,7 +39,7 @@ class NetworkManager {
 
                 this.ws.onerror = (error) => {
                     console.error('WebSocket error:', error);
-                    // reject(error); // Don't reject to keep trying
+                    reject(error);
                 };
 
                 this.ws.onclose = () => {
