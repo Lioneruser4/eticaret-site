@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Match.io | Anonim Chat</title>
+    <title>Match Pro | Telegram Anonim Chat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <link
@@ -12,8 +12,8 @@
         rel="stylesheet">
     <style>
         :root {
-            --tinder: #fd297b;
-            --tinder-gradient: linear-gradient(135deg, #fd297b 0%, #ff5864 50%, #ff6b6b 100%);
+            --tinder: #FD297B;
+            --tinder-gradient: linear-gradient(135deg, #FD297B 0%, #FF5864 50%, #FF6B6B 100%);
             --bg: #000000;
             --card: #141414;
             --text: #ffffff;
@@ -41,13 +41,28 @@
             flex-direction: column;
         }
 
+        /* Status UI */
+        #conn-status {
+            position: fixed;
+            top: var(--safe-top);
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #4ade80;
+            z-index: 9999;
+            padding: 2px;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
         .screen {
             position: absolute;
             inset: 0;
             display: none;
             flex-direction: column;
             padding: 20px;
-            padding-top: calc(20px + var(--safe-top));
+            padding-top: calc(30px + var(--safe-top));
             padding-bottom: calc(20px + var(--safe-bottom));
             background: var(--bg);
             z-index: 10;
@@ -55,30 +70,28 @@
 
         .screen.active {
             display: flex;
-            animation: slideIn 0.3s ease-out;
+            animation: slideUp 0.3s ease-out;
         }
 
-        @keyframes slideIn {
+        @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: scale(1.05);
+                transform: translateY(20px);
             }
 
             to {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0);
             }
         }
 
-        /* Elements */
-        .logo-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        /* Branding */
+        .logo-area {
+            text-align: center;
             margin-bottom: 40px;
         }
 
-        .header-logo {
+        .logo {
             font-family: 'Playfair Display', serif;
             font-size: 4.5rem;
             font-style: italic;
@@ -88,18 +101,18 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .online-badge {
-            background: rgba(74, 222, 128, 0.15);
-            color: #4ade80;
-            padding: 4px 12px;
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
             font-weight: 700;
-            border: 1px solid rgba(74, 222, 128, 0.3);
+            font-size: 0.8rem;
+            color: #4ade80;
             margin-top: -10px;
         }
 
-        .btn-main {
+        .btn-p {
             background: var(--tinder-gradient);
             color: white;
             border: none;
@@ -107,144 +120,131 @@
             border-radius: 50px;
             font-size: 1.1rem;
             font-weight: 800;
-            text-transform: uppercase;
             width: 100%;
-            box-shadow: 0 8px 25px rgba(253, 41, 123, 0.3);
+            text-transform: uppercase;
+            box-shadow: 0 10px 20px rgba(253, 41, 123, 0.3);
             margin-top: auto;
         }
 
-        .btn-main:active {
+        .btn-p:active {
             transform: scale(0.96);
-            opacity: 0.9;
         }
 
         /* Region */
-        .title {
-            font-size: 2.3rem;
-            font-weight: 800;
-            margin-bottom: 25px;
-            line-height: 1.1;
-            text-align: center;
-        }
-
-        .region-grid {
+        .grid-v {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
 
-        .region-btn {
+        .item-row {
             background: var(--card);
             border: 2px solid transparent;
             padding: 22px;
             border-radius: 20px;
-            font-size: 1.2rem;
-            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 20px;
-            transition: 0.2s;
+            font-weight: 700;
+            font-size: 1.2rem;
         }
 
-        .region-btn.selected {
+        .item-row.selected {
             border-color: var(--tinder);
             background: rgba(253, 41, 123, 0.08);
         }
 
-        .flag {
+        .flag-icon {
             font-size: 2rem;
         }
 
         /* Searching */
-        #searching {
+        #searching-screen {
             justify-content: center;
             align-items: center;
             text-align: center;
         }
 
-        .avatar-box {
-            width: 150px;
-            height: 150px;
+        .radar-box {
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
             background: var(--tinder-gradient);
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             margin-bottom: 50px;
         }
 
-        .avatar-box img {
+        .radar-box img {
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            border: 4px solid white;
+            border: 4px solid #000;
             object-fit: cover;
         }
 
-        .waves {
+        .pulse-layer {
             position: absolute;
             inset: 0;
             border: 3px solid var(--tinder);
             border-radius: 50%;
-            animation: wave-anim 2s infinite ease-out;
+            animation: pulse-fx 2s infinite linear;
             opacity: 0;
         }
 
-        .waves:nth-child(2) {
+        .pulse-layer:nth-child(2) {
             animation-delay: 0.6s;
         }
 
-        .waves:nth-child(3) {
+        .pulse-layer:nth-child(3) {
             animation-delay: 1.2s;
         }
 
-        @keyframes wave-anim {
+        @keyframes pulse-fx {
             0% {
                 transform: scale(1);
                 opacity: 0.8;
             }
 
             100% {
-                transform: scale(3.5);
+                transform: scale(4);
                 opacity: 0;
             }
         }
 
         /* Chat */
-        #chat {
+        #chat-screen {
             padding: 0;
         }
 
-        .chat-header {
+        .chat-h {
             padding: calc(15px + var(--safe-top)) 20px 15px;
-            background: #111;
+            background: #000;
             display: flex;
             align-items: center;
             gap: 15px;
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid #1a1a1a;
         }
 
-        .p-av {
-            width: 45px;
-            height: 45px;
+        .p-av-wrap {
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            background: #333;
+            background: #222;
             overflow: hidden;
             position: relative;
         }
 
-        .p-av.blurry img {
+        .p-av-wrap.blurred img {
             filter: blur(15px);
         }
 
-        .p-av img {
+        .p-av-wrap img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .chat-msgs {
+        .chat-b {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
@@ -253,16 +253,16 @@
             gap: 10px;
         }
 
-        .msg {
+        .msg-b {
             max-width: 80%;
             padding: 12px 18px;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             line-height: 1.4;
-            animation: pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            animation: msg-in 0.3s ease-out;
         }
 
-        @keyframes pop {
+        @keyframes msg-in {
             from {
                 transform: scale(0.8);
                 opacity: 0;
@@ -274,74 +274,72 @@
             }
         }
 
-        .msg.p {
+        .msg-b.p {
             background: var(--card);
             border-bottom-left-radius: 4px;
             align-self: flex-start;
         }
 
-        .msg.me {
+        .msg-b.me {
             background: var(--tinder-gradient);
             border-bottom-right-radius: 4px;
             align-self: flex-end;
         }
 
-        .chat-footer {
+        .chat-f {
             padding: 10px 20px calc(15px + var(--safe-bottom));
             background: #000;
-            border-top: 1px solid #222;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            border-top: 1px solid #1a1a1a;
         }
 
-        .actions {
+        .acts {
             display: flex;
             justify-content: space-around;
+            margin-bottom: 15px;
         }
 
-        .action-btn {
-            width: 58px;
-            height: 58px;
+        .circ-btn {
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             border: none;
+            background: var(--card);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            background: var(--card);
+            font-size: 1.4rem;
         }
 
-        .btn-red {
-            color: #FF4444;
-            border: 2px solid #FF4444;
+        .btn-x {
+            color: #ff4444;
+            border: 2px solid #ff4444;
         }
 
-        .btn-blue {
-            color: #2196F3;
-            border: 2px solid #2196F3;
-        }
-
-        .btn-reve {
+        .btn-ok {
             flex: 1;
             margin: 0 15px;
+            border-radius: 30px;
             background: var(--tinder-gradient);
             color: white;
-            font-weight: 900;
-            border-radius: 30px;
-            font-size: 0.9rem;
+            font-weight: 800;
             text-transform: uppercase;
+            font-size: 0.9rem;
         }
 
-        .input-box {
+        .btn-star {
+            color: #2196f3;
+            border: 2px solid #2196f3;
+        }
+
+        .ipt-row {
             display: flex;
             gap: 10px;
             background: var(--card);
             border-radius: 50px;
-            padding: 6px 6px 6px 20px;
+            padding: 5px 5px 5px 20px;
         }
 
-        .input-box input {
+        .ipt-row input {
             flex: 1;
             background: transparent;
             border: none;
@@ -350,58 +348,47 @@
             font-size: 1rem;
         }
 
-        .btn-send {
+        .btn-go {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            border: none;
             background: var(--tinder-gradient);
+            border: none;
             color: white;
         }
 
         /* Overlays */
-        .overlay {
+        .overlay-fx {
             position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0.95);
-            z-index: 100;
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 40px;
             text-align: center;
+            z-index: 100;
         }
 
-        .overlay.active {
+        .overlay-fx.active {
             display: flex;
-            animation: fadeIn 0.3s ease;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        .m-modal {
+        .match-m {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.98);
-            z-index: 5000;
+            z-index: 9999;
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 40px;
             text-align: center;
+            padding: 40px;
         }
 
-        .m-card {
+        .match-c {
             background: var(--card);
             padding: 30px;
             border-radius: 30px;
@@ -410,25 +397,25 @@
             max-width: 320px;
         }
 
-        .m-img {
-            width: 160px;
-            height: 160px;
+        .match-i {
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
-            border: 5px solid var(--tinder);
+            border: 4px solid var(--tinder);
             margin-bottom: 20px;
             object-fit: cover;
         }
 
-        .m-link {
+        .match-l {
             display: block;
             margin-top: 15px;
-            color: #2196F3;
+            color: #2196f3;
             font-weight: 800;
             text-decoration: none;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
         }
 
-        #toast {
+        #toast-msg {
             position: fixed;
             top: calc(20px + var(--safe-top));
             left: 20px;
@@ -441,10 +428,10 @@
             text-align: center;
             z-index: 1000;
             transform: translateY(-200%);
-            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            transition: 0.4s;
         }
 
-        #toast.active {
+        #toast-msg.active {
             transform: translateY(0);
         }
     </style>
@@ -452,203 +439,226 @@
 
 <body>
 
+    <div id="conn-status">Bağlantı Kuruluyor...</div>
+
     <!-- 1. LANDING -->
-    <div id="landing" class="screen active">
-        <div class="logo-box">
-            <div class="header-logo">Tinder</div>
-            <div class="online-badge" id="online-text">0 Çevrimiçi</div>
+    <div id="landing-screen" class="screen active">
+        <div class="logo-area">
+            <div class="logo">Tinder</div>
+            <div class="badge" id="online-count">0 Çevrimiçi</div>
         </div>
-        <h2 class="title" style="margin-bottom: 40px;">Bölgendeki İnsanlarla <br>Anonim Tanış!</h2>
-        <div class="region-grid">
-            <div class="region-btn" id="reg-az" onclick="selectReg('az', this)"><span class="flag">🇦🇿</span>
+        <h1 style="text-align: center; font-size: 2.2rem; margin-bottom: 30px;">Anonim Olarak <br>Tanışmaya Başla!</h1>
+        <div class="grid-v">
+            <div class="item-row" id="reg-az" onclick="setReg('az', this)"><span class="flag-icon">🇦🇿</span>
                 Azerbaycan</div>
-            <div class="region-btn" id="reg-tr" onclick="selectReg('tr', this)"><span class="flag">🇹🇷</span> Türkiye
+            <div class="item-row" id="reg-tr" onclick="setReg('tr', this)"><span class="flag-icon">🇹🇷</span> Türkiye
             </div>
-            <div class="region-btn" id="reg-ru" onclick="selectReg('ru', this)"><span class="flag">🇷🇺</span> Rusya
+            <div class="item-row" id="reg-ru" onclick="setReg('ru', this)"><span class="flag-icon">🇷🇺</span> Rusya
             </div>
-            <div class="region-btn" id="reg-us" onclick="selectReg('us', this)"><span class="flag">🇺🇸</span> Amerika
+            <div class="item-row" id="reg-us" onclick="setReg('us', this)"><span class="flag-icon">🇺🇸</span> Amerika
             </div>
         </div>
-        <button class="btn-main" onclick="goSearching()">Sohbeti Başlat</button>
+        <button class="btn-p" onclick="goSearch()">Sohbeti Başlat</button>
     </div>
 
     <!-- 2. SEARCHING -->
-    <div id="searching" class="screen">
-        <div class="avatar-box">
-            <div class="waves"></div>
-            <div class="waves"></div>
-            <div class="waves"></div>
-            <img id="my-av" src="">
+    <div id="searching-screen" class="screen">
+        <div class="radar-box">
+            <div class="pulse-layer"></div>
+            <div class="pulse-layer"></div>
+            <div class="pulse-layer"></div>
+            <img id="my-av-img" src="">
         </div>
-        <h2 class="title" style="font-size: 1.8rem;">Eşleşme Bekleniyor...</h2>
+        <h2 style="font-size: 1.8rem;">Eşleşme Aranıyor...</h2>
         <p style="color:var(--gray); margin-bottom: 40px;">Kriterlerine en uygun kullanıcı aranıyor.</p>
-        <button class="btn-main" style="background: #222; width: 150px; font-size: 0.9rem;"
-            onclick="stopMatch()">İPTAL</button>
+        <button class="btn-p" style="background: #222; width: 160px; font-size: 0.9rem;" onclick="stopMatch()">İPTAL
+            ET</button>
     </div>
 
     <!-- 3. CHAT -->
-    <div id="chat" class="screen">
-        <div class="chat-header">
-            <div class="p-av blurry" id="p-av-wrap"><img id="p-img" src=""></div>
+    <div id="chat-screen" class="screen">
+        <div class="chat-h">
+            <div class="p-av-wrap blurred" id="p-av-box"><img id="p-img-src" src=""></div>
             <div>
-                <h3 id="p-nick" style="font-weight: 800;">Anonim Partner</h3>
-                <p style="font-size: 0.75rem; color: #4ade80;">Çevrimiçi</p>
+                <h3 id="p-nick-name" style="font-weight: 800;">Anonim Partner</h3>
+                <p style="font-size:0.75rem; color:#4ade80;">Çevrimiçi</p>
             </div>
         </div>
 
-        <div id="toast">Partnerin profilini açmak istiyor!</div>
+        <div id="toast-msg">Partnerin profilini açmak istiyor!</div>
 
-        <div class="chat-msgs" id="chat-msgs-box">
-            <div class="msg p">Harika! Birini bulduk. Sohbete başla. 👋</div>
+        <div class="chat-b" id="chat-msgs-flow">
+            <div class="msg-b p">Sohbet başladı! Bol şanslar. 👋</div>
         </div>
 
-        <div class="chat-footer">
-            <div class="actions">
-                <button class="action-btn btn-red" onclick="cfLeave()">✖</button>
-                <button class="action-btn btn-reve" id="reve-btn" onclick="socket.emit('request_reveal')">Eşleşdik
-                    (Kamera Aç)</button>
-                <button class="action-btn btn-blue" onclick="cfNext()">⭐</button>
+        <div class="chat-f">
+            <div class="acts">
+                <button class="circ-btn btn-x" onclick="leaveChat()">✖</button>
+                <button class="circ-btn btn-ok" id="btn-reveal-now"
+                    onclick="socket.emit('reveal_request')">EŞLEŞDİK</button>
+                <button class="circ-btn btn-star" onclick="nextMatch()">⭐</button>
             </div>
-            <div class="input-box">
-                <input type="text" id="m-input" placeholder="Mesajını yaz..."
+            <div class="ipt-row">
+                <input type="text" id="ipt-msg" placeholder="Mesajını yaz..."
                     onkeypress="if(event.key==='Enter') send()">
-                <button class="btn-send" onclick="send()">➤</button>
+                <button class="btn-go" onclick="send()">➤</button>
             </div>
         </div>
 
-        <div id="end-panel" class="overlay">
+        <div id="end-overlay" class="overlay-fx">
             <h2 style="font-size: 2.5rem; font-weight: 800; color: var(--tinder); margin-bottom: 10px;">Sohbet Bitti!
             </h2>
             <p style="color: var(--gray); margin-bottom: 40px;">Partnerin ayrıldı veya bağlantı koptu.</p>
             <div style="width: 100%; display: flex; gap: 15px;">
-                <button class="btn-main" style="background:#222; margin-top:0" onclick="toHome()">DURDUR</button>
-                <button class="btn-main" style="margin-top:0" onclick="nextQuick()">SIRADAKİ</button>
+                <button class="btn-p" style="background:#222; margin-top:0" onclick="toHome()">LOBİYE DÖN</button>
+                <button class="btn-p" style="margin-top:0" onclick="nextFast()">SIRADAKİ</button>
             </div>
         </div>
     </div>
 
     <!-- 4. MATCH MODAL -->
-    <div id="match-modal" class="m-modal">
-        <div class="m-card">
+    <div id="match-modal" class="match-m">
+        <div class="match-c">
             <h1
                 style="font-family:'Playfair Display'; color:var(--tinder); font-size: 3rem; font-style: italic; margin-bottom: 15px;">
                 Match!</h1>
-            <img id="m-av-img" class="m-img" src="">
-            <h2 id="m-user-name" style="font-size: 2rem; font-weight: 800;">İsim</h2>
-            <a id="m-user-link" class="m-link" href="#" target="_blank">PROFILI GÖR</a>
-            <button class="btn-main" style="margin-top: 30px;"
+            <img id="m-av-res" class="match-i" src="">
+            <div id="m-u-name" style="font-size: 1.8rem; font-weight: 800;">İsim</div>
+            <a id="m-u-link" class="match-l" href="#" target="_blank">PROFİLİ GÖR</a>
+            <button class="btn-p" style="margin-top: 30px;"
                 onclick="document.getElementById('match-modal').style.display='none'">KAPAT</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp; tg.expand();
-        const socket = io();
-        let myData = {
+        // Check if hosted on same domain or external
+        const SERVER_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'https://saskioyunu.onrender.com'
+            : '';
+
+        const socket = io(SERVER_URL, {
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 10
+        });
+
+        const myData = {
             id: tg.initDataUnsafe?.user?.id || 'G' + Math.floor(Math.random() * 99999),
             name: tg.initDataUnsafe?.user?.first_name || 'Gizli',
             photo: tg.initDataUnsafe?.user?.photo_url || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
             username: tg.initDataUnsafe?.user?.username || '',
             region: ''
         };
-        document.getElementById('my-av').src = myData.photo;
+
+        document.getElementById('my-av-img').src = myData.photo;
+
+        // Conn status visualizer
+        socket.on('connect', () => {
+            const el = document.getElementById('conn-status');
+            el.innerText = 'Bağlandı'; el.style.color = '#4ade80';
+            setTimeout(() => el.style.display = 'none', 2000);
+            socket.emit('register_me', myData);
+        });
+
+        socket.on('connect_error', () => {
+            const el = document.getElementById('conn-status');
+            el.innerText = 'Bağlantı Hatası! Yeniden deneniyor...'; el.style.color = '#ff4444'; el.style.display = 'block';
+        });
 
         function showS(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function selectReg(r, el) {
+        function setReg(r, el) {
             myData.region = r;
-            document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('.item-row').forEach(b => b.classList.remove('selected'));
             el.classList.add('selected');
         }
 
-        function goSearching() {
-            if (!myData.region) return alert('Bir bölge seçmelisin!');
-            showS('searching');
-            socket.emit('register_user', myData);
-            socket.emit('start_matchmaking', myData.region);
+        function goSearch() {
+            if (!myData.region) return alert('Bölge seç!');
+            showS('searching-screen');
+            socket.emit('start_match', myData.region);
         }
 
         function stopMatch() {
-            socket.emit('stop_matchmaking');
-            showS('landing');
+            socket.emit('stop_match');
+            showS('landing-screen');
         }
 
-        socket.on('online_stats', (data) => {
-            document.getElementById('online-text').innerText = data.count + ' Çevrimiçi';
+        socket.on('stats_update', (d) => {
+            document.getElementById('online-count').innerText = d.online + ' Çevrimiçi';
         });
 
         socket.on('match_found', () => {
-            showS('chat');
-            document.getElementById('end-panel').classList.remove('active');
+            showS('chat-screen');
+            document.getElementById('end-overlay').classList.remove('active');
             resetUI();
         });
 
-        socket.on('new_msg', (data) => {
-            const b = document.getElementById('chat-msgs-box');
-            const d = document.createElement('div');
-            d.className = 'msg ' + (data.senderId === socket.id ? 'me' : 'p');
-            d.innerText = data.text;
-            b.appendChild(d); b.scrollTop = b.scrollHeight;
+        socket.on('msg_receive', (d) => {
+            const f = document.getElementById('chat-msgs-flow');
+            const m = document.createElement('div');
+            m.className = 'msg-b ' + (d.senderId === socket.id ? 'me' : 'p');
+            m.innerText = d.text;
+            f.appendChild(m); f.scrollTop = f.scrollHeight;
         });
 
-        socket.on('reveal_request', () => {
-            const t = document.getElementById('toast');
+        socket.on('reveal_notifier', () => {
+            const t = document.getElementById('toast-msg');
             t.classList.add('active'); setTimeout(() => t.classList.remove('active'), 7000);
         });
 
-        socket.on('reveal_wait', () => {
-            const b = document.getElementById('reve-btn');
+        socket.on('reveal_wait_status', () => {
+            const b = document.getElementById('btn-reveal-now');
             b.innerText = 'BEKLENİYOR...'; b.disabled = true; b.style.opacity = '0.5';
         });
 
-        socket.on('revealed', (profs) => {
-            const pId = Object.keys(profs).find(id => id !== socket.id);
-            const p = profs[pId];
+        socket.on('reveal_all', (p) => {
+            const pid = Object.keys(p).find(id => id !== socket.id);
+            const user = p[pid];
             document.getElementById('match-modal').style.display = 'flex';
-            document.getElementById('m-av-img').src = p.photo;
-            document.getElementById('m-user-name').innerText = p.name;
-            const l = document.getElementById('m-user-link');
-            if (p.username) { l.href = 'https://t.me/' + p.username; l.innerText = '@' + p.username; }
-            else { l.href = 'tg://user?id=' + p.id; l.innerText = 'TELEGRAM'; }
+            document.getElementById('m-av-res').src = user.photo;
+            document.getElementById('m-u-name').innerText = user.name;
+            const lnk = document.getElementById('m-u-link');
+            if (user.username) { lnk.href = 'https://t.me/' + user.username; lnk.innerText = '@' + user.username; }
+            else { lnk.href = 'tg://user?id=' + user.id; lnk.innerText = 'TELEGRAM'; }
 
-            document.getElementById('p-nick').innerText = p.name;
-            document.getElementById('p-img').src = p.photo;
-            document.getElementById('p-av-wrap').classList.remove('blurry');
-            document.getElementById('reve-btn').style.display = 'none';
+            document.getElementById('p-nick-name').innerText = user.name;
+            document.getElementById('p-img-src').src = user.photo;
+            document.getElementById('p-av-box').classList.remove('blurred');
+            document.getElementById('btn-reveal-now').style.display = 'none';
         });
 
-        socket.on('partner_left', () => {
-            document.getElementById('end-panel').classList.add('active');
+        socket.on('partner_left_room', () => {
+            document.getElementById('end-overlay').classList.add('active');
         });
 
-        socket.on('ready_for_next', () => {
-            showS('searching');
-            socket.emit('start_matchmaking', myData.region);
+        socket.on('trigger_new_search', () => {
+            showS('searching-screen');
+            socket.emit('start_match', myData.region);
         });
 
-        socket.on('to_lobby', () => toHome());
+        socket.on('go_to_lobby', () => toHome());
 
         function send() {
-            const i = document.getElementById('m-input');
+            const i = document.getElementById('ipt-msg');
             const v = i.value.trim(); if (!v) return;
             socket.emit('send_msg', v); i.value = '';
         }
 
-        function cfNext() { if (confirm('Sıradaki kullanıcıya geçilsin mi?')) socket.emit('next_user'); }
-        function cfLeave() { if (confirm('Çıkmak istiyor musun?')) socket.emit('leave_chat'); }
-        function toHome() { showS('landing'); }
-        function nextQuick() { socket.emit('next_user'); }
+        function leaveChat() { if (confirm('Çıkmak istiyor musun?')) socket.emit('exit_chat'); }
+        function nextMatch() { if (confirm('Sıradaki kullanıcı?')) socket.emit('next_please'); }
+        function toHome() { showS('landing-screen'); }
+        function nextFast() { socket.emit('next_please'); }
 
         function resetUI() {
-            document.getElementById('chat-msgs-box').innerHTML = '<div class="msg p">Harika! Birini bulduk. Sohbete başla. 👋</div>';
-            document.getElementById('p-nick').innerText = 'Anonim Partner';
-            document.getElementById('p-av-wrap').classList.add('blurry');
-            const b = document.getElementById('reve-badge'); // Fix
-            const btn = document.getElementById('reve-btn');
-            btn.innerText = 'Eşleşdik (Kamera Aç)'; btn.disabled = false; btn.style.opacity = '1'; btn.style.display = 'flex';
+            document.getElementById('chat-msgs-flow').innerHTML = '<div class="msg-b p">Sohbet başladı! 👋</div>';
+            document.getElementById('p-nick-name').innerText = 'Anonim Partner';
+            document.getElementById('p-av-box').classList.add('blurred');
+            const b = document.getElementById('btn-reveal-now');
+            b.innerText = 'EŞLEŞDİK'; b.disabled = false; b.style.opacity = '1'; b.style.display = 'flex';
         }
     </script>
 </body>
