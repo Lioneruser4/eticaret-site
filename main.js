@@ -15,8 +15,9 @@ class AmongUsGame {
                 });
             }
 
-            // Initialize managers
-            await this.initializeManagers();
+            // Initialize managers (handles connection)
+            const connected = await this.initializeManagers();
+            if (!connected) return; // Stay on loading screen
 
             // Setup network event handlers
             this.setupNetworkHandlers();
@@ -28,14 +29,17 @@ class AmongUsGame {
             setTimeout(() => {
                 document.getElementById('loading-screen').classList.add('hidden');
                 window.uiManager.showScreen('main-menu');
-            }, 1500);
+            }, 1000);
 
             this.initialized = true;
             console.log('Among Us Game initialized successfully!');
 
         } catch (error) {
             console.error('Failed to initialize game:', error);
-            alert('Oyun başlatılamadı. Lütfen sayfayı yenileyin.');
+            // Don't alert for server connection errors, they are handled in initializeManagers
+            if (error.message !== 'Server connection failed') {
+                alert('Beklenmedik bir hata oluştu: ' + error.message);
+            }
         }
     }
 
@@ -46,19 +50,19 @@ class AmongUsGame {
         if (retryBtn) {
             retryBtn.onclick = () => {
                 retryBtn.style.display = 'none';
-                this.initializeManagers();
+                this.init(); // Restart initialization process
             };
         }
 
         // Connect to server
         const attemptConnection = async () => {
             try {
-                if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlanıyor...';
+                if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlanıyor... (Render uyanıyor olabilir)';
 
-                // Add a timeout to the connection attempt
+                // Add a longer timeout for Render (45 seconds)
                 const connectionPromise = window.networkManager.connect();
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Bağlantı zaman aşımına uğradı')), 10000)
+                    setTimeout(() => reject(new Error('Sunucu yanıt vermedi (Zaman Aşımı)')), 45000)
                 );
 
                 await Promise.race([connectionPromise, timeoutPromise]);
@@ -74,12 +78,7 @@ class AmongUsGame {
             }
         };
 
-        const success = await attemptConnection();
-        if (!success) {
-            // If failed, we don't proceed to hide loading screen
-            // The user must click retry
-            throw new Error('Server connection failed');
-        }
+        return await attemptConnection();
     }
 
     setupNetworkHandlers() {
