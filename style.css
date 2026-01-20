@@ -1,1336 +1,171 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
-
-:root {
-    --primary-color: #ff4757;
-    --secondary-color: #5352ed;
-    --success-color: #26de81;
-    --warning-color: #fed330;
-    --danger-color: #fc5c65;
-    --dark-bg: #0a0e27;
-    --darker-bg: #05070f;
-    --card-bg: #1a1f3a;
-    --text-primary: #ffffff;
-    --text-secondary: #a4b0be;
-    --border-color: #2d3561;
-    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --glow: 0 0 20px rgba(255, 71, 87, 0.5);
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
-    color: var(--text-primary);
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
-    touch-action: none;
-}
-
-/* Loading Screen */
-#loading-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-.loading-content {
-    text-align: center;
-}
-
-.crewmate-loading {
-    width: 80px;
-    height: 100px;
-    background: var(--primary-color);
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    position: relative;
-    animation: float 2s ease-in-out infinite;
-    margin: 0 auto 30px;
-}
-
-.crewmate-loading::before {
-    content: '';
-    position: absolute;
-    width: 40px;
-    height: 30px;
-    background: #87ceeb;
-    border-radius: 50%;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.3);
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-20px);
-    }
-}
-
-.loading-text {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: var(--text-primary);
-}
-
-.loading-status {
-    font-size: 16px;
-    color: var(--text-secondary);
-    margin-bottom: 20px;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.loading-bar {
-    width: 200px;
-    height: 6px;
-    background: var(--border-color);
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 0 auto;
-}
-
-.loading-progress {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-    border-radius: 10px;
-    animation: loading 1.5s ease-in-out infinite;
-}
-
-@keyframes loading {
-    0% {
-        width: 0%;
-    }
-
-    50% {
-        width: 70%;
-    }
-
-    100% {
-        width: 100%;
-    }
-}
-
-/* Screen Management */
-.screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: opacity 0.3s ease;
-}
-
-.screen.hidden {
-    display: none;
-    opacity: 0;
-}
-
-/* Main Menu */
-#main-menu {
-    padding: 0;
-    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
-    position: relative;
-    overflow: hidden;
-}
-
-#main-menu::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-        radial-gradient(circle at 20% 30%, rgba(255, 71, 87, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(83, 82, 237, 0.1) 0%, transparent 50%);
-    animation: bgPulse 10s ease-in-out infinite;
-}
-
-@keyframes bgPulse {
-
-    0%,
-    100% {
-        opacity: 0.5;
-    }
-
-    50% {
-        opacity: 1;
-    }
-}
-
-.main-menu-bg {
-    position: relative;
-    z-index: 1;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 40px 20px 30px;
-}
-
-/* Welcome Section */
-.welcome-section {
-    text-align: center;
-    margin-bottom: 20px;
-    animation: fadeInDown 0.8s ease;
-}
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.welcome-text {
-    font-size: 18px;
-    color: var(--text-secondary);
-    margin-bottom: 10px;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-.user-name-display {
-    font-size: 32px;
-    font-weight: bold;
-    color: var(--text-primary);
-    text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
-    animation: glow 2s ease-in-out infinite;
-}
-
-@keyframes glow {
-
-    0%,
-    100% {
-        text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
-    }
-
-    50% {
-        text-shadow: 0 0 30px rgba(255, 71, 87, 0.8), 0 0 40px rgba(83, 82, 237, 0.5);
-    }
-}
-
-/* Game Title */
-.game-title-main {
-    font-size: 56px;
-    font-weight: bold;
-    text-align: center;
-    margin: 30px 0;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--primary-color));
-    background-size: 200% 200%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: gradientShift 3s ease infinite;
-    letter-spacing: 4px;
-}
-
-@keyframes gradientShift {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-/* Main Menu Buttons */
-.main-menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin: 40px 0;
-    animation: fadeInUp 1s ease;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.btn-main {
-    padding: 25px 30px;
-    border: none;
-    border-radius: 20px;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-main::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.btn-main:active::before {
-    width: 400px;
-    height: 400px;
-}
-
-.btn-main:active {
-    transform: scale(0.95);
-}
-
-.btn-main-icon {
-    font-size: 36px;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.btn-main-text {
-    font-size: 22px;
-    letter-spacing: 1px;
-}
-
-.btn-main-primary {
-    background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
-    color: white;
-}
-
-.btn-main-primary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(255, 71, 87, 0.5), 0 0 30px rgba(255, 71, 87, 0.3);
-}
-
-.btn-main-secondary {
-    background: linear-gradient(135deg, #5352ed 0%, #706fd3 100%);
-    color: white;
-}
-
-.btn-main-secondary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(83, 82, 237, 0.5), 0 0 30px rgba(83, 82, 237, 0.3);
-}
-
-.btn-main-tertiary {
-    background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
-    color: white;
-}
-
-.btn-main-tertiary:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(38, 222, 129, 0.5), 0 0 30px rgba(38, 222, 129, 0.3);
-}
-
-/* Online Status */
-.online-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-size: 16px;
-    color: var(--text-secondary);
-    margin-top: auto;
-    padding: 15px;
-    background: rgba(26, 31, 58, 0.5);
-    border-radius: 25px;
-    backdrop-filter: blur(10px);
-}
-
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    background: var(--success-color);
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-    box-shadow: 0 0 10px var(--success-color);
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
-}
-
-/* General Buttons for Other Screens */
-.btn {
-    padding: 15px 25px;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), #ff6b81);
-    color: white;
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, var(--secondary-color), #706fd3);
-    color: white;
-}
-
-.btn-success {
-    background: linear-gradient(135deg, var(--success-color), #20bf6b);
-    color: white;
-}
-
-.btn-large {
-    width: 100%;
-    padding: 18px;
-    font-size: 18px;
-}
-
-.btn-back {
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    color: var(--text-primary);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    font-size: 24px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-back:hover {
-    border-color: var(--primary-color);
-    transform: scale(1.1);
-}
-
-/* Screen Header */
-.screen-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 20px;
-    background: var(--card-bg);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.screen-header h2 {
-    flex: 1;
-    text-align: center;
-    font-size: 24px;
-}
-
-/* Create Room Screen */
-#create-room-screen {
-    padding: 0;
-}
-
-.room-settings {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-.setting-group {
-    margin-bottom: 25px;
-}
-
-.setting-group label {
-    display: block;
-    margin-bottom: 10px;
-    font-size: 16px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.setting-group input[type="text"],
-.setting-group input[type="password"] {
-    width: 100%;
-    padding: 15px;
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    color: var(--text-primary);
-    font-size: 16px;
-    transition: border-color 0.3s ease;
-}
-
-.setting-group input[type="text"]:focus,
-.setting-group input[type="password"]:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.setting-group input[type="range"] {
-    width: 100%;
-    height: 6px;
-    background: var(--border-color);
-    border-radius: 10px;
-    outline: none;
-    appearance: none;
-    -webkit-appearance: none;
-}
-
-.setting-group input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-}
-
-.setting-group input[type="range"]::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-}
-
-#create-room-screen .btn-large {
-    margin: 20px;
-    margin-top: 0;
-}
-
-/* Join Room Screen */
-.room-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-.room-card {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 15px;
-    border: 2px solid var(--border-color);
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.room-card:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-}
-
-.room-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.room-name {
-    font-size: 20px;
-    font-weight: bold;
-}
-
-.room-players {
-    font-size: 16px;
-    color: var(--text-secondary);
-}
-
-.room-info {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.room-tag {
-    background: var(--darker-bg);
-    padding: 5px 10px;
-    border-radius: 5px;
-}
-
-.room-locked {
-    color: var(--warning-color);
-}
-
-/* Room Lobby */
-.lobby-info {
-    padding: 20px;
-    background: var(--card-bg);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.lobby-code {
-    font-size: 32px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-}
-
-.lobby-settings-summary {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.lobby-settings-summary .room-tag {
-    font-size: 12px;
-}
-
-.players-grid {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    align-content: start;
-}
-
-.player-card {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 15px;
-    border: 2px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-}
-
-.player-card.ready {
-    border-color: var(--success-color);
-    box-shadow: 0 0 15px rgba(38, 222, 129, 0.3);
-}
-
-.player-card.host {
-    border-color: var(--warning-color);
-}
-
-.player-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 3px solid var(--border-color);
-    object-fit: cover;
-}
-
-.player-card.ready .player-avatar {
-    border-color: var(--success-color);
-}
-
-.player-name {
-    font-size: 14px;
-    font-weight: bold;
-    text-align: center;
-    word-break: break-word;
-}
-
-.player-status {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.player-card.ready .player-status {
-    color: var(--success-color);
-}
-
-.lobby-footer {
-    padding: 20px;
-    background: var(--card-bg);
-    border-top: 2px solid var(--border-color);
-}
-
-.ready-status {
-    text-align: center;
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: var(--text-secondary);
-}
-
-/* Game Screen */
-#game-screen {
-    padding: 0;
-}
-
-#game-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-/* Role Reveal */
-.role-reveal {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.role-content {
-    text-align: center;
-    padding: 40px;
-}
-
-#role-title {
-    font-size: 36px;
-    margin-bottom: 30px;
-}
-
-.role-icon {
-    width: 150px;
-    height: 180px;
-    margin: 0 auto 30px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    animation: float 2s ease-in-out infinite;
-}
-
-.role-icon.crewmate {
-    background: var(--secondary-color);
-}
-
-.role-icon.imposter {
-    background: var(--primary-color);
-}
-
-.role-icon.police {
-    background: var(--success-color);
-}
-
-#role-description {
-    font-size: 18px;
-    color: var(--text-secondary);
-    max-width: 300px;
-    margin: 0 auto;
-}
-
-/* Game UI */
-.game-ui {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.game-ui>* {
-    pointer-events: auto;
-}
-
-.top-bar {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-
-.alive-count {
-    background: var(--card-bg);
-    padding: 10px 20px;
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
-    font-weight: bold;
-    box-shadow: var(--shadow);
-}
-
-.task-progress {
-    background: var(--card-bg);
-    padding: 10px 20px;
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: var(--shadow);
-}
-
-.task-bar {
-    width: 150px;
-    height: 10px;
-    background: var(--border-color);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.task-fill {
-    height: 100%;
-    background: var(--success-color);
-    border-radius: 10px;
-    transition: width 0.3s ease;
-}
-
-/* Joystick */
-.joystick-container {
-    position: absolute;
-    bottom: 100px;
-    left: 30px;
-}
-
-.joystick-base {
-    width: 120px;
-    height: 120px;
-    background: rgba(26, 31, 58, 0.7);
-    border: 3px solid var(--border-color);
-    border-radius: 50%;
-    position: relative;
-    box-shadow: var(--shadow);
-}
-
-.joystick-stick {
-    width: 50px;
-    height: 50px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
-    transition: all 0.1s ease;
-}
-
-/* Action Buttons */
-.action-buttons {
-    position: absolute;
-    bottom: 100px;
-    right: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.action-btn {
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 15px 25px;
-    border-radius: 25px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow);
-}
-
-.action-btn:active {
-    transform: scale(0.95);
-}
-
-.action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#btn-kill {
-    border-color: var(--danger-color);
-    color: var(--danger-color);
-}
-
-#btn-sabotage {
-    border-color: var(--warning-color);
-    color: var(--warning-color);
-}
-
-#btn-report {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-#btn-use {
-    border-color: var(--success-color);
-    color: var(--success-color);
-}
-
-/* Minimap */
-.minimap {
-    position: absolute;
-    top: 80px;
-    right: 20px;
-    width: 150px;
-    height: 150px;
-    background: rgba(26, 31, 58, 0.9);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-}
-
-#minimap-canvas {
-    width: 100%;
-    height: 100%;
-}
-
-/* Meeting Screen */
-#meeting-screen {
-    background: var(--dark-bg);
-    padding: 0;
-}
-
-.meeting-header {
-    padding: 20px;
-    background: var(--card-bg);
-    border-bottom: 2px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.meeting-header h2 {
-    font-size: 24px;
-}
-
-.meeting-timer {
-    font-size: 32px;
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.meeting-body {
-    padding: 20px;
-    text-align: center;
-    background: var(--darker-bg);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.body-info {
-    font-size: 18px;
-    color: var(--text-secondary);
-}
-
-.players-voting {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    align-content: start;
-}
-
-.voting-player {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 15px;
-    border: 2px solid var(--border-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.voting-player:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-2px);
-}
-
-.voting-player.selected {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
-}
-
-.voting-player.dead {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.vote-count {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: var(--primary-color);
-    color: white;
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.chat-container {
-    background: var(--card-bg);
-    border-top: 2px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    max-height: 200px;
-}
-
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px;
-}
-
-.chat-message {
-    margin-bottom: 10px;
-}
-
-.chat-author {
-    font-weight: bold;
-    color: var(--primary-color);
-    margin-right: 5px;
-}
-
-.chat-text {
-    color: var(--text-primary);
-}
-
-.chat-input-container {
-    display: flex;
-    gap: 10px;
-    padding: 15px;
-    border-top: 2px solid var(--border-color);
-}
-
-#chat-input {
-    flex: 1;
-    padding: 10px 15px;
-    background: var(--darker-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 25px;
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
-#chat-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-#btn-send-chat {
-    padding: 10px 20px;
-    background: var(--primary-color);
-    border: none;
-    border-radius: 25px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.voting-results {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--card-bg);
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    text-align: center;
-    min-width: 300px;
-}
-
-.ejected-player {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.ejection-result {
-    font-size: 18px;
-    color: var(--text-secondary);
-}
-
-/* Game Over Screen */
-#game-over-screen {
-    background: var(--dark-bg);
-    padding: 40px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.game-over-content {
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-}
-
-#game-over-title {
-    font-size: 36px;
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-#game-over-reason {
-    font-size: 18px;
-    color: var(--text-secondary);
-    margin-bottom: 30px;
-}
-
-.winners-list {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 30px;
-}
-
-.winner-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 10px;
-    margin-bottom: 10px;
-    background: var(--darker-bg);
-    border-radius: 10px;
-}
-
-.winner-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid var(--success-color);
-}
-
-.winner-name {
-    flex: 1;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.winner-role {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-/* Modal */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-}
-
-.modal.hidden {
-    display: none;
-}
-
-.modal-content {
-    background: var(--card-bg);
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    min-width: 300px;
-    max-width: 90%;
-}
-
-.modal-content h3 {
-    font-size: 24px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.modal-content input {
-    width: 100%;
-    padding: 15px;
-    background: var(--darker-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    color: var(--text-primary);
-    font-size: 16px;
-    margin-bottom: 20px;
-}
-
-.modal-content input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-.modal-buttons .btn {
-    flex: 1;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--darker-bg);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-color);
-}
-
-/* Responsive */
-@media (max-width: 400px) {
-    .game-title {
-        font-size: 36px;
-    }
-
-    .players-grid,
-    .players-voting {
-        grid-template-columns: 1fr;
-    }
-
-    .joystick-base {
-        width: 100px;
-        height: 100px;
-    }
-
-    .joystick-stick {
-        width: 40px;
-        height: 40px;
-    }
-}
-
-/* Freeze Overlay */
-.freeze-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(10, 14, 39, 0.85);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 20000;
-    animation: fadeIn 0.3s ease;
-}
-
-.freeze-overlay.hidden {
-    display: none;
-}
-
-.freeze-content {
-    text-align: center;
-    padding: 40px;
-    background: var(--card-bg);
-    border-radius: 25px;
-    border: 2px solid var(--primary-color);
-    box-shadow: 0 0 50px rgba(255, 71, 87, 0.3);
-    max-width: 85%;
-}
-
-.freeze-spinner {
-    width: 60px;
-    height: 60px;
-    border: 5px solid var(--border-color);
-    border-top: 5px solid var(--primary-color);
-    border-radius: 50%;
-    margin: 0 auto 25px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-#freeze-title {
-    color: var(--primary-color);
-    font-size: 24px;
-    margin-bottom: 10px;
-}
-
-#freeze-status {
-    color: var(--text-secondary);
-    font-size: 16px;
-}
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*", methods: ["GET", "POST"] }
+});
+
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Data persistence (Memory only for now as requested)
+const users = new Map(); // socket.id -> { id, name, photo, gender, country, city, username }
+const waitingList = []; // Array of socket.ids
+const activeChats = new Map(); // socket.id -> { partnerId, roomId }
+const revealRequests = new Map(); // roomId -> { id1: bool, id2: bool }
+
+io.on('connection', (socket) => {
+    console.log(`[CONN] ${socket.id}`);
+
+    // Update/Register user profile
+    socket.on('update_profile', (profile) => {
+        users.set(socket.id, { ...profile, socketId: socket.id });
+        console.log(`[USER] ${profile.name} (${profile.gender}) joined from ${profile.city || profile.country || 'Global'}`);
+    });
+
+    // Matchmaking Request
+    socket.on('find_partner', () => {
+        const me = users.get(socket.id);
+        if (!me) return;
+
+        // Clean up from queue if already there
+        const oldIdx = waitingList.indexOf(socket.id);
+        if (oldIdx > -1) waitingList.splice(oldIdx, 1);
+
+        // Try to find a match
+        const partnerId = waitingList.find(id => {
+            const p = users.get(id);
+            if (!p) return false;
+            if (id === socket.id) return false;
+
+            // STRIKT FILTRELEME (İsteğe bağlı): 
+            // Eğer şehir/ülke seçilmişse sadece oradan olanlarla eşleştir.
+            // "Azerbaycana dokundukda Bakı sumqayıt Xırdalan yazsın... o şehirler"
+            if (me.country && p.country && me.country !== p.country) return false;
+            if (me.city && p.city && me.city !== p.city) return false;
+
+            // Cinsiyet Karşılaştırması (Opsiyonel: Farklı cinsiyet aramayı tercih edebiliriz)
+            // if (me.gender === p.gender) return false; 
+
+            return true;
+        });
+
+        if (partnerId) {
+            // Match found!
+            const partnerIdx = waitingList.indexOf(partnerId);
+            waitingList.splice(partnerIdx, 1);
+
+            const roomId = `room_${socket.id}_${partnerId}`;
+            const partnerSocket = io.sockets.sockets.get(partnerId);
+
+            if (partnerSocket) {
+                socket.join(roomId);
+                partnerSocket.join(roomId);
+
+                activeChats.set(socket.id, { partnerId, roomId });
+                activeChats.set(partnerId, { partnerId: socket.id, roomId });
+                revealRequests.set(roomId, { [socket.id]: false, [partnerId]: false });
+
+                socket.emit('match_found');
+                partnerSocket.emit('match_found');
+                console.log(`[MATCH] ${socket.id} <-> ${partnerId}`);
+            } else {
+                // Partner disconnected, retry
+                socket.emit('searching');
+                waitingList.push(socket.id);
+            }
+        } else {
+            // No match found, add to waiting list
+            waitingList.push(socket.id);
+            socket.emit('searching');
+            console.log(`[QUEUED] ${socket.id}. Queue size: ${waitingList.length}`);
+        }
+    });
+
+    socket.on('stop_searching', () => {
+        const idx = waitingList.indexOf(socket.id);
+        if (idx > -1) waitingList.splice(idx, 1);
+    });
+
+    // Messaging
+    socket.on('chat_message', (msg) => {
+        const myChat = activeChats.get(socket.id);
+        if (myChat) {
+            io.to(myChat.roomId).emit('chat_message', {
+                senderId: socket.id,
+                text: msg,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+        }
+    });
+
+    // Profile Disclosure (Eşleşdik sistemi)
+    socket.on('request_reveal', () => {
+        const myChat = activeChats.get(socket.id);
+        if (!myChat) return;
+
+        const status = revealRequests.get(myChat.roomId);
+        if (!status) return;
+
+        status[socket.id] = true;
+        const partnerId = myChat.partnerId;
+
+        if (status[partnerId]) {
+            // Both reveal!
+            io.to(myChat.roomId).emit('profiles_revealed', {
+                [socket.id]: users.get(socket.id),
+                [partnerId]: users.get(partnerId)
+            });
+        } else {
+            // One requested
+            socket.emit('reveal_sent');
+            io.to(partnerId).emit('partner_wants_reveal');
+        }
+    });
+
+    // Next/Exit
+    socket.on('next_partner', () => {
+        disconnectPartner(socket);
+        // Automatically find new
+        socket.emit('start_new_search');
+    });
+
+    const disconnectPartner = (sock) => {
+        const myChat = activeChats.get(sock.id);
+        if (myChat) {
+            const pId = myChat.partnerId;
+            const rId = myChat.roomId;
+
+            io.to(pId).emit('partner_left');
+
+            const pSock = io.sockets.sockets.get(pId);
+            if (pSock) pSock.leave(rId);
+            sock.leave(rId);
+
+            activeChats.delete(sock.id);
+            activeChats.delete(pId);
+            revealRequests.delete(rId);
+        }
+        // Always remove from waiting list on any exit
+        const idx = waitingList.indexOf(sock.id);
+        if (idx > -1) waitingList.splice(idx, 1);
+    };
+
+    socket.on('disconnect', () => {
+        disconnectPartner(socket);
+        users.delete(socket.id);
+        console.log(`[DISC] ${socket.id}`);
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
