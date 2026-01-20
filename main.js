@@ -41,16 +41,44 @@ class AmongUsGame {
 
     async initializeManagers() {
         const loadingStatus = document.getElementById('loading-status');
+        const retryBtn = document.getElementById('loading-retry-btn');
+
+        if (retryBtn) {
+            retryBtn.onclick = () => {
+                retryBtn.style.display = 'none';
+                this.initializeManagers();
+            };
+        }
 
         // Connect to server
-        try {
-            if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlanıyor...';
-            await window.networkManager.connect();
-            if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlandı! ✓';
-            console.log('Connected to server');
-        } catch (error) {
-            console.error('Failed to connect to server:', error);
-            if (loadingStatus) loadingStatus.textContent = 'Bağlantı hatası! Yeniden deneniyor...';
+        const attemptConnection = async () => {
+            try {
+                if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlanıyor...';
+
+                // Add a timeout to the connection attempt
+                const connectionPromise = window.networkManager.connect();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Bağlantı zaman aşımına uğradı')), 10000)
+                );
+
+                await Promise.race([connectionPromise, timeoutPromise]);
+
+                if (loadingStatus) loadingStatus.textContent = 'Sunucuya bağlandı! ✓';
+                console.log('Connected to server');
+                return true;
+            } catch (error) {
+                console.error('Failed to connect to server:', error);
+                if (loadingStatus) loadingStatus.textContent = 'Bağlantı hatası: ' + (error.message || 'Sunucuya ulaşılamıyor');
+                if (retryBtn) retryBtn.style.display = 'block';
+                return false;
+            }
+        };
+
+        const success = await attemptConnection();
+        if (!success) {
+            // If failed, we don't proceed to hide loading screen
+            // The user must click retry
+            throw new Error('Server connection failed');
         }
     }
 
