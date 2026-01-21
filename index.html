@@ -1,666 +1,1137 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Match Pro | Telegram Anonim Chat</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@1,800&display=swap"
-        rel="stylesheet">
+    <title>Anonim NFC Sohbet</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --tinder: #FD297B;
-            --tinder-gradient: linear-gradient(135deg, #FD297B 0%, #FF5864 50%, #FF6B6B 100%);
-            --bg: #000000;
-            --card: #141414;
-            --text: #ffffff;
-            --gray: #888888;
-            --safe-top: env(safe-area-inset-top, 0px);
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            user-select: none;
         }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #e1e1e1;
             height: 100vh;
-            width: 100vw;
             overflow: hidden;
+            position: relative;
+        }
+
+        .container {
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Status UI */
-        #conn-status {
-            position: fixed;
-            top: var(--safe-top);
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #4ade80;
-            z-index: 9999;
-            padding: 2px;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-        }
-
-        .screen {
+        /* Başlangıç Animasyonu */
+        .intro-screen {
             position: absolute;
-            inset: 0;
-            display: none;
-            flex-direction: column;
-            padding: 20px;
-            padding-top: calc(30px + var(--safe-top));
-            padding-bottom: calc(20px + var(--safe-bottom));
-            background: var(--bg);
-            z-index: 10;
-        }
-
-        .screen.active {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a1929 0%, #1a1a2e 100%);
             display: flex;
-            animation: slideUp 0.3s ease-out;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .intro-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
-        /* Branding */
-        .logo-area {
+        .intro-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #00b4db, #0083b0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
             text-align: center;
+        }
+
+        .intro-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #a0a0a0;
+            max-width: 80%;
+        }
+
+        /* Animasyon Alanı */
+        .animation-area {
+            width: 300px;
+            height: 300px;
+            position: relative;
             margin-bottom: 40px;
         }
 
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 4.5rem;
-            font-style: italic;
-            font-weight: 800;
-            background: var(--tinder-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .floating-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: float 6s infinite ease-in-out;
         }
 
-        .badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
+        .circle-1 {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #00b4db, #006994);
+            top: 20px;
+            left: 50px;
+            animation-delay: 0s;
+        }
+
+        .circle-2 {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #ff416c, #ff4b2b);
+            top: 150px;
+            right: 60px;
+            animation-delay: 1s;
+        }
+
+        .circle-3 {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #11998e, #38ef7d);
+            bottom: 40px;
+            left: 100px;
+            animation-delay: 2s;
+        }
+
+        .nfc-prompt {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
             background: rgba(255, 255, 255, 0.05);
-            font-weight: 700;
-            font-size: 0.8rem;
-            color: #4ade80;
-            margin-top: -10px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 80%;
+            max-width: 400px;
         }
 
-        .btn-p {
-            background: var(--tinder-gradient);
+        .nfc-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #00b4db;
+        }
+
+        .nfc-button {
+            background: linear-gradient(90deg, #00b4db, #0083b0);
             color: white;
             border: none;
-            padding: 18px;
-            border-radius: 50px;
+            padding: 15px 30px;
             font-size: 1.1rem;
-            font-weight: 800;
+            border-radius: 50px;
+            margin-top: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
             width: 100%;
-            text-transform: uppercase;
-            box-shadow: 0 10px 20px rgba(253, 41, 123, 0.3);
-            margin-top: auto;
         }
 
-        .btn-p:active {
-            transform: scale(0.96);
+        .nfc-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
-        /* Region */
-        .grid-v {
+        .nfc-button i {
+            font-size: 1.3rem;
+        }
+
+        /* NFC Okuma Simülasyonu */
+        .nfc-simulation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .nfc-simulation.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .nfc-scan-area {
+            width: 250px;
+            height: 250px;
+            border: 3px dashed #00b4db;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nfc-scan-area::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #00b4db, transparent);
+            animation: scan 2s infinite linear;
+        }
+
+        .nfc-scan-icon {
+            font-size: 5rem;
+            color: #00b4db;
+        }
+
+        .nfc-instruction {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 20px;
+            padding: 0 20px;
+        }
+
+        /* Sohbet Arayüzü */
+        .chat-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background: #0a1929;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-header {
+            background: rgba(16, 25, 40, 0.95);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
             gap: 12px;
         }
 
-        .item-row {
-            background: var(--card);
-            border: 2px solid transparent;
-            padding: 22px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-
-        .item-row.selected {
-            border-color: var(--tinder);
-            background: rgba(253, 41, 123, 0.08);
-        }
-
-        .flag-icon {
-            font-size: 2rem;
-        }
-
-        /* Searching */
-        #searching-screen {
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .radar-box {
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            background: var(--tinder-gradient);
-            position: relative;
-            margin-bottom: 50px;
-        }
-
-        .radar-box img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 4px solid #000;
-            object-fit: cover;
-        }
-
-        .pulse-layer {
-            position: absolute;
-            inset: 0;
-            border: 3px solid var(--tinder);
-            border-radius: 50%;
-            animation: pulse-fx 2s infinite linear;
-            opacity: 0;
-        }
-
-        .pulse-layer:nth-child(2) {
-            animation-delay: 0.6s;
-        }
-
-        .pulse-layer:nth-child(3) {
-            animation-delay: 1.2s;
-        }
-
-        @keyframes pulse-fx {
-            0% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-
-        /* Chat */
-        #chat-screen {
-            padding: 0;
-        }
-
-        .chat-h {
-            padding: calc(15px + var(--safe-top)) 20px 15px;
-            background: #000;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-
-        .p-av-wrap {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: #222;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .p-av-wrap.blurred img {
-            filter: blur(15px);
-        }
-
-        .p-av-wrap img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .chat-b {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .msg-b {
-            max-width: 80%;
-            padding: 12px 18px;
-            border-radius: 20px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            animation: msg-in 0.3s ease-out;
-        }
-
-        @keyframes msg-in {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .msg-b.p {
-            background: var(--card);
-            border-bottom-left-radius: 4px;
-            align-self: flex-start;
-        }
-
-        .msg-b.me {
-            background: var(--tinder-gradient);
-            border-bottom-right-radius: 4px;
-            align-self: flex-end;
-        }
-
-        .chat-f {
-            padding: 10px 20px calc(15px + var(--safe-bottom));
-            background: #000;
-            border-top: 1px solid #1a1a1a;
-        }
-
-        .acts {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 15px;
-        }
-
-        .circ-btn {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            border: none;
-            background: var(--card);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-        }
-
-        .btn-x {
-            color: #ff4444;
-            border: 2px solid #ff4444;
-        }
-
-        .btn-ok {
-            flex: 1;
-            margin: 0 15px;
-            border-radius: 30px;
-            background: var(--tinder-gradient);
-            color: white;
-            font-weight: 800;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        .btn-star {
-            color: #2196f3;
-            border: 2px solid #2196f3;
-        }
-
-        .ipt-row {
-            display: flex;
-            gap: 10px;
-            background: var(--card);
-            border-radius: 50px;
-            padding: 5px 5px 5px 20px;
-        }
-
-        .ipt-row input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: white;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        .btn-go {
+        .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: var(--tinder-gradient);
-            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
             color: white;
         }
 
-        /* Overlays */
-        .overlay-fx {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.95);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            text-align: center;
-            z-index: 100;
+        .user-details h3 {
+            font-size: 1.1rem;
+            margin-bottom: 3px;
         }
 
-        .overlay-fx.active {
+        .user-details p {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .header-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #0a1929;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.08);
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .chat-input-area {
+            padding: 15px 20px;
+            background: rgba(16, 25, 40, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .message-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .message-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .send-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        /* ID Arama */
+        .search-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 25, 41, 0.98);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .search-container.active {
             display: flex;
         }
 
-        .match-m {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.98);
-            z-index: 9999;
-            display: none;
-            flex-direction: column;
+        .search-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 15px;
+        }
+
+        .search-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            padding: 40px;
         }
 
-        .match-c {
-            background: var(--card);
-            padding: 30px;
-            border-radius: 30px;
-            border: 2px solid var(--tinder);
-            width: 100%;
-            max-width: 320px;
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
         }
 
-        .match-i {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 4px solid var(--tinder);
-            margin-bottom: 20px;
-            object-fit: cover;
-        }
-
-        .match-l {
-            display: block;
-            margin-top: 15px;
-            color: #2196f3;
-            font-weight: 800;
-            text-decoration: none;
-            font-size: 1.2rem;
-        }
-
-        #toast-msg {
-            position: fixed;
-            top: calc(20px + var(--safe-top));
-            left: 20px;
-            right: 20px;
-            background: white;
-            color: black;
+        .search-input {
+            flex: 1;
             padding: 15px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            font-weight: 800;
-            text-align: center;
-            z-index: 1000;
-            transform: translateY(-200%);
-            transition: 0.4s;
+            color: white;
+            font-size: 1rem;
+            outline: none;
         }
 
-        #toast-msg.active {
-            transform: translateY(0);
+        .search-button {
+            padding: 0 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .user-profile {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .profile-info h3 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .profile-info p {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .start-chat-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* Gece Modu */
+        body.night-mode {
+            background: #0a0a0a;
+            color: #e1e1e1;
+        }
+
+        body.night-mode .chat-container {
+            background: #0a0a0a;
+        }
+
+        body.night-mode .chat-header,
+        body.night-mode .chat-input-area {
+            background: rgba(20, 20, 20, 0.95);
+        }
+
+        body.night-mode .message.received {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Animasyonlar */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400%); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Ekran yakalama koruması */
+        .no-screenshot {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* Mobil uyumluluk */
+        @media (max-width: 768px) {
+            .intro-title {
+                font-size: 2rem;
+            }
+            
+            .intro-subtitle {
+                font-size: 1rem;
+            }
+            
+            .animation-area {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .circle-1 {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .circle-2 {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .circle-3 {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+
+        /* Toast mesajları */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            z-index: 1000;
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
         }
     </style>
 </head>
-
-<body>
-
-    <div id="conn-status">Bağlantı Kuruluyor...</div>
-
-    <!-- 1. LANDING -->
-    <div id="landing-screen" class="screen active">
-        <div class="logo-area">
-            <div class="logo">Tinder</div>
-            <div class="badge" id="online-count">0 Çevrimiçi</div>
+<body class="night-mode no-screenshot">
+    <div class="container">
+        <!-- Başlangıç Animasyonu -->
+        <div class="intro-screen" id="introScreen">
+            <div class="animation-area">
+                <div class="floating-circle circle-1"></div>
+                <div class="floating-circle circle-2"></div>
+                <div class="floating-circle circle-3"></div>
+            </div>
+            
+            <h1 class="intro-title">Anonim NFC Sohbet</h1>
+            <p class="intro-subtitle">NFC kartınızı okutarak anonim sohbete başlayın. Mesajlarınız geçicidir ve tarayıcı kapatıldığında kaybolur.</p>
+            
+            <div class="nfc-prompt">
+                <div class="nfc-icon">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <p>NFC kartınızı eklemek için butona basın</p>
+                <button class="nfc-button" id="addNfcBtn">
+                    <i class="fas fa-plus-circle"></i>
+                    NFC Kart Ekle
+                </button>
+            </div>
         </div>
-        <h1 style="text-align: center; font-size: 2.2rem; margin-bottom: 30px;">Anonim Olarak <br>Tanışmaya Başla!</h1>
-        <div class="grid-v">
-            <div class="item-row" id="reg-az" onclick="setReg('az', this)"><span class="flag-icon">🇦🇿</span>
-                Azerbaycan</div>
-            <div class="item-row" id="reg-tr" onclick="setReg('tr', this)"><span class="flag-icon">🇹🇷</span> Türkiye
+
+        <!-- NFC Okuma Simülasyonu -->
+        <div class="nfc-simulation" id="nfcSimulation">
+            <div class="nfc-scan-area">
+                <i class="fas fa-rss nfc-scan-icon"></i>
             </div>
-            <div class="item-row" id="reg-ru" onclick="setReg('ru', this)"><span class="flag-icon">🇷🇺</span> Rusya
+            <p class="nfc-instruction">NFC kartınızı cihazın arkasına yaklaştırın...</p>
+        </div>
+
+        <!-- Sohbet Arayüzü -->
+        <div class="chat-container" id="chatContainer">
+            <div class="chat-header">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div class="user-details">
+                        <h3 id="userName">Anonim Kullanıcı</h3>
+                        <p id="connectionStatus">Çevrimiçi</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="searchBtn" title="Kullanıcı Ara">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button class="header-btn" id="themeBtn" title="Tema Değiştir">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="header-btn" id="infoBtn" title="Bilgi">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
             </div>
-            <div class="item-row" id="reg-us" onclick="setReg('us', this)"><span class="flag-icon">🇺🇸</span> Amerika
+
+            <div class="chat-messages" id="chatMessages">
+                <!-- Mesajlar burada görünecek -->
+                <div class="message received">
+                    Hoş geldiniz! Bu anonim sohbet odasına NFC kartınızla eriştiniz.
+                    <div class="message-time">Şimdi</div>
+                </div>
+                <div class="message received">
+                    Mesajlarınız anlık olarak iletilir ve tarayıcı kapatıldığında kalıcı olarak silinir.
+                    <div class="message-time">Şimdi</div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Mesajınızı yazın...">
+                <button class="send-button" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
         </div>
-        <button class="btn-p" onclick="goSearch()">Sohbeti Başlat</button>
+
+        <!-- ID Arama -->
+        <div class="search-container" id="searchContainer">
+            <div class="search-header">
+                <button class="back-button" id="backButton">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>Kullanıcı Ara</h2>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput" placeholder="Kullanıcı ID'si girin">
+                <button class="search-button" id="searchUserBtn">Ara</button>
+            </div>
+            
+            <div id="searchResults">
+                <!-- Arama sonuçları burada görünecek -->
+            </div>
+        </div>
     </div>
 
-    <!-- 2. SEARCHING -->
-    <div id="searching-screen" class="screen">
-        <div class="radar-box">
-            <div class="pulse-layer"></div>
-            <div class="pulse-layer"></div>
-            <div class="pulse-layer"></div>
-            <img id="my-av-img" src="">
-        </div>
-        <h2 style="font-size: 1.8rem;">Eşleşme Aranıyor...</h2>
-        <p style="color:var(--gray); margin-bottom: 40px;">Kriterlerine en uygun kullanıcı aranıyor.</p>
-        <button class="btn-p" style="background: #222; width: 160px; font-size: 0.9rem;" onclick="stopMatch()">İPTAL
-            ET</button>
-    </div>
-
-    <!-- 3. CHAT -->
-    <div id="chat-screen" class="screen">
-        <div class="chat-h">
-            <div class="p-av-wrap blurred" id="p-av-box"><img id="p-img-src" src=""></div>
-            <div>
-                <h3 id="p-nick-name" style="font-weight: 800;">Anonim Partner</h3>
-                <p style="font-size:0.75rem; color:#4ade80;">Çevrimiçi</p>
-            </div>
-        </div>
-
-        <div id="toast-msg">Partnerin profilini açmak istiyor!</div>
-
-        <div class="chat-b" id="chat-msgs-flow">
-            <div class="msg-b p">Sohbet başladı! Bol şanslar. 👋</div>
-        </div>
-
-        <div class="chat-f">
-            <div class="acts">
-                <button class="circ-btn btn-x" onclick="leaveChat()">✖</button>
-                <button class="circ-btn btn-ok" id="btn-reveal-now"
-                    onclick="socket.emit('reveal_request')">EŞLEŞDİK</button>
-                <button class="circ-btn btn-star" onclick="nextMatch()">⭐</button>
-            </div>
-            <div class="ipt-row">
-                <input type="text" id="ipt-msg" placeholder="Mesajını yaz..."
-                    onkeypress="if(event.key==='Enter') send()">
-                <button class="btn-go" onclick="send()">➤</button>
-            </div>
-        </div>
-
-        <div id="end-overlay" class="overlay-fx">
-            <h2 style="font-size: 2.5rem; font-weight: 800; color: var(--tinder); margin-bottom: 10px;">Sohbet Bitti!
-            </h2>
-            <p style="color: var(--gray); margin-bottom: 40px;">Partnerin ayrıldı veya bağlantı koptu.</p>
-            <div style="width: 100%; display: flex; gap: 15px;">
-                <button class="btn-p" style="background:#222; margin-top:0" onclick="toHome()">LOBİYE DÖN</button>
-                <button class="btn-p" style="margin-top:0" onclick="nextFast()">SIRADAKİ</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. MATCH MODAL -->
-    <div id="match-modal" class="match-m">
-        <div class="match-c">
-            <h1
-                style="font-family:'Playfair Display'; color:var(--tinder); font-size: 3rem; font-style: italic; margin-bottom: 15px;">
-                Match!</h1>
-            <img id="m-av-res" class="match-i" src="">
-            <div id="m-u-name" style="font-size: 1.8rem; font-weight: 800;">İsim</div>
-            <a id="m-u-link" class="match-l" href="#" target="_blank">PROFİLİ GÖR</a>
-            <button class="btn-p" style="margin-top: 30px;"
-                onclick="document.getElementById('match-modal').style.display='none'">KAPAT</button>
-        </div>
-    </div>
+    <!-- Toast mesajları -->
+    <div class="toast" id="toast"></div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.expand();
-        // Check if hosted on same domain or external
-        const SERVER_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-            ? 'https://saskioyunu.onrender.com'
-            : '';
+        // Global değişkenler
+        let userId = null;
+        let currentChatId = null;
+        let isNightMode = true;
+        let socket = null;
+        let nfcRegistered = false;
 
-        const socket = io(SERVER_URL, {
-            transports: ['websocket', 'polling'],
-            reconnectionAttempts: 10
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kullanıcı ID'sini oluştur veya mevcut olanı al
+            initializeUser();
+            
+            // NFC butonu için olay dinleyicisi
+            document.getElementById('addNfcBtn').addEventListener('click', simulateNFCScan);
+            
+            // Mesaj gönderme butonu
+            document.getElementById('sendButton').addEventListener('click', sendMessage);
+            
+            // Enter tuşu ile mesaj gönderme
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Tema değiştirme butonu
+            document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+            
+            // Arama butonu
+            document.getElementById('searchBtn').addEventListener('click', showSearch);
+            
+            // Geri butonu
+            document.getElementById('backButton').addEventListener('click', hideSearch);
+            
+            // Kullanıcı arama butonu
+            document.getElementById('searchUserBtn').addEventListener('click', searchUser);
+            
+            // Bilgi butonu
+            document.getElementById('infoBtn').addEventListener('click', showInfo);
+            
+            // NFC kaydı kontrolü
+            checkNFCStatus();
+            
+            // WebSocket bağlantısını başlat
+            connectWebSocket();
+            
+            // Ekran yakalama koruması
+            preventScreenshots();
         });
 
-        const myData = {
-            id: tg.initDataUnsafe?.user?.id || 'G' + Math.floor(Math.random() * 99999),
-            name: tg.initDataUnsafe?.user?.first_name || 'Gizli',
-            photo: tg.initDataUnsafe?.user?.photo_url || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
-            username: tg.initDataUnsafe?.user?.username || '',
-            region: ''
-        };
-
-        document.getElementById('my-av-img').src = myData.photo;
-
-        // Conn status visualizer
-        socket.on('connect', () => {
-            const el = document.getElementById('conn-status');
-            el.innerText = 'Bağlandı'; el.style.color = '#4ade80';
-            setTimeout(() => el.style.display = 'none', 2000);
-            socket.emit('register_me', myData);
-        });
-
-        socket.on('connect_error', () => {
-            const el = document.getElementById('conn-status');
-            el.innerText = 'Bağlantı Hatası! Yeniden deneniyor...'; el.style.color = '#ff4444'; el.style.display = 'block';
-        });
-
-        function showS(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+        // Kullanıcıyı başlat
+        function initializeUser() {
+            // Telegram'dan gelen kullanıcı ID'sini al (simüle ediyoruz)
+            // Gerçek uygulamada Telegram Web App'dan alınacak
+            const urlParams = new URLSearchParams(window.location.search);
+            let tgUserId = urlParams.get('tg_user_id');
+            
+            if (!tgUserId) {
+                // Rastgele bir ID oluştur (simülasyon)
+                tgUserId = 'user_' + Math.random().toString(36).substring(2, 10);
+            }
+            
+            userId = tgUserId;
+            
+            // Avatar için baş harf
+            const avatarElement = document.getElementById('userAvatar');
+            const nameElement = document.getElementById('userName');
+            
+            // Kullanıcı adı oluştur
+            const randomName = `Anonim_${tgUserId.substring(0, 4)}`;
+            nameElement.textContent = randomName;
+            
+            // Avatar için baş harf
+            avatarElement.textContent = randomName.charAt(0);
+            
+            // Kullanıcı ID'sini konsola yazdır (geliştirme için)
+            console.log(`Kullanıcı ID: ${userId}`);
         }
 
-        function setReg(r, el) {
-            myData.region = r;
-            document.querySelectorAll('.item-row').forEach(b => b.classList.remove('selected'));
-            el.classList.add('selected');
+        // NFC okuma simülasyonu
+        function simulateNFCScan() {
+            const nfcSimulation = document.getElementById('nfcSimulation');
+            const introScreen = document.getElementById('introScreen');
+            
+            // NFC simülasyonunu göster
+            nfcSimulation.classList.add('active');
+            
+            // 3 saniye sonra NFC okundu simülasyonu
+            setTimeout(() => {
+                nfcSimulation.classList.remove('active');
+                introScreen.classList.add('hidden');
+                
+                // Sohbet ekranını göster
+                document.getElementById('chatContainer').classList.add('active');
+                
+                // NFC kaydını tamamla
+                nfcRegistered = true;
+                localStorage.setItem('nfcRegistered', 'true');
+                
+                // Başarı mesajı göster
+                showToast('NFC kartı başarıyla kaydedildi!');
+                
+                // Karşılama mesajı gönder
+                addMessage('Sistem', 'NFC kartınız doğrulandı. Artık anonim sohbet edebilirsiniz.', 'received');
+            }, 3000);
         }
 
-        function goSearch() {
-            if (!myData.region) return alert('Bölge seç!');
-            showS('searching-screen');
-            socket.emit('start_match', myData.region);
+        // NFC durumunu kontrol et
+        function checkNFCStatus() {
+            const nfcRegisteredStorage = localStorage.getItem('nfcRegistered');
+            
+            if (nfcRegisteredStorage === 'true') {
+                // NFC daha önce kaydedilmiş, doğrudan sohbete geç
+                setTimeout(() => {
+                    document.getElementById('introScreen').classList.add('hidden');
+                    document.getElementById('chatContainer').classList.add('active');
+                    nfcRegistered = true;
+                    
+                    // NFC kart okutma uyarısı göster
+                    addMessage('Sistem', 'NFC kartınızı okutarak sohbete eriştiniz. Mesajlarınız geçicidir.', 'received');
+                }, 2000);
+            }
         }
 
-        function stopMatch() {
-            socket.emit('stop_match');
-            showS('landing-screen');
+        // WebSocket bağlantısı
+        function connectWebSocket() {
+            // Render.com'daki WebSocket sunucusuna bağlan
+            const wsUrl = 'wss://saskioyunu.onrender.com';
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                console.log('WebSocket bağlantısı kuruldu');
+                
+                // Kullanıcıyı sunucuya kaydet
+                const registerData = {
+                    type: 'register',
+                    userId: userId,
+                    userName: document.getElementById('userName').textContent
+                };
+                socket.send(JSON.stringify(registerData));
+                
+                // Bağlantı durumunu güncelle
+                document.getElementById('connectionStatus').textContent = 'Çevrimiçi';
+            };
+            
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error('Mesaj işlenirken hata:', error);
+                }
+            };
+            
+            socket.onclose = function() {
+                console.log('WebSocket bağlantısı kapandı');
+                document.getElementById('connectionStatus').textContent = 'Çevrimdışı';
+                
+                // 5 saniye sonra yeniden bağlanmayı dene
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket hatası:', error);
+                document.getElementById('connectionStatus').textContent = 'Bağlantı hatası';
+            };
         }
 
-        socket.on('stats_update', (d) => {
-            document.getElementById('online-count').innerText = d.online + ' Çevrimiçi';
-        });
-
-        socket.on('match_found', () => {
-            showS('chat-screen');
-            document.getElementById('end-overlay').classList.remove('active');
-            resetUI();
-        });
-
-        socket.on('msg_receive', (d) => {
-            const f = document.getElementById('chat-msgs-flow');
-            const m = document.createElement('div');
-            m.className = 'msg-b ' + (d.senderId === socket.id ? 'me' : 'p');
-            m.innerText = d.text;
-            f.appendChild(m); f.scrollTop = f.scrollHeight;
-        });
-
-        socket.on('reveal_notifier', () => {
-            const t = document.getElementById('toast-msg');
-            t.classList.add('active'); setTimeout(() => t.classList.remove('active'), 7000);
-        });
-
-        socket.on('reveal_wait_status', () => {
-            const b = document.getElementById('btn-reveal-now');
-            b.innerText = 'BEKLENİYOR...'; b.disabled = true; b.style.opacity = '0.5';
-        });
-
-        socket.on('reveal_all', (p) => {
-            const pid = Object.keys(p).find(id => id !== socket.id);
-            const user = p[pid];
-            document.getElementById('match-modal').style.display = 'flex';
-            document.getElementById('m-av-res').src = user.photo;
-            document.getElementById('m-u-name').innerText = user.name;
-            const lnk = document.getElementById('m-u-link');
-            if (user.username) { lnk.href = 'https://t.me/' + user.username; lnk.innerText = '@' + user.username; }
-            else { lnk.href = 'tg://user?id=' + user.id; lnk.innerText = 'TELEGRAM'; }
-
-            document.getElementById('p-nick-name').innerText = user.name;
-            document.getElementById('p-img-src').src = user.photo;
-            document.getElementById('p-av-box').classList.remove('blurred');
-            document.getElementById('btn-reveal-now').style.display = 'none';
-        });
-
-        socket.on('partner_left_room', () => {
-            document.getElementById('end-overlay').classList.add('active');
-        });
-
-        socket.on('trigger_new_search', () => {
-            showS('searching-screen');
-            socket.emit('start_match', myData.region);
-        });
-
-        socket.on('go_to_lobby', () => toHome());
-
-        function send() {
-            const i = document.getElementById('ipt-msg');
-            const v = i.value.trim(); if (!v) return;
-            socket.emit('send_msg', v); i.value = '';
+        // WebSocket mesajlarını işle
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'message':
+                    // Yeni mesaj alındı
+                    if (data.senderId !== userId && data.chatId === currentChatId) {
+                        addMessage(data.senderName || 'Anonim', data.content, 'received');
+                    }
+                    break;
+                    
+                case 'user_found':
+                    // Kullanıcı bulundu
+                    showUserProfile(data.user);
+                    break;
+                    
+                case 'user_not_found':
+                    // Kullanıcı bulunamadı
+                    document.getElementById('searchResults').innerHTML = `
+                        <div class="user-profile">
+                            <p>Kullanıcı bulunamadı. ID'yi kontrol edin.</p>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'chat_started':
+                    // Sohbet başladı
+                    currentChatId = data.chatId;
+                    document.getElementById('searchContainer').classList.remove('active');
+                    showToast(`${data.otherUserName} ile sohbet başlatıldı`);
+                    
+                    // Karşılama mesajı ekle
+                    addMessage('Sistem', `${data.otherUserName} ile sohbete başladınız. Mesajlar anlıktır ve kaydedilmez.`, 'received');
+                    break;
+            }
         }
 
-        function leaveChat() { if (confirm('Çıkmak istiyor musun?')) socket.emit('exit_chat'); }
-        function nextMatch() { if (confirm('Sıradaki kullanıcı?')) socket.emit('next_please'); }
-        function toHome() { showS('landing-screen'); }
-        function nextFast() { socket.emit('next_please'); }
-
-        function resetUI() {
-            document.getElementById('chat-msgs-flow').innerHTML = '<div class="msg-b p">Sohbet başladı! 👋</div>';
-            document.getElementById('p-nick-name').innerText = 'Anonim Partner';
-            document.getElementById('p-av-box').classList.add('blurred');
-            const b = document.getElementById('btn-reveal-now');
-            b.innerText = 'EŞLEŞDİK'; b.disabled = false; b.style.opacity = '1'; b.style.display = 'flex';
+        // Mesaj gönder
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!currentChatId) {
+                showToast('Önce bir kullanıcı seçerek sohbet başlatın');
+                return;
+            }
+            
+            // Mesajı arayüze ekle
+            addMessage('Siz', message, 'sent');
+            
+            // WebSocket ile mesajı gönder
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    type: 'message',
+                    senderId: userId,
+                    senderName: document.getElementById('userName').textContent,
+                    chatId: currentChatId,
+                    content: message,
+                    timestamp: new Date().toISOString()
+                };
+                socket.send(JSON.stringify(messageData));
+            }
+            
+            // Input'u temizle
+            input.value = '';
+            input.focus();
         }
+
+        // Mesaj ekle
+        function addMessage(sender, text, type) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            
+            // Zaman formatı
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                ${text}
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // En son mesaja kaydır
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Mesajları otomatik temizleme (simülasyon)
+            // Gerçek uygulamada bu sunucu tarafında yapılır
+            if (messagesContainer.children.length > 50) {
+                // En eski mesajları temizle
+                while (messagesContainer.children.length > 30) {
+                    messagesContainer.removeChild(messagesContainer.firstChild);
+                }
+            }
+        }
+
+        // Tema değiştir
+        function toggleTheme() {
+            isNightMode = !isNightMode;
+            const body = document.body;
+            const themeIcon = document.getElementById('themeBtn').querySelector('i');
+            
+            if (isNightMode) {
+                body.classList.add('night-mode');
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                body.classList.remove('night-mode');
+                themeIcon.className = 'fas fa-sun';
+            }
+        }
+
+        // Arama ekranını göster
+        function showSearch() {
+            document.getElementById('searchContainer').classList.add('active');
+            document.getElementById('searchInput').focus();
+        }
+
+        // Arama ekranını gizle
+        function hideSearch() {
+            document.getElementById('searchContainer').classList.remove('active');
+        }
+
+        // Kullanıcı ara
+        function searchUser() {
+            const searchInput = document.getElementById('searchInput');
+            const searchId = searchInput.value.trim();
+            
+            if (!searchId) {
+                showToast('Lütfen bir ID girin');
+                return;
+            }
+            
+            // Kendi ID'sini aramaya izin verme
+            if (searchId === userId) {
+                showToast('Kendi ID\'nizi arayamazsınız');
+                return;
+            }
+            
+            // WebSocket üzerinden kullanıcı ara
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const searchData = {
+                    type: 'search_user',
+                    userId: userId,
+                    searchId: searchId
+                };
+                socket.send(JSON.stringify(searchData));
+                
+                // Yükleniyor mesajı göster
+                document.getElementById('searchResults').innerHTML = `
+                    <div class="user-profile">
+                        <p>Kullanıcı aranıyor...</p>
+                    </div>
+                `;
+            } else {
+                showToast('Bağlantı hatası. Lütfen tekrar deneyin.');
+            }
+        }
+
+        // Kullanıcı profili göster
+        function showUserProfile(user) {
+            const searchResults = document.getElementById('searchResults');
+            
+            // Avatar için baş harf
+            const avatarLetter = user.userName ? user.userName.charAt(0) : 'A';
+            
+            searchResults.innerHTML = `
+                <div class="user-profile">
+                    <div class="profile-avatar">${avatarLetter}</div>
+                    <div class="profile-info">
+                        <h3>${user.userName || 'Anonim Kullanıcı'}</h3>
+                        <p>ID: ${user.userId}</p>
+                    </div>
+                </div>
+                <button class="start-chat-btn" onclick="startChat('${user.userId}')">
+                    Sohbet Başlat
+                </button>
+            `;
+        }
+
+        // Sohbet başlat
+        function startChat(otherUserId) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const chatData = {
+                    type: 'start_chat',
+                    userId: userId,
+                    otherUserId: otherUserId
+                };
+                socket.send(JSON.stringify(chatData));
+            }
+        }
+
+        // Bilgi göster
+        function showInfo() {
+            addMessage('Sistem', 'Bu anonim sohbet uygulaması NFC kart ile erişim sağlar. Mesajlar anlıktır ve kalıcı olarak kaydedilmez. Ekran görüntüsü alınamaz.', 'received');
+            showToast('Güvenli anonim mesajlaşma platformu');
+        }
+
+        // Toast mesajı göster
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Ekran yakalama koruması
+        function preventScreenshots() {
+            // Kopyalamayı engelle
+            document.addEventListener('copy', (e) => e.preventDefault());
+            document.addEventListener('cut', (e) => e.preventDefault());
+            document.addEventListener('paste', (e) => e.preventDefault());
+            
+            // Görüntü çekmeyi engelle
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
+            
+            // Klavye kısayollarını engelle
+            document.addEventListener('keydown', (e) => {
+                // Print Screen, F12 (Developer Tools), Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+                if (
+                    e.key === 'PrintScreen' || 
+                    e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                    (e.ctrlKey && e.key === 'u')
+                ) {
+                    e.preventDefault();
+                    showToast('Bu işlem güvenlik nedeniyle engellendi');
+                }
+            });
+            
+            // Developer Tools açılmasını tespit et
+            setInterval(() => {
+                const widthThreshold = window.outerWidth - window.innerWidth > 100;
+                const heightThreshold = window.outerHeight - window.innerHeight > 100;
+                
+                if (widthThreshold || heightThreshold) {
+                    // Developer Tools açılmış olabilir
+                    showToast('Güvenlik nedeniyle sayfa yenilenecek');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // Tarayıcı kapatıldığında mesajları temizle
+        window.addEventListener('beforeunload', function() {
+            // WebSocket bağlantısını kapat
+            if (socket) {
+                socket.close();
+            }
+            
+            // Mesajları temizle (simülasyon)
+            // Gerçek uygulamada bu sunucu tarafında yapılır
+            localStorage.removeItem('chatMessages');
+        });
+
+        // NFC kart okuma simülasyonu (tekrar giriş için)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && nfcRegistered) {
+                // Kullanıcı sayfaya geri döndüğünde NFC simülasyonu göster
+                setTimeout(() => {
+                    const nfcSimulation = document.getElementById('nfcSimulation');
+                    nfcSimulation.classList.add('active');
+                    
+                    setTimeout(() => {
+                        nfcSimulation.classList.remove('active');
+                        showToast('NFC kartı doğrulandı');
+                    }, 2000);
+                }, 500);
+            }
+        });
     </script>
 </body>
-
 </html>
