@@ -2,124 +2,138 @@ const WebSocket = require('ws');
 const http = require('http');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Veritabanı (production'da Redis/MongoDB kullanın)
-const nfcDatabase = {
-    // NFC ID -> {userId, registeredAt, lastUsed}
-    cards: new Map(),
-    
-    // Kullanıcı verileri
-    users: new Map(),
-    
-    // Aktif sohbetler
-    chats: new Map(),
-    
-    // Oturumlar
-    sessions: new Map()
-};
+// Veritabanı (geçici - production'da Redis/MongoDB kullanın)
+const usersDB = new Map(); // userId -> userData
+const chatsDB = new Map(); // chatId -> chatData
+const onlineUsers = new Map(); // userId -> {ws, lastSeen}
+const userSessions = new Map(); // sessionId -> userId
 
 // Middleware
 app.use(express.json());
 app.use(express.static('.'));
 
-// API Endpoint'leri
-app.post('/api/nfc/register', (req, res) => {
-    const { userId, nfcId, telegramData } = req.body;
-    
-    if (!userId || !nfcId) {
-        return res.status(400).json({ error: 'Eksik parametreler' });
-    }
-    
-    // NFC kartını kaydet
-    nfcDatabase.cards.set(nfcId, {
-        userId,
-        telegramData,
-        registeredAt: new Date(),
-        lastUsed: new Date()
-    });
-    
-    // Kullanıcıyı kaydet
-    if (!nfcDatabase.users.has(userId)) {
-        nfcDatabase.users.set(userId, {
-            userId,
-            nfcId,
-            createdAt: new Date(),
-            lastActive: new Date(),
-            chats: []
-        });
-    }
-    
-    res.json({ 
-        success: true, 
-        message: 'NFC kartı kaydedildi',
-        nfcId 
+// API Endpoints
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'online',
+        users: usersDB.size,
+        online: onlineUsers.size,
+        chats: chatsDB.size,
+        uptime: process.uptime()
     });
 });
 
-app.post('/api/nfc/auth', (req, res) => {
-    const { nfcId } = req.body;
-    
-    if (!nfcId) {
-        return res.status(400).json({ error: 'NFC ID gerekiyor' });
-    }
-    
-    const cardData = nfcDatabase.cards.get(nfcId);
-    
-    if (!cardData) {
-        return res.status(404).json({ 
-            success: false, 
-            message: 'NFC kartı kayıtlı değil' 
+app.post('/api/register', (req, res) => {
+    try {
+        const { userId, userName, telegramData, gameCompleted, colorPassword } = req.body;
+        
+        if (!userId || !userName) {
+            return res.status(400).json({ error: 'Geçersiz kullanıcı verileri' });
+        }
+        
+        // Kullanıcıyı kaydet
+        const userData = {
+            id: userId,
+            name: userName,
+            telegramData: telegramData || null,
+            gameCompleted: gameCompleted || false,
+            colorPassword: colorPassword || null,
+            createdAt: new Date(),
+            lastSeen: new Date(),
+            isActive: true,
+            avatar: userName.charAt(0).toUpperCase(),
+            status: 'online'
+        };
+        
+        usersDB.set(userId, userData);
+        
+        // Session oluştur
+        const sessionId = CryptoJS.SHA256(userId + Date.now()).toString();
+        userSessions.set(sessionId, userId);
+        
+        res.json({
+            success: true,
+            sessionId,
+            user: userData,
+            message: 'Kullanıcı başarıyla kaydedildi'
         });
+        
+    } catch (error) {
+        console.error('Kayıt hatası:', error);
+        res.status(500).json({ error: 'Sunucu hatası' });
     }
-    
-    // Son kullanım zamanını güncelle
-    cardData.lastUsed = new Date();
-    
-    // Oturum oluştur
-    const sessionId = crypto.randomBytes(16).toString('hex');
-    nfcDatabase.sessions.set(sessionId, {
-        userId: cardData.userId,
-        nfcId,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 saat
-    });
-    
-    res.json({
-        success: true,
-        sessionId,
-        userId: cardData.userId,
-        message: 'NFC doğrulama başarılı'
-    });
 });
 
 app.get('/api/user/:userId', (req, res) => {
-    const { userId } = req.params;
-    const user = nfcDatabase.users.get(userId);
+    const userId = req.params.userId;
+    const user = usersDB.get(userId);
     
     if (!user) {
         return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
     }
     
-    res.json({
-        userId: user.userId,
-        createdAt: user.createdAt,
-        lastActive: user.lastActive,
-        chatCount: user.chats.length
-    });
+    // Hassas verileri çıkar
+    const publicData = {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        status: onlineUsers.has(userId) ? 'online' : 'offline',
+        lastSeen: user.lastSeen,
+        isActive: user.isActive
+    };
+    
+    res.json(publicData);
 });
 
-// WebSocket bağlantıları
+app.get('/api/users/search', (req, res) => {
+    const { query, limit = 20 } = req.query;
+    
+    if (!query || query.length < 2) {
+        return res.json([]);
+    }
+    
+    const results = [];
+    const queryLower = query.toLowerCase();
+    
+    for (const [userId, user] of usersDB.entries()) {
+        if (results.length >= limit) break;
+        
+        if (user.name.toLowerCase().includes(queryLower) ||
+            userId.toLowerCase().includes(queryLower) ||
+            (user.telegramData && user.telegramData.username && 
+             user.telegramData.username.toLowerCase().includes(queryLower))) {
+            
+            results.push({
+                id: user.id,
+                name: user.name,
+                avatar: user.avatar,
+                status: onlineUsers.has(userId) ? 'online' : 'offline',
+                lastSeen: user.lastSeen
+            });
+        }
+    }
+    
+    res.json(results);
+});
+
+// WebSocket Bağlantıları
 wss.on('connection', (ws, req) => {
     console.log('Yeni WebSocket bağlantısı');
     
     ws.id = uuidv4();
     ws.userId = null;
-    ws.sessionId = null;
+    ws.isAlive = true;
+    
+    // Heartbeat
+    ws.on('pong', () => {
+        ws.isAlive = true;
+    });
     
     ws.on('message', async (data) => {
         try {
@@ -127,35 +141,47 @@ wss.on('connection', (ws, req) => {
             await handleWebSocketMessage(ws, message);
         } catch (error) {
             console.error('Mesaj işleme hatası:', error);
-            ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Geçersiz mesaj formatı'
-            }));
+            sendError(ws, 'Geçersiz mesaj formatı');
         }
     });
     
     ws.on('close', () => {
         console.log(`Bağlantı kapandı: ${ws.id}`);
-        // Kullanıcı durumunu güncelle
+        
+        // Kullanıcıyı çevrimdışı yap
         if (ws.userId) {
-            const user = nfcDatabase.users.get(ws.userId);
-            if (user) {
-                user.lastActive = new Date();
-                user.online = false;
-            }
+            onlineUsers.delete(ws.userId);
+            updateUserStatus(ws.userId, 'offline');
         }
+    });
+    
+    ws.on('error', (error) => {
+        console.error('WebSocket hatası:', error);
     });
 });
 
-// WebSocket mesaj işleme
+// Heartbeat kontrolü
+setInterval(() => {
+    wss.clients.forEach((ws) => {
+        if (!ws.isAlive) {
+            return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
+// WebSocket Mesaj İşleme
 async function handleWebSocketMessage(ws, message) {
+    console.log('Gelen mesaj:', message.type);
+    
     switch (message.type) {
         case 'register':
             await handleRegister(ws, message);
             break;
             
-        case 'nfc_auth':
-            await handleNFCAuth(ws, message);
+        case 'get_users':
+            await handleGetUsers(ws, message);
             break;
             
         case 'search_user':
@@ -170,118 +196,156 @@ async function handleWebSocketMessage(ws, message) {
             await handleChatMessage(ws, message);
             break;
             
+        case 'read_receipt':
+            await handleReadReceipt(ws, message);
+            break;
+            
+        case 'typing':
+            await handleTyping(ws, message);
+            break;
+            
         default:
-            ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Bilinmeyen mesaj türü'
-            }));
+            sendError(ws, 'Bilinmeyen mesaj türü');
     }
 }
 
 async function handleRegister(ws, data) {
-    const { userId, userName, telegramData } = data;
+    const { userId, userName, action } = data;
     
     if (!userId) {
-        ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Kullanıcı ID\'si gerekli'
-        }));
+        sendError(ws, 'Kullanıcı ID\'si gerekli');
         return;
     }
     
-    // Kullanıcıyı kaydet
-    nfcDatabase.users.set(userId, {
-        userId,
-        userName: userName || `Anonim_${userId.substring(0, 6)}`,
-        telegramData,
-        online: true,
-        createdAt: new Date(),
-        lastActive: new Date(),
-        ws: ws
+    // Kullanıcıyı kontrol et veya oluştur
+    let user = usersDB.get(userId);
+    if (!user) {
+        user = {
+            id: userId,
+            name: userName || `Anonim_${userId.substring(0, 6)}`,
+            avatar: (userName || 'A').charAt(0).toUpperCase(),
+            createdAt: new Date(),
+            lastSeen: new Date(),
+            status: 'online'
+        };
+        usersDB.set(userId, user);
+    }
+    
+    // Son görülme zamanını güncelle
+    user.lastSeen = new Date();
+    user.status = 'online';
+    
+    // Online kullanıcılara ekle
+    ws.userId = userId;
+    onlineUsers.set(userId, {
+        ws,
+        lastSeen: new Date()
     });
     
-    ws.userId = userId;
-    
+    // Başarılı yanıt
     ws.send(JSON.stringify({
         type: 'registered',
-        userId,
-        userName: nfcDatabase.users.get(userId).userName,
-        message: 'Kayıt başarılı'
+        user: {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            status: 'online'
+        },
+        timestamp: Date.now()
     }));
     
-    console.log(`Kullanıcı kaydedildi: ${userId}`);
+    // Tüm kullanıcılara durum güncellemesini bildir
+    broadcastUserStatus(userId, 'online');
+    
+    console.log(`Kullanıcı giriş yaptı: ${userId}`);
 }
 
-async function handleNFCAuth(ws, data) {
-    const { nfcId } = data;
+async function handleGetUsers(ws, data) {
+    const { userId } = data;
     
-    const cardData = nfcDatabase.cards.get(nfcId);
-    if (!cardData) {
-        ws.send(JSON.stringify({
-            type: 'nfc_auth_failed',
-            message: 'NFC kartı kayıtlı değil'
-        }));
+    if (!userId || !onlineUsers.has(userId)) {
+        sendError(ws, 'Kimlik doğrulama gerekli');
         return;
     }
     
-    // Oturum oluştur
-    const sessionId = crypto.randomBytes(16).toString('hex');
-    nfcDatabase.sessions.set(sessionId, {
-        userId: cardData.userId,
-        nfcId,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-    });
+    // Tüm aktif kullanıcıları getir (kendisi hariç)
+    const usersList = [];
     
-    // Kullanıcıyı çevrimiçi yap
-    const user = nfcDatabase.users.get(cardData.userId);
-    if (user) {
-        user.online = true;
-        user.lastActive = new Date();
-        user.ws = ws;
+    for (const [uid, user] of usersDB.entries()) {
+        if (uid === userId) continue; // Kendisini listeleme
+        
+        usersList.push({
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            status: onlineUsers.has(uid) ? 'online' : 'offline',
+            lastSeen: user.lastSeen
+        });
     }
     
-    ws.userId = cardData.userId;
-    ws.sessionId = sessionId;
-    
     ws.send(JSON.stringify({
-        type: 'nfc_auth_success',
-        sessionId,
-        userId: cardData.userId,
-        userName: user ? user.userName : 'Anonim',
-        message: 'NFC doğrulama başarılı'
+        type: 'user_list',
+        users: usersList,
+        timestamp: Date.now()
     }));
-    
-    console.log(`NFC doğrulandı: ${nfcId} -> ${cardData.userId}`);
 }
 
 async function handleSearchUser(ws, data) {
-    const { userId, searchId } = data;
+    const { userId, query, searchType } = data;
     
-    const user = nfcDatabase.users.get(userId);
-    if (!user) {
+    if (!userId || !onlineUsers.has(userId)) {
+        sendError(ws, 'Kimlik doğrulama gerekli');
+        return;
+    }
+    
+    if (!query || query.length < 2) {
         ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Kimlik doğrulama gerekli'
+            type: 'user_found',
+            user: null,
+            message: 'En az 2 karakter girin'
         }));
         return;
     }
     
-    const searchedUser = nfcDatabase.users.get(searchId);
+    const queryLower = query.toLowerCase();
+    let results = [];
     
-    if (searchedUser && searchedUser.userId !== userId) {
+    // Arama yap
+    for (const [uid, user] of usersDB.entries()) {
+        if (uid === userId) continue; // Kendisini listeleme
+        
+        const isMatch = user.name.toLowerCase().includes(queryLower) ||
+                       uid.toLowerCase().includes(queryLower) ||
+                       (user.telegramData && user.telegramData.username && 
+                        user.telegramData.username.toLowerCase().includes(queryLower));
+        
+        if (isMatch) {
+            // Filtreleme
+            if (searchType === 'online' && !onlineUsers.has(uid)) continue;
+            
+            results.push({
+                id: user.id,
+                name: user.name,
+                avatar: user.avatar,
+                status: onlineUsers.has(uid) ? 'online' : 'offline',
+                lastSeen: user.lastSeen,
+                telegramData: user.telegramData
+            });
+        }
+    }
+    
+    // Sonuçları gönder
+    if (results.length > 0) {
+        // İlk sonucu göster (ilk eşleşen)
         ws.send(JSON.stringify({
             type: 'user_found',
-            user: {
-                userId: searchedUser.userId,
-                userName: searchedUser.userName,
-                online: searchedUser.online,
-                lastActive: searchedUser.lastActive
-            }
+            user: results[0],
+            timestamp: Date.now()
         }));
     } else {
         ws.send(JSON.stringify({
-            type: 'user_not_found',
+            type: 'user_found',
+            user: null,
             message: 'Kullanıcı bulunamadı'
         }));
     }
@@ -290,150 +354,252 @@ async function handleSearchUser(ws, data) {
 async function handleStartChat(ws, data) {
     const { userId, otherUserId } = data;
     
-    const user1 = nfcDatabase.users.get(userId);
-    const user2 = nfcDatabase.users.get(otherUserId);
-    
-    if (!user1 || !user2) {
-        ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Kullanıcı bulunamadı veya çevrimdışı'
-        }));
+    if (!userId || !onlineUsers.has(userId)) {
+        sendError(ws, 'Kimlik doğrulama gerekli');
         return;
     }
     
-    // Sohbet ID'si oluştur
-    const chatId = uuidv4();
-    const chat = {
-        id: chatId,
-        participants: [userId, otherUserId],
-        messages: [],
-        createdAt: new Date(),
-        lastMessageAt: new Date()
-    };
+    const otherUser = usersDB.get(otherUserId);
+    if (!otherUser) {
+        sendError(ws, 'Kullanıcı bulunamadı');
+        return;
+    }
     
-    nfcDatabase.chats.set(chatId, chat);
+    // Chat ID oluştur (her iki kullanıcı için aynı)
+    const chatId = generateChatId(userId, otherUserId);
     
-    // Kullanıcılara sohbeti ekle
-    user1.chats.push(chatId);
-    user2.chats.push(chatId);
+    // Chat'i kontrol et veya oluştur
+    let chat = chatsDB.get(chatId);
+    if (!chat) {
+        chat = {
+            id: chatId,
+            participants: [userId, otherUserId],
+            messages: [],
+            createdAt: new Date(),
+            lastActivity: new Date()
+        };
+        chatsDB.set(chatId, chat);
+    }
     
     // Her iki kullanıcıya da bildirim gönder
-    [user1, user2].forEach(user => {
-        if (user.ws && user.ws.readyState === WebSocket.OPEN) {
-            user.ws.send(JSON.stringify({
-                type: 'chat_started',
-                chatId,
-                otherUserId: user === user1 ? otherUserId : userId,
-                otherUserName: user === user1 ? user2.userName : user1.userName
-            }));
-        }
-    });
+    const user1 = onlineUsers.get(userId);
+    const user2 = onlineUsers.get(otherUserId);
+    
+    if (user1 && user1.ws) {
+        user1.ws.send(JSON.stringify({
+            type: 'chat_started',
+            chatId,
+            otherUserId,
+            otherUserName: otherUser.name,
+            timestamp: Date.now()
+        }));
+    }
+    
+    if (user2 && user2.ws) {
+        user2.ws.send(JSON.stringify({
+            type: 'chat_started',
+            chatId,
+            otherUserId: userId,
+            otherUserName: usersDB.get(userId).name,
+            timestamp: Date.now()
+        }));
+    }
     
     console.log(`Sohbet başlatıldı: ${chatId} (${userId} - ${otherUserId})`);
 }
 
 async function handleChatMessage(ws, data) {
-    const { userId, chatId, content } = data;
+    const { chatId, senderId, content, timestamp, messageId } = data;
     
-    const chat = nfcDatabase.chats.get(chatId);
-    if (!chat || !chat.participants.includes(userId)) {
-        ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Sohbet bulunamadı veya erişim izniniz yok'
-        }));
+    if (!senderId || !onlineUsers.has(senderId)) {
+        sendError(ws, 'Kimlik doğrulama gerekli');
+        return;
+    }
+    
+    const chat = chatsDB.get(chatId);
+    if (!chat || !chat.participants.includes(senderId)) {
+        sendError(ws, 'Sohbet bulunamadı veya erişim izniniz yok');
         return;
     }
     
     // Mesajı oluştur
     const message = {
-        id: uuidv4(),
-        senderId: userId,
+        id: messageId || uuidv4(),
+        chatId,
+        senderId,
         content,
-        timestamp: new Date(),
-        delivered: true
+        timestamp: timestamp || Date.now(),
+        delivered: false,
+        read: false
     };
     
     // Sohbete mesajı ekle
     chat.messages.push(message);
-    chat.lastMessageAt = new Date();
+    chat.lastActivity = new Date();
     
-    // Mesajı tüm katılımcılara gönder
-    chat.participants.forEach(participantId => {
-        const participant = nfcDatabase.users.get(participantId);
-        if (participant && participant.ws && participant.ws.readyState === WebSocket.OPEN) {
-            participant.ws.send(JSON.stringify({
-                type: 'message',
-                chatId,
-                senderId: userId,
-                senderName: nfcDatabase.users.get(userId).userName,
-                content,
-                timestamp: message.timestamp,
-                messageId: message.id
-            }));
+    // Mesaj sayısını sınırla (performans için)
+    if (chat.messages.length > 1000) {
+        chat.messages = chat.messages.slice(-500);
+    }
+    
+    // Alıcıyı bul
+    const receiverId = chat.participants.find(id => id !== senderId);
+    
+    // Mesajı alıcıya gönder
+    const receiver = onlineUsers.get(receiverId);
+    if (receiver && receiver.ws) {
+        receiver.ws.send(JSON.stringify({
+            type: 'message',
+            ...message,
+            delivered: true
+        }));
+        
+        // Teslim edildi olarak işaretle
+        message.delivered = true;
+    }
+    
+    // Gönderene de onay gönder
+    ws.send(JSON.stringify({
+        type: 'message_sent',
+        messageId: message.id,
+        timestamp: Date.now()
+    }));
+    
+    console.log(`Mesaj gönderildi: ${chatId} - ${senderId} -> ${receiverId}`);
+}
+
+async function handleReadReceipt(ws, data) {
+    const { chatId, userId } = data;
+    
+    const chat = chatsDB.get(chatId);
+    if (!chat) return;
+    
+    // Son mesajları okundu olarak işaretle
+    chat.messages.forEach(msg => {
+        if (msg.senderId !== userId && !msg.read) {
+            msg.read = true;
         }
     });
     
-    console.log(`Mesaj gönderildi: ${chatId} - ${userId}`);
+    // Diğer kullanıcıya bildir
+    const otherUserId = chat.participants.find(id => id !== userId);
+    const otherUser = onlineUsers.get(otherUserId);
+    
+    if (otherUser && otherUser.ws) {
+        otherUser.ws.send(JSON.stringify({
+            type: 'messages_read',
+            chatId,
+            userId,
+            timestamp: Date.now()
+        }));
+    }
+}
+
+async function handleTyping(ws, data) {
+    const { chatId, userId, isTyping } = data;
+    
+    const chat = chatsDB.get(chatId);
+    if (!chat) return;
+    
+    // Diğer kullanıcıya bildir
+    const otherUserId = chat.participants.find(id => id !== userId);
+    const otherUser = onlineUsers.get(otherUserId);
+    
+    if (otherUser && otherUser.ws) {
+        otherUser.ws.send(JSON.stringify({
+            type: 'typing',
+            chatId,
+            userId,
+            isTyping,
+            timestamp: Date.now()
+        }));
+    }
+}
+
+// Yardımcı Fonksiyonlar
+function generateChatId(userId1, userId2) {
+    // Her iki sıralama için aynı ID'yi üret
+    const sortedIds = [userId1, userId2].sort();
+    return CryptoJS.SHA256(sortedIds.join('_')).toString();
+}
+
+function broadcastUserStatus(userId, status) {
+    const statusUpdate = {
+        type: 'user_status',
+        userId,
+        status,
+        timestamp: Date.now()
+    };
+    
+    // Tüm online kullanıcılara gönder
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN && client.userId !== userId) {
+            client.send(JSON.stringify(statusUpdate));
+        }
+    });
+}
+
+function updateUserStatus(userId, status) {
+    const user = usersDB.get(userId);
+    if (user) {
+        user.status = status;
+        user.lastSeen = new Date();
+    }
+}
+
+function sendError(ws, message) {
+    ws.send(JSON.stringify({
+        type: 'error',
+        message,
+        timestamp: Date.now()
+    }));
 }
 
 // Zaman aşımı ile temizlik
 setInterval(() => {
     const now = new Date();
+    const FIVE_MINUTES = 5 * 60 * 1000;
     
-    // Eski oturumları temizle (24 saatten eski)
-    for (const [sessionId, session] of nfcDatabase.sessions.entries()) {
-        if (session.expiresAt < now) {
-            nfcDatabase.sessions.delete(sessionId);
+    // Çevrimdışı kullanıcıları temizle
+    for (const [userId, userData] of onlineUsers.entries()) {
+        if (now - userData.lastSeen > FIVE_MINUTES) {
+            onlineUsers.delete(userId);
+            updateUserStatus(userId, 'offline');
+            broadcastUserStatus(userId, 'offline');
         }
     }
     
-    // Eski mesajları temizle (1 saatten eski mesajlar)
-    for (const [chatId, chat] of nfcDatabase.chats.entries()) {
-        if (chat.lastMessageAt < new Date(now - 60 * 60 * 1000)) {
-            // Sohbeti temizle
-            chat.messages = chat.messages.filter(msg => 
-                new Date(msg.timestamp) > new Date(now - 60 * 60 * 1000)
-            );
-            
-            // Eğer hiç mesaj kalmadıysa sohbeti sil
-            if (chat.messages.length === 0) {
-                nfcDatabase.chats.delete(chatId);
-            }
+    // Eski oturumları temizle
+    for (const [sessionId, userId] of userSessions.entries()) {
+        // 24 saatten eski oturumları temizle
+        if (now - new Date(usersDB.get(userId)?.lastSeen || 0) > 24 * 60 * 60 * 1000) {
+            userSessions.delete(sessionId);
         }
     }
     
-    // Çevrimdışı kullanıcıları işaretle
-    for (const [userId, user] of nfcDatabase.users.entries()) {
-        if (user.lastActive < new Date(now - 5 * 60 * 1000)) { // 5 dakika
-            user.online = false;
+    // Eski mesajları temizle (1 günden eski sohbetler)
+    for (const [chatId, chat] of chatsDB.entries()) {
+        if (now - chat.lastActivity > 24 * 60 * 60 * 1000) {
+            // Sadece mesajları temizle, sohbeti değil
+            chat.messages = [];
         }
     }
     
-    console.log(`Temizlik yapıldı: ${nfcDatabase.sessions.size} oturum, ${nfcDatabase.chats.size} sohbet`);
+    console.log(`Temizlik yapıldı: ${onlineUsers.size} online, ${chatsDB.size} sohbet`);
 }, 5 * 60 * 1000); // 5 dakikada bir
 
-// Ana sayfa
+// Statik dosyalar
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
-// Sağlık kontrolü
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'online',
-        users: nfcDatabase.users.size,
-        chats: nfcDatabase.chats.size,
-        nfcCards: nfcDatabase.cards.size,
-        uptime: process.uptime()
-    });
+app.get('/chat.html', (req, res) => {
+    res.sendFile(__dirname + '/chat.html');
 });
 
-// Sunucuyu başlat
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`✅ Sunucu ${PORT} portunda çalışıyor`);
-    console.log(`🌐 WebSocket sunucusu hazır`);
-    console.log(`🔒 HTTPS: https://saskioyunu.onrender.com`);
+// 404 handler
+app.use((req, res) => {
+    res.status(404).sendFile(__dirname + '/index.html');
 });
 
 // Hata yönetimi
@@ -443,4 +609,13 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('İşlenmemiş promise:', reason);
+});
+
+// Sunucuyu başlat
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`🚀 Sunucu ${PORT} portunda çalışıyor`);
+    console.log(`📱 Ana sayfa: http://localhost:${PORT}`);
+    console.log(`💬 Sohbet: http://localhost:${PORT}/chat.html`);
+    console.log(`🔒 Sistem aktif, WebSocket hazır`);
 });
