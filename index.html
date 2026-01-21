@@ -2,273 +2,387 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonim NFC Sohbet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anonim Sohbet - Giriş Oyunu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 500px;
             margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        header {
+        /* Header */
+        .header {
             text-align: center;
-            margin-bottom: 40px;
-            padding-top: 20px;
+            padding: 30px 0 20px;
+        }
+
+        .logo {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
+            font-weight: 700;
             margin-bottom: 10px;
-            background: linear-gradient(90deg, #00b4db, #0083b0);
+            background: linear-gradient(90deg, #fff, #f0f0f0);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
         }
 
         .subtitle {
-            color: #a0a0a0;
+            color: rgba(255, 255, 255, 0.8);
             font-size: 1.1rem;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .status-card {
-            display: flex;
-            align-items: center;
-            gap: 20px;
             margin-bottom: 30px;
         }
 
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #4CAF50;
-            animation: pulse 2s infinite;
+        /* Game Container */
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-title {
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 25px;
+            color: white;
+        }
+
+        .game-instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Color Grid */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            flex: 1;
+        }
+
+        .color-btn {
+            aspect-ratio: 1;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .color-btn:active {
+            transform: scale(0.95);
+        }
+
+        .color-btn.selected {
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
-        .button {
-            background: linear-gradient(90deg, #00b4db, #0083b0);
-            color: white;
+        /* Sequence Display */
+        .sequence-display {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .sequence-dot {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .sequence-dot.empty {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        /* Game Controls */
+        .game-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .game-btn {
+            flex: 1;
+            padding: 16px;
             border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 1rem;
+            border-radius: 15px;
+            font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            width: 100%;
-            margin: 10px 0;
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
         }
 
-        .button:hover {
-            transform: translateY(-2px);
+        .game-btn.primary {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
         }
 
-        .button:active {
+        .game-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .game-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .game-btn:active {
             transform: translateY(0);
         }
 
-        .button.secondary {
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 8px;
             background: rgba(255, 255, 255, 0.1);
-        }
-
-        .icon {
-            font-size: 1.2rem;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .user-details h3 {
-            font-size: 1.3rem;
-            margin-bottom: 5px;
-        }
-
-        .user-details p {
-            color: #a0a0a0;
-            font-size: 0.9rem;
-        }
-
-        .chat-container {
-            display: none;
-            flex-direction: column;
-            height: 70vh;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
+            border-radius: 4px;
             overflow: hidden;
+            margin-bottom: 30px;
         }
 
-        .chat-container.active {
-            display: flex;
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease;
         }
 
-        .chat-header {
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.5);
+        /* Game Stats */
+        .game-stats {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .message {
-            max-width: 70%;
-            padding: 12px 15px;
-            border-radius: 18px;
-            word-wrap: break-word;
-        }
-
-        .message.sent {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            align-self: flex-end;
-            border-bottom-right-radius: 5px;
-        }
-
-        .message.received {
-            background: rgba(255, 255, 255, 0.1);
-            align-self: flex-start;
-            border-bottom-left-radius: 5px;
-        }
-
-        .chat-input {
+            background: rgba(0, 0, 0, 0.3);
             padding: 15px;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            gap: 10px;
+            border-radius: 15px;
+            margin-bottom: 25px;
         }
 
-        .chat-input input {
-            flex: 1;
-            padding: 12px 20px;
-            border-radius: 25px;
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 1rem;
+        .stat-item {
+            text-align: center;
         }
 
-        .chat-input button {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            color: white;
-            cursor: pointer;
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #4CAF50;
         }
 
-        .nfc-scan-overlay {
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+        }
+
+        /* Success Screen */
+        .success-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 30px;
+            text-align: center;
         }
 
-        .nfc-scan-overlay.active {
+        .success-screen.active {
             display: flex;
+            animation: fadeIn 0.5s ease;
         }
 
-        .nfc-animation {
-            width: 200px;
-            height: 200px;
-            border: 3px dashed #00b4db;
-            border-radius: 20px;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .success-icon {
+            font-size: 8rem;
+            color: #4CAF50;
+            margin-bottom: 30px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .success-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .continue-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .continue-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            position: relative;
-            overflow: hidden;
+            z-index: 2000;
         }
 
-        .nfc-animation::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, transparent, #00b4db, transparent);
-            animation: scan 2s infinite linear;
+        .loading.active {
+            display: flex;
         }
 
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(400%); }
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
         }
 
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .color-grid {
+                gap: 12px;
+            }
+            
+            .game-controls {
+                flex-direction: column;
+            }
+        }
+
+        /* Toast */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            z-index: 1000;
+            padding: 15px 25px;
+            border-radius: 15px;
+            z-index: 3000;
             opacity: 0;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 90%;
+            text-align: center;
         }
 
         .toast.show {
@@ -276,562 +390,617 @@
             opacity: 1;
         }
 
-        .compatibility-warning {
-            background: rgba(255, 87, 87, 0.1);
-            border: 1px solid rgba(255, 87, 87, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .compatibility-warning.show {
-            display: block;
-        }
-
-        .compatibility-warning p {
-            color: #ff5757;
-            font-size: 0.9rem;
+        /* Screenshot Protection */
+        .no-screenshot {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
-<body>
+<body class="no-screenshot">
     <div class="container">
-        <header>
-            <h1>🔒 Anonim NFC Sohbet</h1>
-            <p class="subtitle">NFC kartınızla anında güvenli sohbet</p>
-        </header>
-
-        <div class="compatibility-warning" id="compatibilityWarning">
-            <p>⚠️ Tarayıcınız NFC'yi desteklemiyor. Sohbete erişmek için alternatif yöntem:</p>
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🎮</div>
+            <h1>Anonim Sohbet</h1>
+            <p class="subtitle">Renk oyunu ile güvenli giriş</p>
         </div>
 
-        <div class="card status-card">
-            <div class="status-indicator"></div>
-            <div>
-                <h3>Sistem Durumu</h3>
-                <p id="systemStatus">Başlatılıyor...</p>
+        <!-- Game Container -->
+        <div class="game-container">
+            <h2 class="game-title" id="gameTitle">Renk Dizmece Oyunu</h2>
+            
+            <div class="game-instructions" id="instructions">
+                <p><strong>Nasıl Oynanır:</strong></p>
+                <p>1. 4 renkten oluşan bir şifre belirleyin</p>
+                <p>2. Bu şifreyi hatırlayın</p>
+                <p>3. Her girişte aynı şifreyi girerek doğrulayın</p>
             </div>
-        </div>
 
-        <div id="authSection">
-            <div class="card">
-                <div class="user-info">
-                    <div class="avatar" id="userAvatar">A</div>
-                    <div class="user-details">
-                        <h3 id="userName">Anonim Kullanıcı</h3>
-                        <p id="userId">ID: Yükleniyor...</p>
-                    </div>
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <!-- Sequence Display -->
+            <div class="sequence-display">
+                <div class="sequence-dot empty" id="dot1"></div>
+                <div class="sequence-dot empty" id="dot2"></div>
+                <div class="sequence-dot empty" id="dot3"></div>
+                <div class="sequence-dot empty" id="dot4"></div>
+            </div>
+
+            <!-- Color Grid -->
+            <div class="color-grid" id="colorGrid">
+                <!-- Colors will be generated by JavaScript -->
+            </div>
+
+            <!-- Game Stats -->
+            <div class="game-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="attemptCount">0</div>
+                    <div class="stat-label">Deneme</div>
                 </div>
-
-                <button class="button" onclick="startNFCAuth()" id="nfcButton">
-                    <span class="icon">📱</span>
-                    NFC Kartını Okut
-                </button>
-
-                <button class="button secondary" onclick="manualAuth()" id="manualButton">
-                    <span class="icon">🔑</span>
-                    Manuel Giriş (Yedek)
-                </button>
-            </div>
-        </div>
-
-        <div class="chat-container" id="chatContainer">
-            <div class="chat-header">
-                <div class="user-info">
-                    <div class="avatar" id="chatUserAvatar">A</div>
-                    <div>
-                        <h3 id="chatUserName">Anonim</h3>
-                        <p id="chatStatus">Çevrimiçi</p>
-                    </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="gameStage">1</div>
+                    <div class="stat-label">Aşama</div>
                 </div>
-                <button class="button secondary" onclick="showUserSearch()">
-                    <span class="icon">🔍</span>
-                    Kullanıcı Ara
+                <div class="stat-item">
+                    <div class="stat-value" id="timeLeft">60</div>
+                    <div class="stat-label">Saniye</div>
+                </div>
+            </div>
+
+            <!-- Game Controls -->
+            <div class="game-controls">
+                <button class="game-btn secondary" id="clearBtn">
+                    <i class="fas fa-undo"></i>
+                    Temizle
                 </button>
-            </div>
-
-            <div class="chat-messages" id="chatMessages">
-                <!-- Mesajlar buraya gelecek -->
-            </div>
-
-            <div class="chat-input">
-                <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()">
-                    <span class="icon">➤</span>
+                <button class="game-btn primary" id="submitBtn">
+                    <i class="fas fa-check"></i>
+                    Onayla
                 </button>
-            </div>
-        </div>
-
-        <div class="nfc-scan-overlay" id="nfcScanOverlay">
-            <div class="nfc-animation">
-                <span style="font-size: 3rem; color: #00b4db;">📱</span>
             </div>
         </div>
     </div>
 
+    <!-- Success Screen -->
+    <div class="success-screen" id="successScreen">
+        <div class="success-icon">🎉</div>
+        <h2 class="success-title">Tebrikler!</h2>
+        <p class="success-message" id="successMessage">Şifreniz başarıyla oluşturuldu. Anonim sohbet platformuna erişim sağlanıyor...</p>
+        <button class="continue-btn" id="continueBtn">
+            <i class="fas fa-arrow-right"></i>
+            Sohbete Geç
+        </button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading" id="loadingScreen">
+        <div class="spinner"></div>
+        <h2 id="loadingText">Yükleniyor...</h2>
+    </div>
+
+    <!-- Toast -->
     <div class="toast" id="toast"></div>
 
     <script>
         // Global değişkenler
+        let selectedColors = [];
+        let gameStage = 1; // 1: Şifre oluşturma, 2: Şifre doğrulama
+        let userPassword = null;
         let userId = null;
         let userName = null;
-        let userAvatar = 'A';
-        let socket = null;
-        let currentChat = null;
-        let nfcSupported = false;
-        let isTelegramWebView = false;
+        let userTelegramData = null;
+        let attempts = 0;
+        let timeLeft = 60;
+        let timerInterval = null;
+        let isFirstVisit = true;
+
+        // Renk paleti
+        const colors = [
+            { name: 'Kırmızı', value: '#FF5252', icon: '❤️' },
+            { name: 'Mavi', value: '#448AFF', icon: '💙' },
+            { name: 'Yeşil', value: '#4CAF50', icon: '💚' },
+            { name: 'Sarı', value: '#FFD740', icon: '💛' },
+            { name: 'Mor', value: '#7C4DFF', icon: '💜' },
+            { name: 'Turuncu', value: '#FF9800', icon: '🧡' },
+            { name: 'Pembe', value: '#FF4081', icon: '💗' },
+            { name: 'Turkuaz', value: '#18FFFF', icon: '💠' }
+        ];
 
         // Sayfa yüklendiğinde
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('Sayfa yüklendi');
             
-            // Telegram WebView kontrolü
-            detectEnvironment();
+            // Ekran koruması
+            setupScreenProtection();
             
-            // NFC desteğini kontrol et
-            await checkNFCSupport();
+            // Kullanıcı bilgilerini al
+            initializeUser();
             
-            // Kullanıcı ID'sini al
-            await initializeUser();
+            // Renk grid'ini oluştur
+            createColorGrid();
             
-            // WebSocket bağlantısını kur
-            connectWebSocket();
+            // Game stage'i kontrol et
+            checkGameStage();
             
-            // NFC butonunu yapılandır
-            setupNFCButton();
+            // Buton event listener'ları
+            document.getElementById('clearBtn').addEventListener('click', clearSelection);
+            document.getElementById('submitBtn').addEventListener('click', submitSequence);
+            document.getElementById('continueBtn').addEventListener('click', goToChat);
+            
+            // Timer başlat
+            startTimer();
+            
+            // Toast göster
+            showToast('Renk oyununa hoş geldiniz!');
         });
 
-        // Ortamı tespit et
-        function detectEnvironment() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            isTelegramWebView = userAgent.includes('telegram') || 
-                               userAgent.includes('webview') ||
-                               window.TelegramWebViewProxy !== undefined;
+        // Ekran yakalama koruması
+        function setupScreenProtection() {
+            // Kopyalamayı engelle
+            document.addEventListener('copy', (e) => e.preventDefault());
+            document.addEventListener('cut', (e) => e.preventDefault());
+            document.addEventListener('paste', (e) => e.preventDefault());
             
-            console.log('Telegram WebView:', isTelegramWebView);
-            console.log('User Agent:', userAgent);
+            // Sağ tık menüsünü engelle
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
             
-            if (isTelegramWebView) {
-                document.getElementById('systemStatus').textContent = 'Telegram WebView algılandı';
-                showToast('Telegram WebView modunda');
-            }
-        }
-
-        // NFC desteğini kontrol et
-        async function checkNFCSupport() {
-            try {
-                // Web NFC API kontrolü
-                if ('NDEFReader' in window) {
-                    nfcSupported = true;
-                    document.getElementById('systemStatus').textContent = 'NFC destekleniyor';
-                    console.log('NFC API destekleniyor');
-                } else {
-                    nfcSupported = false;
-                    document.getElementById('systemStatus').textContent = 'NFC desteklenmiyor';
-                    document.getElementById('compatibilityWarning').classList.add('show');
-                    console.log('NFC API desteklenmiyor');
+            // Klavye kısayollarını engelle
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'PrintScreen' || 
+                    e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                    (e.ctrlKey && e.key === 'u') ||
+                    (e.ctrlKey && e.key === 's')) {
+                    e.preventDefault();
+                    showToast('Bu işlem güvenlik nedeniyle engellendi');
                 }
-            } catch (error) {
-                console.error('NFC kontrol hatası:', error);
-                nfcSupported = false;
-            }
-        }
-
-        // NFC butonunu yapılandır
-        function setupNFCButton() {
-            const nfcButton = document.getElementById('nfcButton');
+            });
             
-            if (!nfcSupported) {
-                nfcButton.innerHTML = '<span class="icon">⚠️</span> NFC Desteklenmiyor';
-                nfcButton.disabled = true;
-                nfcButton.style.opacity = '0.5';
-                nfcButton.style.cursor = 'not-allowed';
+            // Developer Tools açıldığında tespit et
+            setInterval(() => {
+                const threshold = 100;
+                const widthDiff = window.outerWidth - window.innerWidth;
+                const heightDiff = window.outerHeight - window.innerHeight;
                 
-                // Manuel giriş butonunu vurgula
-                document.getElementById('manualButton').style.background = 'linear-gradient(90deg, #4CAF50, #2E7D32)';
-            }
+                if (widthDiff > threshold || heightDiff > threshold) {
+                    showToast('Güvenlik uyarısı!');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }, 1000);
         }
 
-        // Kullanıcıyı başlat (Telegram'dan veya oluştur)
+        // Kullanıcıyı başlat
         async function initializeUser() {
             try {
-                // URL'den Telegram verilerini al
+                // URL parametrelerini kontrol et (Telegram WebApp)
                 const urlParams = new URLSearchParams(window.location.search);
                 const tgInitData = urlParams.get('tgInitData');
                 
                 if (tgInitData) {
-                    // Telegram'dan gelen verileri parse et
-                    await handleTelegramData(tgInitData);
+                    // Telegram'dan gelen verileri işle
+                    await processTelegramData(tgInitData);
                 } else {
                     // Rastgele kullanıcı oluştur
                     await createRandomUser();
                 }
                 
-                updateUserDisplay();
+                // LocalStorage'dan şifreyi kontrol et
+                checkExistingPassword();
+                
             } catch (error) {
                 console.error('Kullanıcı başlatma hatası:', error);
                 await createRandomUser();
-                updateUserDisplay();
             }
         }
 
         // Telegram verilerini işle
-        async function handleTelegramData(initData) {
+        async function processTelegramData(initData) {
             try {
-                // initData'yi parse et (örnek format)
                 const params = new URLSearchParams(initData);
-                const tgUser = params.get('user');
+                const userParam = params.get('user');
                 
-                if (tgUser) {
-                    const userData = JSON.parse(decodeURIComponent(tgUser));
+                if (userParam) {
+                    const userData = JSON.parse(decodeURIComponent(userParam));
                     userId = `tg_${userData.id}`;
-                    userName = userData.first_name || `Kullanıcı_${userData.id}`;
-                    userAvatar = userName.charAt(0).toUpperCase();
+                    userName = userData.first_name || `User_${userData.id}`;
                     
-                    // Kullanıcı adı varsa ekle
                     if (userData.username) {
                         userName = `@${userData.username}`;
                     }
-                } else {
-                    await createRandomUser();
+                    
+                    userTelegramData = userData;
+                    
+                    console.log('Telegram kullanıcısı:', userData);
+                    showToast(`Hoş geldin ${userName}!`);
                 }
             } catch (error) {
                 console.error('Telegram veri işleme hatası:', error);
-                await createRandomUser();
+                throw error;
             }
         }
 
         // Rastgele kullanıcı oluştur
         async function createRandomUser() {
-            const randomId = Math.random().toString(36).substring(2, 10);
+            const randomId = Math.random().toString(36).substring(2, 15);
             userId = `anon_${randomId}`;
-            userName = `Anonim_${randomId.substring(0, 4)}`;
-            userAvatar = userName.charAt(0).toUpperCase();
-        }
-
-        // Kullanıcı bilgilerini güncelle
-        function updateUserDisplay() {
-            document.getElementById('userName').textContent = userName;
-            document.getElementById('userId').textContent = `ID: ${userId}`;
-            document.getElementById('userAvatar').textContent = userAvatar;
-            document.getElementById('chatUserAvatar').textContent = userAvatar;
-            document.getElementById('chatUserName').textContent = userName;
-        }
-
-        // WebSocket bağlantısı
-        function connectWebSocket() {
-            // Render.com WebSocket URL'si
-            const wsUrl = 'wss://' + window.location.hostname;
-            socket = new WebSocket(wsUrl);
+            userName = `Anonim_${randomId.substring(0, 6)}`;
             
-            socket.onopen = function() {
-                console.log('WebSocket bağlantısı kuruldu');
-                document.getElementById('systemStatus').textContent = 'Sunucuya bağlandı';
+            console.log('Rastgele kullanıcı oluşturuldu:', userId);
+        }
+
+        // Mevcut şifreyi kontrol et
+        function checkExistingPassword() {
+            const savedPassword = localStorage.getItem(`color_password_${userId}`);
+            
+            if (savedPassword) {
+                userPassword = JSON.parse(savedPassword);
+                gameStage = 2; // Şifre doğrulama moduna geç
+                isFirstVisit = false;
+                updateGameUI();
+            }
+        }
+
+        // Game stage'ini kontrol et ve UI'ı güncelle
+        function checkGameStage() {
+            updateGameUI();
+        }
+
+        // Game UI'ını güncelle
+        function updateGameUI() {
+            const title = document.getElementById('gameTitle');
+            const instructions = document.getElementById('instructions');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (gameStage === 1) {
+                title.textContent = 'Şifre Oluştur';
+                instructions.innerHTML = `
+                    <p><strong>İlk defa mı giriyorsunuz?</strong></p>
+                    <p>1. 4 renkten oluşan bir şifre seçin</p>
+                    <p>2. Bu şifreyi unutmayın!</p>
+                    <p>3. Şifrenizi tekrar girerek doğrulayın</p>
+                `;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Şifreyi Kaydet';
+            } else {
+                title.textContent = 'Şifrenizi Girin';
+                instructions.innerHTML = `
+                    <p><strong>Hoş geldiniz!</strong></p>
+                    <p>1. Daha önce belirlediğiniz 4 renkli şifreyi girin</p>
+                    <p>2. Şifrenizi unuttuysanız sayfayı yenileyin</p>
+                    <p>3. Her yanlış denemede süre azalır</p>
+                `;
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Giriş Yap';
+            }
+            
+            // İstatistikleri güncelle
+            document.getElementById('gameStage').textContent = gameStage;
+        }
+
+        // Renk grid'ini oluştur
+        function createColorGrid() {
+            const grid = document.getElementById('colorGrid');
+            grid.innerHTML = '';
+            
+            // 8 renk ekle (4x2 grid)
+            colors.forEach((color, index) => {
+                const button = document.createElement('button');
+                button.className = 'color-btn';
+                button.style.background = color.value;
+                button.dataset.index = index;
+                button.dataset.color = color.value;
+                button.dataset.name = color.name;
                 
-                // Kullanıcıyı kaydet
-                registerUser();
-            };
+                // Renk etiketi
+                const label = document.createElement('div');
+                label.style.position = 'absolute';
+                label.style.bottom = '5px';
+                label.style.left = '0';
+                label.style.right = '0';
+                label.style.textAlign = 'center';
+                label.style.fontSize = '1.5rem';
+                label.textContent = color.icon;
+                
+                button.appendChild(label);
+                
+                button.addEventListener('click', () => selectColor(color, button));
+                grid.appendChild(button);
+            });
+        }
+
+        // Renk seç
+        function selectColor(color, button) {
+            if (selectedColors.length >= 4) {
+                showToast('Maksimum 4 renk seçebilirsiniz');
+                return;
+            }
             
-            socket.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    handleSocketMessage(data);
-                } catch (error) {
-                    console.error('Mesaj işleme hatası:', error);
+            selectedColors.push(color);
+            
+            // Seçili rengi işaretle
+            button.classList.add('selected');
+            
+            // Sequence dot'larını güncelle
+            updateSequenceDots();
+            
+            // Progress bar'ı güncelle
+            updateProgressBar();
+            
+            // Butonun animasyonunu başlat
+            button.style.animation = 'pulse 0.3s ease';
+            setTimeout(() => {
+                button.style.animation = '';
+            }, 300);
+        }
+
+        // Sequence dot'larını güncelle
+        function updateSequenceDots() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`dot${i}`);
+                
+                if (i <= selectedColors.length) {
+                    const color = selectedColors[i - 1];
+                    dot.style.background = color.value;
+                    dot.classList.remove('empty');
+                    dot.innerHTML = `<span style="font-size: 0.8rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">${color.icon}</span>`;
+                } else {
+                    dot.style.background = '';
+                    dot.classList.add('empty');
+                    dot.innerHTML = '';
                 }
-            };
+            }
+        }
+
+        // Progress bar'ı güncelle
+        function updateProgressBar() {
+            const progress = (selectedColors.length / 4) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        // Seçimi temizle
+        function clearSelection() {
+            selectedColors = [];
             
-            socket.onclose = function() {
-                console.log('WebSocket bağlantısı kapandı');
-                document.getElementById('systemStatus').textContent = 'Bağlantı kesildi';
+            // Tüm renk butonlarından selected class'ını kaldır
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Sequence dot'larını sıfırla
+            updateSequenceDots();
+            
+            // Progress bar'ı sıfırla
+            updateProgressBar();
+            
+            showToast('Seçim temizlendi');
+        }
+
+        // Sequence'i gönder
+        function submitSequence() {
+            if (selectedColors.length !== 4) {
+                showToast('Lütfen tam olarak 4 renk seçin');
+                return;
+            }
+            
+            attempts++;
+            document.getElementById('attemptCount').textContent = attempts;
+            
+            if (gameStage === 1) {
+                // Şifre oluşturma modu
+                handlePasswordCreation();
+            } else {
+                // Şifre doğrulama modu
+                handlePasswordVerification();
+            }
+        }
+
+        // Şifre oluşturma
+        function handlePasswordCreation() {
+            if (!userPassword) {
+                // İlk şifre oluşturma
+                userPassword = selectedColors.map(c => c.value);
+                showToast('Şifreniz oluşturuldu. Şimdi tekrar girin.');
                 
-                // 5 saniye sonra yeniden bağlan
-                setTimeout(connectWebSocket, 5000);
-            };
+                // Stage 2'ye geç
+                gameStage = 2;
+                updateGameUI();
+                clearSelection();
+            } else {
+                // Şifreyi doğrula
+                const newPassword = selectedColors.map(c => c.value);
+                const isMatch = JSON.stringify(userPassword) === JSON.stringify(newPassword);
+                
+                if (isMatch) {
+                    // Şifre doğrulandı, kaydet
+                    savePassword();
+                    showSuccessScreen('Şifreniz başarıyla doğrulandı!');
+                } else {
+                    // Şifre yanlış
+                    handleWrongPassword();
+                }
+            }
+        }
+
+        // Şifre doğrulama
+        function handlePasswordVerification() {
+            const enteredPassword = selectedColors.map(c => c.value);
+            const isMatch = JSON.stringify(userPassword) === JSON.stringify(enteredPassword);
             
-            socket.onerror = function(error) {
-                console.error('WebSocket hatası:', error);
-            };
+            if (isMatch) {
+                // Şifre doğrulandı
+                showSuccessScreen('Giriş başarılı!');
+            } else {
+                // Şifre yanlış
+                handleWrongPassword();
+            }
+        }
+
+        // Yanlış şifre işleme
+        function handleWrongPassword() {
+            showToast('Yanlış şifre! Tekrar deneyin.');
+            
+            // Süreyi azalt
+            timeLeft = Math.max(10, timeLeft - 10);
+            updateTimerDisplay();
+            
+            // Hata animasyonu
+            document.querySelectorAll('.sequence-dot').forEach(dot => {
+                dot.style.animation = 'none';
+                setTimeout(() => {
+                    dot.style.animation = 'pulse 0.5s ease';
+                }, 10);
+            });
+            
+            clearSelection();
+        }
+
+        // Şifreyi kaydet
+        function savePassword() {
+            localStorage.setItem(`color_password_${userId}`, JSON.stringify(userPassword));
+            localStorage.setItem(`user_id`, userId);
+            localStorage.setItem(`user_name`, userName);
+            
+            // Telegram verisini de kaydet
+            if (userTelegramData) {
+                localStorage.setItem(`telegram_data`, JSON.stringify(userTelegramData));
+            }
+            
+            console.log('Şifre kaydedildi:', userPassword);
+        }
+
+        // Başarı ekranını göster
+        function showSuccessScreen(message) {
+            document.getElementById('successMessage').textContent = message;
+            document.getElementById('successScreen').classList.add('active');
+            
+            // Timer'ı durdur
+            clearInterval(timerInterval);
+            
+            // Kullanıcı verilerini sunucuya kaydet
+            saveUserToServer();
         }
 
         // Kullanıcıyı sunucuya kaydet
-        function registerUser() {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const message = {
-                    type: 'register',
+        async function saveUserToServer() {
+            showLoading('Sisteme kaydediliyor...');
+            
+            try {
+                // Kullanıcı verilerini hazırla
+                const userData = {
                     userId: userId,
                     userName: userName,
-                    telegramData: window.location.search,
-                    timestamp: Date.now()
+                    telegramData: userTelegramData,
+                    gameCompleted: true,
+                    timestamp: Date.now(),
+                    colorPassword: userPassword
                 };
-                socket.send(JSON.stringify(message));
-            }
-        }
-
-        // NFC ile kimlik doğrulama başlat
-        async function startNFCAuth() {
-            if (!nfcSupported) {
-                showToast('Tarayıcınız NFC\'yi desteklemiyor');
-                return;
-            }
-            
-            showNFCOverlay();
-            
-            try {
-                if (isTelegramWebView) {
-                    // Telegram WebView için özel yaklaşım
-                    await handleTelegramNFC();
-                } else {
-                    // Normal tarayıcı için Web NFC API
-                    await handleWebNFC();
+                
+                // LocalStorage'a kaydet
+                localStorage.setItem('user_data', JSON.stringify(userData));
+                
+                // Sunucuya POST isteği gönder
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Sunucu kaydı başarısız');
                 }
+                
+                const result = await response.json();
+                console.log('Sunucu kaydı başarılı:', result);
+                
+                hideLoading();
+                
             } catch (error) {
-                console.error('NFC okuma hatası:', error);
-                showToast('NFC okuma başarısız: ' + error.message);
-                hideNFCOverlay();
+                console.error('Sunucu kaydı hatası:', error);
+                hideLoading();
+                showToast('Bağlantı hatası, offline modda devam ediliyor');
             }
         }
 
-        // Telegram WebView için NFC işleme
-        async function handleTelegramNFC() {
-            showToast('Telegram WebView NFC test ediliyor...');
-            
-            // Telegram Bot API üzerinden NFC verisi al
-            // Bu kısım Telegram Bot entegrasyonu gerektirir
-            await simulateNFCAuth();
-        }
-
-        // Web NFC API ile okuma
-        async function handleWebNFC() {
-            try {
-                const ndef = new NDEFReader();
-                
-                await ndef.scan();
-                
-                ndef.onreading = async (event) => {
-                    console.log('NFC kartı okundu:', event);
-                    
-                    const nfcId = event.serialNumber;
-                    const nfcData = {};
-                    
-                    for (const record of event.message.records) {
-                        nfcData[record.recordType] = await record.data.text();
-                    }
-                    
-                    // NFC verisini sunucuya gönder
-                    sendNFCAuth(nfcId, nfcData);
-                    
-                    // Sohbet ekranını göster
-                    showChat();
-                };
-                
-                ndef.onreadingerror = (error) => {
-                    console.error('NFC okuma hatası:', error);
-                    showToast('NFC okuma hatası: ' + error.message);
-                    hideNFCOverlay();
-                };
-                
-                // 30 saniye sonra zaman aşımı
-                setTimeout(() => {
-                    hideNFCOverlay();
-                    showToast('NFC okuma zaman aşımı');
-                }, 30000);
-                
-            } catch (error) {
-                throw error;
-            }
-        }
-
-        // NFC kimlik doğrulamasını simüle et
-        async function simulateNFCAuth() {
-            // Demo için rastgele NFC ID oluştur
-            const simulatedNFCId = 'nfc_' + Math.random().toString(36).substring(2, 15);
-            const nfcData = {
-                type: 'simulated',
-                timestamp: Date.now()
-            };
+        // Sohbet sayfasına geç
+        function goToChat() {
+            showLoading('Sohbet platformuna yönlendiriliyor...');
             
             setTimeout(() => {
-                sendNFCAuth(simulatedNFCId, nfcData);
-                showChat();
+                // Sohbet sayfasına yönlendir
+                window.location.href = '/chat.html?userId=' + encodeURIComponent(userId);
             }, 2000);
         }
 
-        // NFC kimlik doğrulamasını sunucuya gönder
-        function sendNFCAuth(nfcId, nfcData) {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const message = {
-                    type: 'nfc_auth',
-                    userId: userId,
-                    nfcId: nfcId,
-                    nfcData: nfcData,
-                    timestamp: Date.now()
-                };
-                socket.send(JSON.stringify(message));
-                showToast('NFC doğrulandı');
-            }
-        }
-
-        // Manuel giriş (yedek yöntem)
-        function manualAuth() {
-            const pin = prompt('Güvenlik PIN\'i girin (demo: 1234):');
+        // Timer başlat
+        function startTimer() {
+            updateTimerDisplay();
             
-            if (pin === '1234') {
-                showToast('Manuel giriş başarılı');
-                showChat();
-            } else {
-                showToast('Geçersiz PIN');
-            }
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showToast('Süre doldu! Sayfa yenileniyor...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else if (timeLeft <= 10) {
+                    // Son 10 saniye uyarısı
+                    document.getElementById('timeLeft').style.color = '#FF5252';
+                }
+            }, 1000);
         }
 
-        // Sohbet ekranını göster
-        function showChat() {
-            hideNFCOverlay();
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('chatContainer').classList.add('active');
-            
-            // Karşılama mesajı
-            addMessage('Sistem', 'Anonim sohbete hoş geldiniz! Mesajlar anlıktır ve kaydedilmez.', 'received');
+        // Timer display'ini güncelle
+        function updateTimerDisplay() {
+            document.getElementById('timeLeft').textContent = timeLeft;
         }
 
-        // NFC overlay göster/gizle
-        function showNFCOverlay() {
-            document.getElementById('nfcScanOverlay').classList.add('active');
-        }
-
-        function hideNFCOverlay() {
-            document.getElementById('nfcScanOverlay').classList.remove('active');
-        }
-
-        // Mesaj gönder
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            if (!currentChat) {
-                showToast('Önce bir sohbet başlatın');
-                return;
-            }
-            
-            // Mesajı ekrana ekle
-            addMessage('Siz', message, 'sent');
-            
-            // WebSocket ile gönder
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const data = {
-                    type: 'message',
-                    userId: userId,
-                    chatId: currentChat,
-                    content: message,
-                    timestamp: Date.now()
-                };
-                socket.send(JSON.stringify(data));
-            }
-            
-            // Input'u temizle
-            input.value = '';
-            input.focus();
-        }
-
-        // Mesaj ekle
-        function addMessage(sender, text, type) {
-            const messagesDiv = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            
-            messageDiv.className = `message ${type}`;
-            messageDiv.textContent = `${sender}: ${text}`;
-            
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        // WebSocket mesajlarını işle
-        function handleSocketMessage(data) {
-            switch (data.type) {
-                case 'registered':
-                    console.log('Sunucuya kaydedildi:', data);
-                    break;
-                    
-                case 'nfc_auth_success':
-                    showToast('NFC doğrulama başarılı');
-                    showChat();
-                    break;
-                    
-                case 'message':
-                    if (data.chatId === currentChat && data.senderId !== userId) {
-                        addMessage(data.senderName || 'Anonim', data.content, 'received');
-                    }
-                    break;
-                    
-                case 'chat_started':
-                    currentChat = data.chatId;
-                    showToast(`${data.otherUserName} ile sohbet başlatıldı`);
-                    break;
-                    
-                case 'error':
-                    showToast('Hata: ' + data.message);
-                    break;
-            }
-        }
-
-        // Kullanıcı arama
-        function showUserSearch() {
-            const userId = prompt('Aramak istediğiniz kullanıcı ID\'sini girin:');
-            if (userId) {
-                searchUser(userId);
-            }
-        }
-
-        function searchUser(searchId) {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const data = {
-                    type: 'search_user',
-                    userId: userId,
-                    searchId: searchId,
-                    timestamp: Date.now()
-                };
-                socket.send(JSON.stringify(data));
-            }
-        }
-
-        // Enter tuşu ile mesaj gönder
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        // Toast mesajı göster
-        function showToast(message) {
+        // Toast göster
+        function showToast(message, duration = 3000) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.classList.add('show');
             
             setTimeout(() => {
                 toast.classList.remove('show');
-            }, 3000);
+            }, duration);
         }
 
-        // Ekran yakalama koruması
-        document.addEventListener('keydown', function(e) {
-            // Print Screen, F12 vb. engelle
-            if (e.key === 'PrintScreen' || e.key === 'F12' || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-                e.preventDefault();
-                showToast('Bu işlem güvenlik nedeniyle engellendi');
-                return false;
+        // Loading göster
+        function showLoading(text = 'Yükleniyor...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingScreen').classList.add('active');
+        }
+
+        // Loading gizle
+        function hideLoading() {
+            document.getElementById('loadingScreen').classList.remove('active');
+        }
+
+        // Sayfadan çıkışta temizlik
+        window.addEventListener('beforeunload', function() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
             }
         });
 
-        // Sayfadan çıkarken uyarı
-        window.addEventListener('beforeunload', function(e) {
-            // Mesajları temizle
-            if (socket) {
-                socket.close();
-            }
+        // Online/offline durumunu takip et
+        window.addEventListener('online', () => {
+            showToast('İnternet bağlantısı sağlandı');
+        });
+
+        window.addEventListener('offline', () => {
+            showToast('İnternet bağlantısı kesildi');
         });
     </script>
 </body>
