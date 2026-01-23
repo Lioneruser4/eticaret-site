@@ -1,7 +1,7 @@
 {
-  "name": "anonim-nfc-sohbet",
+  "name": "telegram-blackjack",
   "version": "1.0.0",
-  "description": "NFC ile erişimli anlık anonim mesajlaşma platformu",
+  "description": "Online Telegram Blackjack 21 Oyunu",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,10 +9,13 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "ws": "^8.13.0",
-    "uuid": "^9.0.0"
+    "socket.io": "^4.7.2",
+    "mongoose": "^7.5.0",
+    "crypto-js": "^4.1.1",
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
