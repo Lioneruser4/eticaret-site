@@ -3,557 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>♠️ Durak Oyunu</title>
+    <title>Pub POS - Sipariş Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:Arial,sans-serif;background:#0a1a2a;color:white;height:100vh;overflow:hidden}
-        
-        /* Loading */
-        .loading{position:fixed;top:0;left:0;width:100%;height:100%;background:#0a1929;z-index:1000;display:flex;flex-direction:column;justify-content:center;align-items:center}
-        .loading.hidden{display:none}
-        .spinner{width:50px;height:50px;border:4px solid rgba(255,255,255,0.1);border-top-color:#FFD700;border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        
-        /* App */
-        .app{display:none;height:100vh;padding:10px}
-        .app.active{display:block}
-        
-        /* Header */
-        .header{display:flex;justify-content:space-between;align-items:center;padding:15px;background:rgba(16,25,40,0.9);border-radius:10px;margin-bottom:15px}
-        .user-info{display:flex;align-items:center;gap:10px}
-        .avatar{width:50px;height:50px;border-radius:50%;border:2px solid #FFD700}
-        .balance{font-size:24px;font-weight:bold;color:#FFD700}
-        .bonus-btn{padding:8px 15px;background:#4CAF50;border:none;border-radius:5px;color:white;font-weight:bold}
-        
-        /* Lobby */
-        .lobby{display:block}
-        .lobby.hidden{display:none}
-        .room-actions{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:20px 0}
-        .room-btn{padding:20px;background:rgba(255,255,255,0.05);border:2px solid #FFD700;border-radius:10px;color:white;font-size:18px;text-align:center}
-        
-        /* Room */
-        .room{display:none}
-        .room.active{display:block}
-        .room-code{text-align:center;font-size:28px;letter-spacing:5px;margin:15px 0}
-        .players{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-        .player-card{padding:15px;background:rgba(255,255,255,0.05);border-radius:10px;text-align:center}
-        .player-card.ready{background:rgba(76,175,80,0.2)}
-        .ready-btn{padding:15px 30px;background:#2196F3;border:none;border-radius:8px;color:white;font-size:18px;margin:20px auto;display:block}
-        
-        /* Game */
-        .game{display:none}
-        .game.active{display:block}
-        .table{height:60vh;position:relative}
-        .opponent{position:absolute;top:10px;left:50%;transform:translateX(-50%)}
-        .left-player{position:absolute;left:10px;top:50%}
-        .right-player{position:absolute;right:10px;top:50%}
-        .player-hand{position:absolute;bottom:10px;left:50%;transform:translateX(-50%)}
-        .cards{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
-        .card{width:60px;height:90px;background:white;border-radius:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#222;font-weight:bold;position:relative}
-        .card.red{color:#D32F2F}
-        .table-cards{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:10px}
-        
-        /* Controls */
-        .controls{display:flex;gap:10px;justify-content:center;margin-top:20px}
-        .ctrl-btn{padding:12px 24px;background:#FF9800;border:none;border-radius:6px;color:white;font-weight:bold}
-        
-        /* Notifications */
-        .notification{position:fixed;top:20px;right:20px;background:rgba(0,0,0,0.9);padding:15px;border-radius:8px;border-left:4px solid #4CAF50;max-width:300px}
-        
-        /* Mobile */
-        @media (max-width: 768px) {
-            .room-actions{grid-template-columns:1fr}
-            .card{width:50px;height:75px;font-size:12px}
-        }
+        body { background-color: #0f172a; color: #f8fafc; }
+        .menu-card { transition: all 0.3s ease; border: 1px solid #1e293b; }
+        .menu-card:active { transform: scale(0.95); }
+        .neon-text { text-shadow: 0 0 10px #ef4444; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body>
-    <!-- Loading Screen -->
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p style="margin-top:20px">Sunucuya bağlanıyor...</p>
-    </div>
+<body class="h-screen overflow-hidden flex flex-col">
 
-    <!-- Main App -->
-    <div class="app" id="app">
-        <!-- Header -->
-        <div class="header">
-            <div class="user-info">
-                <img class="avatar" id="userAvatar" src="https://ui-avatars.com/api/?name=Player&background=random">
-                <div>
-                    <div id="userName">Oyuncu</div>
-                    <div class="balance" id="balance">100 ₺</div>
-                </div>
+    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shadow-xl">
+        <h1 class="text-2xl font-black tracking-tighter text-red-500 animate__animated animate__fadeInLeft">PUB <span class="text-white">CONTROL</span></h1>
+        <div class="text-slate-400 font-mono" id="current-time"></div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <div class="w-2/3 p-6 overflow-y-auto custom-scrollbar">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                
+                <button onclick="sepeteEkle('Pivə', 1.80)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🍺</div>
+                    <div class="text-xl font-bold">Pivə</div>
+                    <div class="text-red-400 font-mono mt-1">1.80 AZN</div>
+                </button>
+
+                <button onclick="sepeteEkle('Semiçka', 2.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🌻</div>
+                    <div class="text-xl font-bold">Semiçka</div>
+                    <div class="text-red-400 font-mono mt-1">2.00 AZN</div>
+                </button>
+
+                <button onclick="sepeteEkle('Sardelka', 6.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🌭</div>
+                    <div class="text-xl font-bold">Sardelka</div>
+                    <div class="text-red-400 font-mono mt-1">6.00 AZN</div>
+                </button>
+
+                <button onclick="sepeteEkle('Turşu', 3.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🥒</div>
+                    <div class="text-xl font-bold">Turşu</div>
+                    <div class="text-red-400 font-mono mt-1">3.00 AZN</div>
+                </button>
+
+                <button onclick="sepeteEkle('Qovurma', 12.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🥘</div>
+                    <div class="text-xl font-bold">Qovurma</div>
+                    <div class="text-red-400 font-mono mt-1">12.00 AZN</div>
+                </button>
+
+                <button onclick="sepeteEkle('Boğaz', 1.50)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
+                    <div class="text-4xl mb-3 group-hover:animate-bounce">🍗</div>
+                    <div class="text-xl font-bold">Boğaz</div>
+                    <div class="text-red-400 font-mono mt-1">1.50 AZN</div>
+                </button>
+
             </div>
-            <button class="bonus-btn" id="bonusBtn" onclick="claimBonus()">
-                <i class="fas fa-gift"></i> Günlük Bonus
-            </button>
         </div>
 
-        <!-- Lobby -->
-        <div class="lobby" id="lobby">
-            <h2 style="text-align:center;margin:20px 0">♠️ DURAK OYUNU ♣️</h2>
-            
-            <div class="room-actions">
-                <button class="room-btn" onclick="quickPlay()">
-                    <i class="fas fa-bolt"></i><br>Hızlı Oyna
-                </button>
-                <button class="room-btn" onclick="createRoom()">
-                    <i class="fas fa-plus"></i><br>Oda Kur
-                </button>
-                <button class="room-btn" onclick="showJoinRoom()">
-                    <i class="fas fa-door-open"></i><br>Odaya Katıl
-                </button>
-                <button class="room-btn" onclick="showStats()">
-                    <i class="fas fa-chart-bar"></i><br>İstatistikler
-                </button>
+        <div class="w-1/3 bg-slate-900 border-l border-slate-800 p-6 flex flex-col shadow-2xl">
+            <div class="mb-6">
+                <label class="text-xs uppercase text-slate-500 font-bold tracking-widest">Masa No</label>
+                <input type="number" id="masa-no" value="1" class="bg-slate-800 border-none text-white text-2xl font-bold rounded-lg w-full p-2 mt-1 focus:ring-2 focus:ring-red-500 outline-none">
             </div>
 
-            <!-- Active Rooms -->
-            <div style="margin-top:30px">
-                <h3><i class="fas fa-users"></i> Aktif Odalar</h3>
-                <div id="activeRooms" style="margin-top:10px"></div>
-            </div>
-        </div>
-
-        <!-- Room Lobby -->
-        <div class="room" id="room">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <button onclick="leaveRoom()"><i class="fas fa-arrow-left"></i> Çık</button>
-                <div class="room-code" id="roomCode">ABC123</div>
-                <div id="roomStatus">Bekleniyor</div>
+            <div class="flex-grow overflow-y-auto custom-scrollbar pr-2" id="sepet-listesi">
+                <div class="text-slate-600 text-center mt-20 italic animate__animated animate__pulse animate__infinite">Sipariş bekliyor...</div>
             </div>
 
-            <div class="players" id="roomPlayers">
-                <!-- Players will be added here -->
-            </div>
-
-            <button class="ready-btn" id="readyBtn" onclick="toggleReady()">HAZIRIM</button>
-        </div>
-
-        <!-- Game Table -->
-        <div class="game" id="game">
-            <div style="text-align:center;margin-bottom:15px">
-                <div id="gameStatus">Oyun Devam Ediyor</div>
-                <div id="turnInfo"></div>
-            </div>
-
-            <div class="table">
-                <div class="opponent" id="opponent1">
-                    <div class="player-card">Rakip 1</div>
-                </div>
-                <div class="left-player" id="opponent2">
-                    <div class="player-card">Rakip 2</div>
-                </div>
-                <div class="right-player" id="opponent3">
-                    <div class="player-card">Rakip 3</div>
+            <div class="border-t border-slate-700 pt-6 mt-4">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-slate-400 text-lg">Toplam Tutar:</span>
+                    <span id="toplam-fiyat" class="text-3xl font-mono font-bold text-green-400">0.00 AZN</span>
                 </div>
                 
-                <div class="table-cards" id="tableCards"></div>
-                
-                <div class="player-hand">
-                    <div style="text-align:center;margin-bottom:10px">SİZ (6 kart)</div>
-                    <div class="cards" id="playerCards"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="sepetiTemizle()" class="bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-bold transition">TEMİZLE</button>
+                    <button onclick="cekCikar()" class="bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-900/20 transition animate__animated animate__pulse animate__infinite">ÇEK ÇIKAR</button>
                 </div>
             </div>
-
-            <div class="controls">
-                <button class="ctrl-btn" id="attackBtn" onclick="attackCard()">ATAK YAP</button>
-                <button class="ctrl-btn" id="defendBtn" onclick="defendCard()">SAVUN</button>
-                <button class="ctrl-btn" id="takeBtn" onclick="takeCards()">KART AL</button>
-                <button class="ctrl-btn" onclick="passTurn()">GEÇ</button>
-            </div>
         </div>
     </div>
 
-    <!-- Join Room Modal -->
-    <div id="joinModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1001;justify-content:center;align-items:center">
-        <div style="background:#1a2b3a;padding:30px;border-radius:10px;width:90%;max-width:400px">
-            <h3>Odaya Katıl</h3>
-            <input type="text" id="roomCodeInput" placeholder="Oda Kodunu Girin" style="width:100%;padding:10px;margin:15px 0;border-radius:5px;border:none">
-            <div style="display:flex;gap:10px">
-                <button onclick="joinRoom()" style="flex:1;padding:10px;background:#4CAF50;border:none;border-radius:5px;color:white">Katıl</button>
-                <button onclick="closeModal()" style="flex:1;padding:10px;background:#f44336;border:none;border-radius:5px;color:white">İptal</button>
+    <div id="fis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white text-black p-8 w-80 shadow-2xl rounded-sm font-mono animate__animated animate__zoomIn">
+            <div class="text-center border-b-2 border-dashed border-black pb-4 mb-4">
+                <h2 class="text-2xl font-bold">PUB CONTROL</h2>
+                <p id="fis-tarih" class="text-xs"></p>
+                <p id="fis-masa" class="font-bold mt-2"></p>
             </div>
+            <div id="fis-icerik" class="space-y-1 text-sm mb-4">
+                </div>
+            <div class="border-t-2 border-dashed border-black pt-4">
+                <div class="flex justify-between font-bold text-lg">
+                    <span>TOPLAM:</span>
+                    <span id="fis-toplam"></span>
+                </div>
+            </div>
+            <button onclick="modalKapat()" class="w-full mt-6 bg-black text-white py-2 no-print">KAPAT</button>
         </div>
     </div>
 
-    <!-- Socket.io -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    
     <script>
-        // Global variables
-        let socket = null;
-        let currentUser = null;
-        let currentRoom = null;
-        let playerCards = [];
-        let selectedCard = null;
+        let sepet = [];
+        let toplam = 0;
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check Telegram data
-            const urlParams = new URLSearchParams(window.location.search);
-            const tgData = urlParams.get('tgData');
+        function sepeteEkle(ad, fiyat) {
+            sepet.push({
+                ad: ad, 
+                fiyat: fiyat, 
+                saat: new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})
+            });
+            toplam += fiyat;
+            guncelleArayuz();
+        }
+
+        function guncelleArayuz() {
+            const liste = document.getElementById('sepet-listesi');
+            const toplamText = document.getElementById('toplam-fiyat');
             
-            if (tgData) {
-                try {
-                    const userData = JSON.parse(decodeURIComponent(tgData));
-                    currentUser = {
-                        id: userData.id || `user_${Date.now()}`,
-                        username: userData.username || 'Oyuncu',
-                        photoUrl: userData.photo_url || `https://ui-avatars.com/api/?name=${userData.first_name}&background=random`
-                    };
-                } catch (e) {
-                    currentUser = createDemoUser();
-                }
+            if (sepet.length === 0) {
+                liste.innerHTML = '<div class="text-slate-600 text-center mt-20 italic">Sipariş bekliyor...</div>';
             } else {
-                currentUser = createDemoUser();
+                liste.innerHTML = sepet.map((item, index) => `
+                    <div class="flex justify-between items-start bg-slate-800/50 p-3 rounded-lg mb-2 animate__animated animate__fadeInRight">
+                        <div>
+                            <div class="font-bold text-white">${item.ad}</div>
+                            <div class="text-xs text-slate-500">${item.saat} - Girdi</div>
+                        </div>
+                        <div class="text-red-400 font-mono font-bold">${item.fiyat.toFixed(2)} m</div>
+                    </div>
+                `).join('');
             }
-            
-            // Update UI
-            document.getElementById('userAvatar').src = currentUser.photoUrl;
-            document.getElementById('userName').textContent = currentUser.username;
-            
-            // Connect to server
-            connectSocket();
-        });
-
-        function createDemoUser() {
-            return {
-                id: `demo_${Date.now()}`,
-                username: 'Demo Oyuncu',
-                photoUrl: 'https://ui-avatars.com/api/?name=Demo&background=FFD700'
-            };
+            toplamText.innerText = `${toplam.toFixed(2)} AZN`;
         }
 
-        function connectSocket() {
-            // Connect to Render server
-            socket = io('https://saskioyunu.onrender.com', {
-                transports: ['websocket'],
-                timeout: 10000
-            });
-
-            socket.on('connect', () => {
-                console.log('Connected to server');
-                hideLoading();
-                
-                // Login with Telegram data
-                const initData = window.location.search;
-                socket.emit('telegram-login', { initData });
-            });
-
-            // Event listeners
-            socket.on('login-success', handleLogin);
-            socket.on('room-created', handleRoomCreated);
-            socket.on('room-joined', handleRoomJoined);
-            socket.on('player-joined', handlePlayerJoined);
-            socket.on('player-ready-update', handlePlayerReady);
-            socket.on('game-started', handleGameStarted);
-            socket.on('card-attacked', handleCardAttacked);
-            socket.on('card-defended', handleCardDefended);
-            socket.on('attacker-turn', handleAttackerTurn);
-            socket.on('defender-turn', handleDefenderTurn);
-            socket.on('update-hand', handleUpdateHand);
-            socket.on('bonus-claimed', handleBonusClaimed);
-            socket.on('error', handleError);
-            
-            socket.on('disconnect', () => {
-                showNotification('Sunucu bağlantısı kesildi', 'error');
-            });
-        }
-
-        // Event handlers
-        function handleLogin(data) {
-            currentUser = { ...currentUser, ...data.user };
-            document.getElementById('balance').textContent = data.user.balance + ' ₺';
-            
-            if (data.user.dailyBonusAvailable) {
-                document.getElementById('bonusBtn').style.display = 'block';
-            } else {
-                document.getElementById('bonusBtn').style.display = 'none';
-            }
-            
-            // Load active rooms
-            loadActiveRooms();
-        }
-
-        function handleRoomCreated(data) {
-            currentRoom = data.roomId;
-            document.getElementById('roomCode').textContent = data.roomCode;
-            showRoom();
-        }
-
-        function handleRoomJoined(data) {
-            currentRoom = data.roomId;
-            updateRoomPlayers(data.players);
-            showRoom();
-        }
-
-        function handlePlayerJoined(data) {
-            updateRoomPlayers(data.roomInfo.players);
-        }
-
-        function handlePlayerReady(data) {
-            const playersDiv = document.getElementById('roomPlayers');
-            const playerCards = playersDiv.querySelectorAll('.player-card');
-            
-            playerCards.forEach(card => {
-                if (card.querySelector('.player-name').textContent.includes(data.username)) {
-                    if (data.isReady) {
-                        card.classList.add('ready');
-                    } else {
-                        card.classList.remove('ready');
-                    }
-                }
-            });
-        }
-
-        function handleGameStarted(data) {
-            playerCards = data.yourCards;
-            renderPlayerCards();
-            document.getElementById('gameStatus').textContent = 'Oyun Başladı!';
-            document.getElementById('turnInfo').textContent = data.isAttacker ? 'Sıra sizde (Atak)' : 'Rakip sırası';
-            showGame();
-        }
-
-        function handleCardAttacked(data) {
-            renderTableCards(data.tableCards);
-            document.getElementById('turnInfo').textContent = 'Savunma sırası';
-        }
-
-        function handleCardDefended(data) {
-            renderTableCards(data.tableCards);
-        }
-
-        function handleAttackerTurn(data) {
-            document.getElementById('turnInfo').textContent = `${data.player} atağı yapıyor`;
-        }
-
-        function handleDefenderTurn(data) {
-            document.getElementById('turnInfo').textContent = `${data.player} savunuyor`;
-        }
-
-        function handleUpdateHand(data) {
-            playerCards = data.cards;
-            renderPlayerCards();
-        }
-
-        function handleBonusClaimed(data) {
-            document.getElementById('balance').textContent = data.newBalance + ' ₺';
-            document.getElementById('bonusBtn').style.display = 'none';
-            showNotification('+50 ₺ bonus alındı!', 'success');
-        }
-
-        function handleError(data) {
-            showNotification('Hata: ' + data.message, 'error');
-        }
-
-        // UI Functions
-        function hideLoading() {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('app').classList.add('active');
-        }
-
-        function showLobby() {
-            document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('room').classList.remove('active');
-            document.getElementById('game').classList.remove('active');
-        }
-
-        function showRoom() {
-            document.getElementById('lobby').classList.add('hidden');
-            document.getElementById('room').classList.add('active');
-            document.getElementById('game').classList.remove('active');
-        }
-
-        function showGame() {
-            document.getElementById('room').classList.remove('active');
-            document.getElementById('game').classList.add('active');
-        }
-
-        function showJoinRoom() {
-            document.getElementById('joinModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('joinModal').style.display = 'none';
-        }
-
-        // Game Actions
-        function quickPlay() {
-            socket.emit('quick-play', { maxPlayers: 4 });
-        }
-
-        function createRoom() {
-            socket.emit('create-room', { maxPlayers: 4, betAmount: 0 });
-        }
-
-        function joinRoom() {
-            const code = document.getElementById('roomCodeInput').value.toUpperCase();
-            if (code.length === 6) {
-                socket.emit('join-room-by-code', { roomCode: code });
-                closeModal();
+        function sepetiTemizle() {
+            if(confirm("Tüm masayı sıfırlamak istiyor musunuz?")) {
+                sepet = [];
+                toplam = 0;
+                guncelleArayuz();
             }
         }
 
-        function leaveRoom() {
-            if (currentRoom) {
-                socket.emit('leave-room', { roomId: currentRoom });
-                currentRoom = null;
-                showLobby();
-            }
-        }
+        function cekCikar() {
+            if(sepet.length === 0) return alert("Masa boş!");
 
-        function toggleReady() {
-            if (currentRoom) {
-                socket.emit('player-ready', { roomId: currentRoom });
-                const btn = document.getElementById('readyBtn');
-                if (btn.textContent === 'HAZIRIM') {
-                    btn.textContent = 'HAZIR';
-                    btn.style.background = '#4CAF50';
-                } else {
-                    btn.textContent = 'HAZIRIM';
-                    btn.style.background = '#2196F3';
-                }
-            }
-        }
-
-        function claimBonus() {
-            socket.emit('claim-daily-bonus');
-        }
-
-        function attackCard() {
-            if (selectedCard && currentRoom) {
-                socket.emit('attack-card', { 
-                    roomId: currentRoom, 
-                    cardId: selectedCard.id 
-                });
-                selectedCard = null;
-            }
-        }
-
-        function defendCard() {
-            // Implementation depends on selected cards
-            showNotification('Savunma özelliği aktif edilecek', 'info');
-        }
-
-        function takeCards() {
-            if (currentRoom) {
-                socket.emit('take-cards', { roomId: currentRoom });
-            }
-        }
-
-        function passTurn() {
-            showNotification('Sıra geçildi', 'info');
-        }
-
-        // Rendering functions
-        function updateRoomPlayers(players) {
-            const container = document.getElementById('roomPlayers');
-            container.innerHTML = '';
+            const simdi = new Date();
+            document.getElementById('fis-tarih').innerText = simdi.toLocaleString();
+            document.getElementById('fis-masa').innerText = "MASA NO: " + document.getElementById('masa-no').value;
             
-            players.forEach(player => {
-                const playerDiv = document.createElement('div');
-                playerDiv.className = `player-card ${player.isReady ? 'ready' : ''}`;
-                playerDiv.innerHTML = `
-                    <img src="${player.photoUrl}" style="width:40px;height:40px;border-radius:50%;margin-bottom:5px">
-                    <div class="player-name">${player.username}</div>
-                    <small>${player.isReady ? 'Hazır' : 'Bekliyor'}</small>
-                `;
-                container.appendChild(playerDiv);
-            });
-        }
-
-        function renderPlayerCards() {
-            const container = document.getElementById('playerCards');
-            container.innerHTML = '';
+            let icerik = sepet.map(item => `
+                <div class="flex justify-between">
+                    <span>${item.ad}</span>
+                    <span>${item.fiyat.toFixed(2)}</span>
+                </div>
+            `).join('');
             
-            playerCards.forEach(card => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'red' : ''}`;
-                cardDiv.innerHTML = `
-                    <div style="position:absolute;top:5px;left:5px">${card.name}</div>
-                    <div style="font-size:20px">${card.suit}</div>
-                    <div style="position:absolute;bottom:5px;right:5px;transform:rotate(180deg)">${card.name}</div>
-                `;
-                cardDiv.onclick = () => selectCard(card, cardDiv);
-                container.appendChild(cardDiv);
-            });
-        }
-
-        function renderTableCards(cards) {
-            const container = document.getElementById('tableCards');
-            container.innerHTML = '';
+            document.getElementById('fis-icerik').innerHTML = icerik;
+            document.getElementById('fis-toplam').innerText = toplam.toFixed(2) + " AZN";
             
-            cards.forEach(card => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'red' : ''}`;
-                cardDiv.innerHTML = `
-                    <div style="position:absolute;top:5px;left:5px">${card.name}</div>
-                    <div style="font-size:20px">${card.suit}</div>
-                `;
-                container.appendChild(cardDiv);
-            });
+            document.getElementById('fis-modal').classList.remove('hidden');
         }
 
-        function selectCard(card, element) {
-            // Remove previous selection
-            document.querySelectorAll('.card').forEach(c => {
-                c.style.boxShadow = 'none';
-            });
-            
-            // Select new card
-            selectedCard = card;
-            element.style.boxShadow = '0 0 15px #FFD700';
+        function modalKapat() {
+            document.getElementById('fis-modal').classList.add('hidden');
         }
 
-        function loadActiveRooms() {
-            // Fetch active rooms from API
-            fetch('https://saskioyunu.onrender.com/api/rooms/active')
-                .then(res => res.json())
-                .then(rooms => {
-                    const container = document.getElementById('activeRooms');
-                    if (rooms.length === 0) {
-                        container.innerHTML = '<p style="color:#aaa;text-align:center">Aktif oda yok</p>';
-                        return;
-                    }
-                    
-                    let html = '';
-                    rooms.slice(0, 5).forEach(room => {
-                        html += `
-                            <div style="background:rgba(255,255,255,0.05);padding:10px;margin:5px 0;border-radius:5px;display:flex;justify-content:space-between">
-                                <div>${room.roomCode} (${room.playerCount}/${room.maxPlayers})</div>
-                                <button onclick="joinRoomByCode('${room.roomCode}')" style="padding:5px 10px;background:#2196F3;border:none;border-radius:3px;color:white">Katıl</button>
-                            </div>
-                        `;
-                    });
-                    container.innerHTML = html;
-                });
-        }
-
-        function joinRoomByCode(code) {
-            socket.emit('join-room-by-code', { roomCode: code });
-        }
-
-        function showStats() {
-            showNotification('İstatistikler yükleniyor...', 'info');
-        }
-
-        function showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.style.borderLeftColor = type === 'error' ? '#f44336' : type === 'success' ? '#4CAF50' : '#2196F3';
-            notification.innerHTML = message;
-            
-            // Add to body
-            document.body.appendChild(notification);
-            
-            // Remove after 3 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
+        // Saat güncelleme
+        setInterval(() => {
+            document.getElementById('current-time').innerText = new Date().toLocaleTimeString();
+        }, 1000);
     </script>
 </body>
 </html>
