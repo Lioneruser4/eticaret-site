@@ -3,90 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAMBA PUB POS v2.0</title>
+    <title>MAMBA PUB POS v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .menu-item { transition: all 0.2s; border: 1px solid #1e293b; cursor: pointer; background: #0f172a; position: relative; border-radius: 12px; }
-        .menu-item:hover { border-color: #ef4444; transform: translateY(-2px); }
+        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
         .active-table { background: #ef4444 !important; border-color: #f87171 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
         .active-cat { background: #ef4444 !important; color: white !important; }
-        .has-order { border-color: #22c55e !important; }
-        .has-order::after { content: ''; position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 5px #22c55e; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .has-order { position: relative; border-color: #22c55e !important; }
+        .has-order::after { content: ''; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; }
         
-        .edit-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85); flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; z-index: 20; }
+        .menu-card { transition: all 0.2s; border: 1px solid #1e293b; cursor: pointer; background: #0f172a; border-radius: 12px; position: relative; overflow: hidden; }
+        .menu-card:hover { border-color: #ef4444; transform: translateY(-2px); }
+        
+        .edit-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); flex-direction: column; align-items: center; justify-content: center; gap: 8px; z-index: 10; }
         .edit-mode .edit-overlay { display: flex; }
 
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        /* PRINTER AYARLARI */
         @media print {
             .no-print { display: none !important; }
-            #receipt-print-area { display: block !important; width: 100% !important; background: white !important; color: black !important; padding: 0; margin: 0; }
+            #receipt-print { display: block !important; width: 100% !important; background: white !important; color: black !important; padding: 0; margin: 0; }
             body { background: white !important; }
-            @page { margin: 0; }
+            @page { margin: 0; size: auto; }
         }
-        #receipt-print-area { display: none; }
+        #receipt-print { display: none; }
     </style>
 </head>
 <body class="h-screen flex flex-col">
 
     <div class="no-print flex flex-col h-full w-full">
-        <header class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center shadow-lg">
+        <header class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center shadow-2xl">
             <div class="flex items-center gap-6">
-                <h1 class="text-3xl font-black italic tracking-tighter text-white">MAMBA <span class="text-red-600">PUB</span></h1>
-                <button onclick="toggleEditMode()" id="edit-btn" class="bg-blue-600 hover:bg-blue-500 text-xs px-5 py-2 rounded-full font-bold uppercase transition-all shadow-lg">Menyunu Düzenle</button>
+                <h1 class="text-3xl font-black italic tracking-tighter">MAMBA <span class="text-red-600">PUB</span></h1>
+                <button onclick="toggleEditMode()" id="edit-btn" class="bg-blue-600 hover:bg-blue-500 text-[10px] px-4 py-2 rounded-full font-bold uppercase transition-all">Menyunu Düzenle</button>
             </div>
-            <div id="clock" class="text-slate-400 font-mono font-bold text-xl">00:00:00</div>
+            <div id="clock" class="text-slate-400 font-mono font-bold text-lg">00:00:00</div>
         </header>
 
-        <div id="table-nav" class="flex gap-3 p-4 bg-slate-900 border-b border-slate-800 justify-center overflow-x-auto shadow-inner"></div>
+        <div id="table-nav" class="flex gap-2 p-3 bg-slate-900 border-b border-slate-800 justify-center overflow-x-auto shadow-inner"></div>
 
         <div class="flex flex-1 overflow-hidden">
-            <div class="w-3/4 flex flex-col bg-slate-950/40">
-                <div class="flex items-center bg-slate-900/50 border-b border-slate-800/50">
-                    <div id="cat-nav" class="flex-1 flex gap-3 p-4 overflow-x-auto custom-scroll"></div>
-                    <button id="add-item-btn" onclick="addNewItem()" class="hidden mr-6 bg-green-600 hover:bg-green-500 px-5 py-2 rounded-lg text-xs font-bold animate__animated animate__fadeIn">+ YENİ MƏHSUL</button>
+            <div class="w-3/4 flex flex-col bg-slate-950/50">
+                <div class="flex items-center bg-slate-900/30 border-b border-slate-800/50">
+                    <div id="cat-nav" class="flex-1 flex gap-2 p-4 overflow-x-auto custom-scroll"></div>
+                    <button id="add-item-btn" onclick="addNewItem()" class="hidden mr-6 bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-xs font-bold animate__animated animate__fadeIn">+ YENİ MƏHSUL</button>
                 </div>
                 <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 overflow-y-auto custom-scroll"></div>
             </div>
 
             <div class="w-1/4 bg-slate-900 border-l border-slate-800 flex flex-col shadow-2xl">
-                <div class="p-5 border-b border-slate-800 bg-slate-800/20 text-center">
-                    <h2 id="active-table-title" class="text-2xl font-black text-red-500 italic uppercase tracking-tighter">Masa 1</h2>
+                <div class="p-5 border-b border-slate-800 bg-slate-800/20">
+                    <h2 id="table-title" class="text-2xl font-black text-red-500 italic uppercase text-center tracking-tighter">Masa 1</h2>
                 </div>
-                <div id="order-items" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll"></div>
+                <div id="cart-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll"></div>
                 
                 <div class="p-6 bg-slate-950 border-t border-slate-800">
                     <div class="flex justify-between items-center mb-5">
-                        <span class="text-slate-500 font-bold text-sm uppercase tracking-widest">Cəmi:</span>
+                        <span class="text-slate-500 font-bold text-xs uppercase">Cəmi:</span>
                         <span id="total-price" class="text-3xl font-mono font-black text-green-500">0.00 ₼</span>
                     </div>
-                    <button onclick="printReceipt()" class="w-full bg-red-600 hover:bg-red-500 py-5 rounded-2xl font-black text-white shadow-xl mb-3 transition-all active:scale-95 text-lg uppercase">HESABI ÇIXART (PRINT)</button>
-                    <button onclick="clearCurrentTable()" class="w-full text-slate-600 text-[11px] font-bold uppercase hover:text-red-400 transition">Masanı Sıfırla</button>
+                    <button onclick="printReceipt()" class="w-full bg-red-600 hover:bg-red-500 py-5 rounded-2xl font-black text-white shadow-xl mb-3 transition-all active:scale-95 text-lg uppercase tracking-widest">HESABI ÇAP ET</button>
+                    <button onclick="clearCurrentTable()" class="w-full text-slate-600 text-[10px] font-bold uppercase hover:text-red-400 transition">Masanı Sıfırla</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="receipt-print-area">
-        <div style="width: 280px; margin: 0 auto; font-family: 'Courier New', Courier, monospace; color: black; background: white;">
-            <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 10px;">
-                <h1 style="margin: 0; font-size: 28px; font-style: italic;">MAMBA PUB</h1>
-                <p id="p-date" style="font-size: 12px; margin: 5px 0;"></p>
-                <div id="p-table" style="font-size: 20px; font-weight: bold; border: 2px solid black; display: inline-block; padding: 5px 15px; margin-top: 5px;"></div>
-            </div>
-            
-            <div id="p-items" style="font-size: 14px; line-height: 1.5;"></div>
-            
-            <div style="border-top: 2px solid black; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 20px; font-weight: bold;">
+    <div id="receipt-print">
+        <div style="width: 280px; margin: 0 auto; font-family: 'Courier New', monospace; color: black; background: white; padding: 10px;">
+            <center>
+                <h1 style="margin: 0; font-size: 24px; font-style: italic;">MAMBA PUB</h1>
+                <p id="p-date" style="font-size: 11px; margin: 5px 0;"></p>
+                <div id="p-table" style="font-size: 18px; font-weight: bold; border: 2px solid black; display: inline-block; padding: 4px 12px; margin: 5px 0;"></div>
+            </center>
+            <hr style="border-top: 2px dashed black; margin: 10px 0;">
+            <div id="p-items" style="font-size: 14px; line-height: 1.4;"></div>
+            <hr style="border-top: 2px dashed black; margin: 10px 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
                 <span>CƏMİ:</span>
                 <span id="p-total"></span>
             </div>
-            
-            <div style="text-align: center; margin-top: 30px; font-size: 12px; border-top: 1px dashed #000; pt: 10px;">
-                NUŞ OLSUN! <br> Yarpaq POS System
-            </div>
+            <center style="margin-top: 25px; font-size: 11px;">
+                NUŞ OLSUN! <br> Yarpaq POS v3.0
+            </center>
         </div>
     </div>
 
@@ -95,12 +97,11 @@
         let activeTable = localStorage.getItem('mamba_active_table') || "1";
         let activeCat = "isti";
 
-        // Menyu Məlumatları
         const defaultMenu = {
-            isti: [{name:'Gürcü xəngəli', price:0.80},{name:'Tabaka', price:18.00},{name:'Çığirtma', price:18.00}],
-            meze: [{name:'Pivə 1.80m', price:1.80},{name:'Semiçka', price:2.00},{name:'Turşu', price:3.00}],
+            isti: [{name:'Gürcü xəngəli', price:0.80},{name:'Tabaka', price:18.00}],
+            meze: [{name:'Pivə 1.80m', price:1.80},{name:'Semiçka', price:2.00}],
             ickiler: [{name:'Xırdalan', price:1.80},{name:'Cola 1L', price:3.00}],
-            setler: [{name:'SET 1', price:20.00},{name:'SET 2', price:25.00}]
+            setler: [{name:'SET 1', price:20.00}]
         };
 
         let allMenu = JSON.parse(localStorage.getItem('mamba_menu')) || defaultMenu;
@@ -110,16 +111,15 @@
             isEditMode = !isEditMode;
             document.body.classList.toggle('edit-mode', isEditMode);
             document.getElementById('add-item-btn').classList.toggle('hidden', !isEditMode);
-            const btn = document.getElementById('edit-btn');
-            btn.innerText = isEditMode ? "Düzəlişi Bitir" : "Menyunu Düzenle";
-            btn.classList.toggle('bg-green-600', isEditMode);
+            document.getElementById('edit-btn').innerText = isEditMode ? "Bitir" : "Menyunu Düzenle";
+            document.getElementById('edit-btn').classList.toggle('bg-green-600', isEditMode);
             renderMenu();
         }
 
         function renderTableNav() {
             const nav = document.getElementById('table-nav');
             nav.innerHTML = Object.keys(tables).map(id => `
-                <button onclick="masaSec('${id}')" class="px-7 py-3 bg-slate-800 rounded-xl font-bold border border-slate-700 transition-all shrink-0 ${activeTable == id ? 'active-table text-white' : 'text-slate-400'} ${tables[id].length > 0 ? 'has-order' : ''}">
+                <button onclick="switchTable('${id}')" class="px-6 py-2 bg-slate-800 rounded-xl font-bold border border-slate-700 transition-all shrink-0 ${activeTable == id ? 'active-table' : ''} ${tables[id].length > 0 ? 'has-order' : ''}">
                     ${id === 'K1' ? 'KABİNET' : 'MASA ' + id}
                 </button>
             `).join('');
@@ -129,31 +129,23 @@
             const cats = {isti:'İsti Yeməklər', meze:'Məzələr', ickiler:'İçkilər', setler:'Setlər', qelyan:'Qəlyan'};
             const nav = document.getElementById('cat-nav');
             nav.innerHTML = Object.entries(cats).map(([key, label]) => `
-                <button onclick="changeCat('${key}')" id="cat-${key}" class="cat-btn px-6 py-3 bg-slate-800 rounded-full text-[11px] font-black uppercase tracking-widest shrink-0 transition-all ${activeCat == key ? 'active-cat' : 'text-slate-400'}">
-                    ${label}
-                </button>
+                <button onclick="changeCat('${key}')" class="cat-btn px-5 py-2 bg-slate-800 rounded-full text-[10px] font-bold uppercase shrink-0 transition-all ${activeCat == key ? 'active-cat' : ''}">${label}</button>
             `).join('');
         }
 
-        function changeCat(cat) {
-            activeCat = cat;
-            renderCatNav();
-            renderMenu();
-        }
+        function changeCat(cat) { activeCat = cat; renderCatNav(); renderMenu(); }
 
         function renderMenu() {
             const grid = document.getElementById('menu-grid');
             if (!allMenu[activeCat]) allMenu[activeCat] = [];
-            
             grid.innerHTML = allMenu[activeCat].map((item, index) => `
-                <div class="menu-item p-5 animate__animated animate__fadeIn" onclick="${isEditMode ? '' : `addToTable('${item.name}', ${item.price})`}">
-                    <div class="text-[10px] text-red-500 font-bold mb-1 uppercase tracking-tighter">${activeCat}</div>
-                    <div class="text-sm font-black text-white h-10 leading-tight">${item.name}</div>
-                    <div class="text-xl font-mono font-black text-green-500 mt-2">${item.price.toFixed(2)} ₼</div>
-                    
+                <div class="menu-card p-4 animate__animated animate__fadeIn" onclick="${isEditMode ? '' : `addItemToCart('${item.name}', ${item.price})`}">
+                    <div class="text-[9px] text-red-500 font-bold mb-1 uppercase tracking-tighter">${activeCat}</div>
+                    <div class="text-sm font-bold text-white h-10 overflow-hidden leading-tight">${item.name}</div>
+                    <div class="text-xl font-mono font-black text-green-500 mt-1">${item.price.toFixed(2)} ₼</div>
                     <div class="edit-overlay">
-                        <button onclick="editItem(${index})" class="bg-blue-600 w-3/4 py-2 rounded-lg font-bold text-xs">DÜZƏLİŞ</button>
-                        <button onclick="deleteItem(${index})" class="bg-red-600 w-3/4 py-2 rounded-lg font-bold text-xs">SİL</button>
+                        <button onclick="editItem(${index})" class="bg-blue-600 w-3/4 py-1.5 rounded-lg font-bold text-[10px]">DÜZƏLİŞ</button>
+                        <button onclick="deleteItem(${index})" class="bg-red-600 w-3/4 py-1.5 rounded-lg font-bold text-[10px]">SİL</button>
                     </div>
                 </div>
             `).join('');
@@ -165,78 +157,72 @@
             if(n && p) { allMenu[activeCat][i] = {name:n, price:parseFloat(p)}; saveMenu(); }
         }
 
-        function deleteItem(i) { if(confirm("Məhsul silinsin?")) { allMenu[activeCat].splice(i,1); saveMenu(); } }
-        
+        function deleteItem(i) { if(confirm("Silinsin?")) { allMenu[activeCat].splice(i,1); saveMenu(); } }
         function addNewItem() {
-            const n = prompt("Məhsul adı:");
-            const p = prompt("Qiyməti:");
+            const n = prompt("Ad:");
+            const p = prompt("Qiymət:");
             if(n && p) { allMenu[activeCat].push({name:n, price:parseFloat(p)}); saveMenu(); }
         }
-
         function saveMenu() { localStorage.setItem('mamba_menu', JSON.stringify(allMenu)); renderMenu(); }
 
-        function masaSec(id) {
+        function switchTable(id) {
             activeTable = id;
             localStorage.setItem('mamba_active_table', id);
             renderTableNav();
-            document.getElementById('active-table-title').innerText = id === 'K1' ? 'KABİNET' : 'MASA ' + id;
-            updateDisplay();
+            document.getElementById('table-title').innerText = id === 'K1' ? 'KABİNET' : 'MASA ' + id;
+            updateUI();
         }
 
-        function addToTable(name, price) {
+        function addItemToCart(name, price) {
             let table = tables[activeTable];
-            let exist = table.find(i => i.name === name);
-            if(exist) exist.count++; else table.push({name, price, count:1});
-            save();
+            let item = table.find(i => i.name === name);
+            if(item) item.count++; else table.push({name, price, count:1});
+            saveData();
         }
 
-        function updateDisplay() {
-            const list = document.getElementById('order-items');
+        function updateUI() {
+            const list = document.getElementById('cart-list');
             let total = 0;
-            list.innerHTML = tables[activeTable].length === 0 ? '<div class="text-slate-600 text-center mt-20 italic">Sifariş yoxdur</div>' : '';
-            
+            list.innerHTML = tables[activeTable].length === 0 ? '<div class="text-slate-600 text-center mt-10 italic text-sm">Sifariş yoxdur</div>' : '';
             tables[activeTable].forEach((item, index) => {
-                const sub = item.price * item.count;
-                total += sub;
-                list.innerHTML += `
-                    <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 flex flex-col gap-2">
-                        <div class="flex justify-between items-center">
-                            <span class="font-black text-red-500 text-lg">${item.count}x</span>
-                            <span class="flex-1 font-bold text-xs px-3">${item.name}</span>
-                            <span class="font-mono text-green-400 font-bold">${sub.toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-end">
-                             <button onclick="remove(${index})" class="text-[10px] text-red-500 font-black uppercase hover:text-red-300">Sil</button>
-                        </div>
-                    </div>`;
+                total += item.price * item.count;
+                list.innerHTML += `<div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center text-xs">
+                    <span><b class="text-red-500">${item.count}x</b> ${item.name}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold">${(item.price * item.count).toFixed(2)}</span>
+                        <button onclick="removeFromCart(${index})" class="text-red-500 font-bold text-lg">×</button>
+                    </div>
+                </div>`;
             });
             document.getElementById('total-price').innerText = total.toFixed(2) + " ₼";
         }
 
-        function remove(idx) { tables[activeTable].splice(idx,1); save(); }
-        function save() { localStorage.setItem('mamba_tables', JSON.stringify(tables)); updateDisplay(); renderTableNav(); }
-        function clearCurrentTable() { if(confirm("Masadakı bütün sifarişlər silinsin?")) { tables[activeTable] = []; save(); } }
+        function removeFromCart(i) { tables[activeTable].splice(i,1); saveData(); }
+        function saveData() { localStorage.setItem('mamba_tables', JSON.stringify(tables)); updateUI(); renderTableNav(); }
+        function clearCurrentTable() { if(confirm("Masa təmizlənsin?")) { tables[activeTable] = []; saveData(); } }
 
+        // ÇAP FUNKSİYASI
         function printReceipt() {
             const items = tables[activeTable];
-            if(items.length == 0) return;
-            const total = items.reduce((s, i) => s + (i.price * i.count), 0);
+            if(items.length === 0) return alert("Masa boşdur!");
             
             document.getElementById('p-date').innerText = new Date().toLocaleString('az-AZ');
             document.getElementById('p-table').innerText = activeTable === 'K1' ? 'KABİNET' : 'MASA ' + activeTable;
-            document.getElementById('p-items').innerHTML = items.map(i => `
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span style="width:70%">${i.count} x ${i.name}</span>
-                    <span style="width:30%; text-align:right;">${(i.price * i.count).toFixed(2)}</span>
-                </div>
-            `).join('');
+            let total = 0;
+            document.getElementById('p-items').innerHTML = items.map(i => {
+                total += i.price * i.count;
+                return `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span style="text-align:left;">${i.count} x ${i.name}</span>
+                    <span style="text-align:right;">${(i.price * i.count).toFixed(2)}</span>
+                </div>`;
+            }).join('');
             document.getElementById('p-total').innerText = total.toFixed(2) + " AZN";
             
             window.print();
         }
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('az-AZ'); }, 1000);
-        renderTableNav(); renderCatNav(); changeCat('isti'); masaSec(activeTable);
+        renderTableNav(); renderCatNav(); changeCat('isti'); switchTable(activeTable);
     </script>
 </body>
 </html>
