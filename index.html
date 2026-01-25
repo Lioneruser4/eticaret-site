@@ -1,35 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html>
-<html lang="az">
+<html b:css='false' b:defaultwidgetversion='2' b:layoutsversion='3' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mamba Pub POS - Professional</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <style>
-        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        .menu-item { transition: all 0.2s; border: 1px solid #1e293b; cursor: pointer; }
-        .menu-item:hover { border-color: #ef4444; background: #0f172a; transform: translateY(-2px); }
-        .active-table { background: #ef4444 !important; border-color: #f87171 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
-        .has-order { position: relative; border-color: #22c55e !important; }
-        .has-order::after { content: '●'; position: absolute; top: 5px; right: 5px; color: #22c55e; font-size: 12px; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    <title>MAMBA POS - FULL SYSTEM v3.0</title>
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'/>
+    
+    <!-- CACHE ÖNLEME TAG'LERİ -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <script src='https://cdn.tailwindcss.com?version=3'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    
+    <b:skin><![CDATA[
+        body, html { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            height: 100vh !important; 
+            width: 100vw !important; 
+            background: #020617 !important; 
+            overflow: hidden !important; 
+            font-family: 'Segoe UI', sans-serif !important;
+        }
+        .active-table { 
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important; 
+            color: white !important;
+            border-color: #f87171 !important; 
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); 
+        }
+        .active-cat { 
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important; 
+            color: white !important; 
+        }
+        .has-order { 
+            border-color: #22c55e !important; 
+            position: relative; 
+            background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+        }
+        .has-order::after { 
+            content: ''; 
+            position: absolute; 
+            top: 4px; 
+            right: 4px; 
+            width: 10px; 
+            height: 10px; 
+            background: #22c55e; 
+            border-radius: 50%;
+            box-shadow: 0 0 5px #22c55e;
+        }
         
-        /* Çek stili - 80mm termal fiş */
+        .menu-item { 
+            transition: all 0.3s; 
+            border: 1px solid #1e293b; 
+            cursor: pointer; 
+            background: linear-gradient(145deg, #0f172a, #1e293b);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .menu-item:hover { 
+            border-color: #ef4444; 
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
+        }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            border-radius: 10px; 
+        }
+        
+        /* YAZDIRMA STİLİ - SADECE FİŞ */
         @media print {
-            body * { visibility: hidden; }
-            #receipt-print, #receipt-print * { visibility: visible; }
+            body * { 
+                visibility: hidden !important;
+                display: none !important;
+            }
+            #receipt-print, #receipt-print * { 
+                visibility: visible !important;
+                display: block !important;
+            }
             #receipt-print { 
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
                 width: 80mm !important;
-                font-size: 11px !important;
-                padding: 10px !important;
-                margin: 0 !important;
+                font-size: 12px !important;
                 background: white !important;
                 color: black !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                font-family: 'Courier New', monospace !important;
             }
             @page { 
                 margin: 0 !important; 
@@ -37,10 +99,7 @@
             }
         }
         
-        /* Kategori butonları */
-        .category-btn.active { background: #ef4444 !important; color: white !important; }
-        
-        /* Modal */
+        /* MODAL */
         .modal { 
             display: none; 
             position: fixed; 
@@ -50,32 +109,10 @@
             height: 100%; 
             background: rgba(0,0,0,0.95); 
             z-index: 1000; 
-            backdrop-filter: blur(5px);
-        }
-        .modal-content { 
-            background: white; 
-            width: 80mm; 
-            margin: 20px auto; 
-            border-radius: 5px; 
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
         }
         
-        /* Admin Panel */
-        #admin-panel {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.98);
-            z-index: 2000;
-            backdrop-filter: blur(10px);
-            overflow-y: auto;
-        }
-        
-        /* Quantity kontrol */
         .quantity-btn {
             width: 24px;
             height: 24px;
@@ -91,30 +128,41 @@
             background: #475569;
         }
         
-        /* Tablo satırları */
-        .order-row {
-            transition: background 0.2s;
+        .section, .widget, .post, .post-body, .Blog1 { 
+            display: block !important; 
+            width: 100% !important; 
+            height: 100% !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
         }
-        .order-row:hover {
-            background: rgba(30, 41, 59, 0.5);
+        iframe.b-gadget, .status-msg-wrap { display: none !important; }
+        
+        /* Fiş görünümü */
+        .receipt-box {
+            width: 80mm;
+            background: white;
+            color: black;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-    </style>
+    ]]></b:skin>
 </head>
-<body class="h-screen flex flex-col">
+<body>
 
+<!-- ANA POS SİSTEMİ -->
+<div class='no-print flex flex-col h-screen w-full' id='app-root'>
     <!-- ÜST BAR -->
-    <header class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center px-6 shadow-2xl">
+    <header class='bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center px-6 shadow-2xl'>
         <div class="flex items-center gap-4">
             <h1 class="text-3xl font-black tracking-tighter text-white">
                 MAMBA <span class="text-red-600">PUB</span>
             </h1>
             <div class="bg-slate-800 px-3 py-1 rounded-full text-xs">
                 <i class="fas fa-database text-green-400 mr-1"></i>
-                <span id="data-status">Yaddaş aktiv</span>
+                <span id="data-status">Aktiv</span>
             </div>
-            <button onclick="toggleAdminPanel()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg text-xs font-bold">
-                <i class="fas fa-cog mr-1"></i>Admin
-            </button>
         </div>
         <div class="flex items-center gap-4">
             <div id="clock" class="text-slate-300 font-mono text-lg font-bold">15:50:30</div>
@@ -197,831 +245,426 @@
                 
                 <div class="text-center text-xs text-slate-500">
                     <i class="fas fa-hdd mr-1"></i>
-                    <span id="storage-info">PC yaddaşında saxlanılır</span>
+                    <span id="storage-info">Yaddaşda</span>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- ADMIN PANEL -->
-    <div id="admin-panel">
-        <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 p-6">
-            <div class="max-w-6xl mx-auto">
-                <div class="flex justify-between items-center mb-8">
-                    <h1 class="text-3xl font-bold text-white">
-                        <i class="fas fa-user-shield text-blue-500 mr-3"></i>
-                        Admin Panel
-                    </h1>
-                    <button onclick="toggleAdminPanel()" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold text-white">
-                        <i class="fas fa-times mr-2"></i>Bağla
-                    </button>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <!-- MENÜ EKLEME -->
-                    <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                        <h2 class="text-xl font-bold text-white mb-4">
-                            <i class="fas fa-plus-circle text-green-500 mr-2"></i>
-                            Yeni Məhsul Əlavə Et
-                        </h2>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Məhsul Adı</label>
-                                <input type="text" id="new-item-name" 
-                                       class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Qiymət (₼)</label>
-                                <input type="number" step="0.01" id="new-item-price" 
-                                       class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Kateqoriya</label>
-                                <select id="new-item-category" 
-                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
-                                    <option value="İçkilər">İçkilər</option>
-                                    <option value="Mezeler">Mezeler</option>
-                                    <option value="İsti Yeməklər">İsti Yeməklər</option>
-                                    <option value="Setlər">Setlər</option>
-                                    <option value="Digər">Digər</option>
-                                </select>
-                            </div>
-                            
-                            <button onclick="addNewMenuItem()" 
-                                    class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 py-4 rounded-xl font-bold text-white">
-                                <i class="fas fa-save mr-2"></i>Məhsulu Əlavə Et
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- MÖVCUD MENÜ -->
-                    <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                        <h2 class="text-xl font-bold text-white mb-4">
-                            <i class="fas fa-list text-blue-500 mr-2"></i>
-                            Mövcud Menyu
-                        </h2>
-                        
-                        <div class="overflow-y-auto max-h-96">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="text-left text-sm text-slate-400 border-b border-slate-700">
-                                        <th class="pb-3">Ad</th>
-                                        <th class="pb-3">Kateqoriya</th>
-                                        <th class="pb-3">Qiymət</th>
-                                        <th class="pb-3">Əməliyyat</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="menu-list">
-                                    <!-- Menü listesi buraya yüklenecek -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- TOPLU QİYMƏT DƏYİŞİKLİYİ -->
-                <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 mb-8">
-                    <h2 class="text-xl font-bold text-white mb-4">
-                        <i class="fas fa-tags text-yellow-500 mr-2"></i>
-                        Toplu Qiymət Dəyişikliyi
-                    </h2>
-                    
-                    <div class="grid grid-cols-3 gap-4">
-                        <button onclick="changeAllPrices(5, 'increase')" 
-                                class="bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold">
-                            +5% Artır
-                        </button>
-                        <button onclick="changeAllPrices(10, 'increase')" 
-                                class="bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold">
-                            +10% Artır
-                        </button>
-                        <button onclick="changeAllPrices(5, 'decrease')" 
-                                class="bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold">
-                            -5% Azalt
-                        </button>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <div class="flex gap-3">
-                            <input type="number" id="custom-percent" placeholder="Faiz" 
-                                   class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
-                            <button onclick="changeCustomPercent()" 
-                                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold">
-                                Tətbiq et
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- VERİ İDAREETMƏ -->
-                <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                    <h2 class="text-xl font-bold text-white mb-4">
-                        <i class="fas fa-database text-purple-500 mr-2"></i>
-                        Veri İdarəetmə
-                    </h2>
-                    
-                    <div class="grid grid-cols-3 gap-4">
-                        <button onclick="exportMenuData()" 
-                                class="bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold">
-                            <i class="fas fa-download mr-2"></i>Export
-                        </button>
-                        <button onclick="importMenuData()" 
-                                class="bg-purple-600 hover:bg-purple-700 py-4 rounded-xl font-bold">
-                            <i class="fas fa-upload mr-2"></i>Import
-                        </button>
-                        <button onclick="resetAllData()" 
-                                class="bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold">
-                            <i class="fas fa-trash mr-2"></i>Sıfırla
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- FİŞ MODAL -->
-    <div id="receipt-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeIn">
-            <div id="receipt-print" style="width: 80mm; font-family: 'Courier New', monospace; padding: 15px; background: white; color: black; margin: 0 auto;">
-                <center>
-                    <b style="font-size: 16px; display: block; margin-bottom: 5px;">MAMBA PUB</b>
-                    <span style="font-size: 11px; display: block;">Restoran & Bar</span>
-                    <span style="font-size: 10px; display: block;">Qəbala şossesi, Bakı</span>
-                    <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                    <span style="font-size: 11px;" id="receipt-date"></span><br>
-                    <span style="font-size: 11px;">Fiş No: <span id="receipt-no">0001</span></span><br>
-                    <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                    <b style="font-size: 14px; display: block; padding: 4px 0;" id="receipt-table">MASA 1</b>
-                    <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                </center>
-                
-                <div id="receipt-items" style="font-size: 12px; margin: 10px 0;">
-                    <!-- Fiş öğeleri buraya -->
-                </div>
-                
-                <hr style="border-top: 1px dashed #000; margin: 10px 0;">
-                <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
-                    <span>TOPLAM:</span>
-                    <span id="receipt-total">0.00</span>
-                </div>
-                
-                <center style="margin-top: 20px; font-size: 11px;">
-                    <b>TƏŞƏKKÜRLƏR!</b><br>
-                    Nuş Olsun!<br>
-                    <span style="font-size: 10px;">POS Sistemi v2.0</span>
-                </center>
+<!-- FİŞ MODAL -->
+<div id="receipt-modal" class="modal">
+    <div class="receipt-box animate__animated animate__fadeIn">
+        <!-- FİŞ İÇERİĞİ -->
+        <div id="receipt-print">
+            <center>
+                <b style="font-size: 18px; display: block; margin-bottom: 5px;">MAMBA PUB</b>
                 <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                <center style="font-size: 9px; color: #666;">
-                    Çek tarixi: <span id="receipt-time"></span>
-                </center>
+                <span style="font-size: 11px;" id="receipt-date"></span><br>
+                <span style="font-size: 11px;">Fiş No: <span id="receipt-no">0001</span></span><br>
+                <hr style="border-top: 1px dashed #000; margin: 8px 0;">
+                <b style="font-size: 14px; display: block; padding: 4px 0;" id="receipt-table">MASA 1</b>
+                <hr style="border-top: 1px dashed #000; margin: 8px 0;">
+            </center>
+            
+            <div id="receipt-items" style="font-size: 12px; margin: 10px 0;">
+                <!-- Fiş öğeleri buraya -->
             </div>
             
-            <div style="display: flex; gap: 10px; padding: 15px; background: #f5f5f5; border-top: 1px solid #ddd;">
-                <button onclick="printReceiptNow()" class="flex-1 bg-green-600 text-white py-3 rounded font-bold">
-                    <i class="fas fa-print mr-2"></i>YAZDIR
-                </button>
-                <button onclick="closeModal()" class="flex-1 bg-red-600 text-white py-3 rounded font-bold">
-                    <i class="fas fa-times mr-2"></i>KAPAT
-                </button>
+            <hr style="border-top: 1px dashed #000; margin: 10px 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
+                <span>TOPLAM:</span>
+                <span id="receipt-total">0.00</span>
             </div>
+            
+            <center style="margin-top: 20px; font-size: 11px;">
+                <b>TƏŞƏKKÜRLƏR!</b><br>
+                Nuş Olsun!
+            </center>
+            <hr style="border-top: 1px dashed #000; margin: 8px 0;">
+            <center style="font-size: 9px; color: #666;">
+                Çek tarixi: <span id="receipt-time"></span>
+            </center>
+        </div>
+        
+        <!-- BUTONLAR -->
+        <div style="display: flex; gap: 10px; padding: 15px 0 0 0;">
+            <button onclick="directPrint()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded font-bold">
+                <i class="fas fa-print mr-2"></i>YAZDIR
+            </button>
+            <button onclick="closeModal()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold">
+                <i class="fas fa-times mr-2"></i>KAPAT
+            </button>
         </div>
     </div>
+</div>
 
-    <!-- Gizli input for file import -->
-    <input type="file" id="file-import" accept=".json" style="display: none;">
+<!-- YAZDIRMA İÇİN GİZLİ ALAN -->
+<div id="print-container" style="display: none;"></div>
 
-    <script>
-        // MENÜ VERİTABANI - LocalStorage'dan yükle veya varsayılan
-        let menu = JSON.parse(localStorage.getItem('mamba_menu')) || [
-            // İÇKİLER
-            { id: 1, name: 'Pivə 1.80m', price: 1.80, category: 'İçkilər' },
-            { id: 2, name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
-            { id: 3, name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
-            { id: 4, name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
-            { id: 5, name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
-            { id: 6, name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
-            { id: 7, name: 'Red Bull', price: 4.00, category: 'İçkilər' },
-            { id: 8, name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
-            { id: 9, name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
-            { id: 10, name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
-            
-            // MEZELER
-            { id: 11, name: 'Semiçka', price: 2.00, category: 'Mezeler' },
-            { id: 12, name: 'Sardelka', price: 6.00, category: 'Mezeler' },
-            { id: 13, name: 'Turşu', price: 3.00, category: 'Mezeler' },
-            { id: 14, name: 'Çips', price: 4.00, category: 'Mezeler' },
-            { id: 15, name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
-            
-            // İSTİ YEMEKLER
-            { id: 16, name: 'Tabaka Toyuq', price: 18.00, category: 'İsti Yeməklər' },
-            { id: 17, name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
-            { id: 18, name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
-            { id: 19, name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
-            { id: 20, name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
-            
-            // SETLER
-            { id: 21, name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
-            { id: 22, name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
-            { id: 23, name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
-            { id: 24, name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
-            
-            // DİĞER
-            { id: 25, name: 'Boğaz', price: 1.50, category: 'Digər' },
-            { id: 26, name: 'Qəlyan', price: 12.00, category: 'Digər' },
-            { id: 27, name: 'Nargilə', price: 15.00, category: 'Digər' },
-            { id: 28, name: 'Çay', price: 1.00, category: 'Digər' }
-        ];
+<div style='display:none !important;'>
+    <b:section id='main' showaddelement='false'>
+        <b:widget id='Blog1' locked='true' title='POS' type='Blog'/>
+    </b:section>
+</div>
 
-        // DEĞİŞKENLER
-        let activeTable = localStorage.getItem('mamba_active_table') || "1";
-        let activeCategory = "İçkilər";
-        let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
-            "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
-            "BAR": [], "TERAS": []
-        };
-        let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
-        let nextItemId = Math.max(...menu.map(item => item.id), 0) + 1;
+<script type='text/javascript'>
+// <![CDATA[
+// Cache kontrolü
+if (localStorage.getItem('pos_version') !== '3.0') {
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('pos_version', '3.0');
+}
 
-        // SAYFA YÜKLENDİĞİNDE
-        document.addEventListener('DOMContentLoaded', function() {
-            updateClock();
-            setInterval(updateClock, 1000);
-            selectCategory('İçkilər');
-            selectTable(activeTable);
-            updateStorageInfo();
-            loadMenuList();
-            
-            // Otomatik kaydet
-            setInterval(saveData, 5000);
+// MENÜ VERİTABANI
+let menu = JSON.parse(localStorage.getItem('mamba_menu')) || [
+    { id: 1, name: 'Pivə 1.80m', price: 1.80, category: 'İçkilər' },
+    { id: 2, name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
+    { id: 3, name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
+    { id: 4, name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
+    { id: 5, name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
+    { id: 6, name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
+    { id: 7, name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
+    { id: 8, name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
+    { id: 9, name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
+    
+    { id: 11, name: 'Semiçka', price: 2.00, category: 'Mezeler' },
+    { id: 12, name: 'Sardelka', price: 6.00, category: 'Mezeler' },
+    { id: 13, name: 'Turşu', price: 3.00, category: 'Mezeler' },
+    { id: 14, name: 'Çips', price: 4.00, category: 'Mezeler' },
+    { id: 15, name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
+    
+    { id: 16, name: 'Tabaka Toyuq', price: 18.00, category: 'İsti Yeməklər' },
+    { id: 17, name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
+    { id: 18, name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
+    { id: 19, name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
+    { id: 20, name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
+    
+    { id: 21, name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
+    { id: 22, name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
+    { id: 23, name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
+    { id: 24, name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
+    
+    { id: 25, name: 'Boğaz', price: 1.50, category: 'Digər' },
+    { id: 26, name: 'Qəlyan', price: 12.00, category: 'Digər' },
+    { id: 27, name: 'Nargilə', price: 15.00, category: 'Digər' },
+    { id: 28, name: 'Çay', price: 1.00, category: 'Digər' }
+];
+
+// DEĞİŞKENLER
+let activeTable = localStorage.getItem('mamba_active_table') || "1";
+let activeCategory = "İçkilər";
+let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
+    "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
+    "BAR": [], "TERAS": []
+};
+let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
+
+// SAYFA YÜKLENDİĞİNDE
+document.addEventListener('DOMContentLoaded', function() {
+    updateClock();
+    setInterval(updateClock, 1000);
+    selectCategory('İçkilər');
+    selectTable(activeTable);
+    updateStorageInfo();
+});
+
+// SAAT GÜNCELLE
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('az-AZ');
+    document.getElementById('table-time').textContent = now.toLocaleTimeString('az-AZ', {hour12: false});
+}
+
+// KATEGORİ SEÇ
+function selectCategory(category) {
+    activeCategory = category;
+    document.getElementById('current-category-title').textContent = category;
+    
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active-cat');
+        if (btn.textContent === category) {
+            btn.classList.add('active-cat');
+        }
+    });
+    
+    renderMenu();
+}
+
+// MENÜYÜ GÖSTER
+function renderMenu() {
+    const grid = document.getElementById('menu-grid');
+    const filtered = menu.filter(item => item.category === activeCategory);
+    
+    grid.innerHTML = filtered.map(item => `
+        <div onclick="addToTable(${item.id})" 
+             class="menu-item bg-slate-900 p-4 rounded-xl">
+            <div class="text-[10px] text-red-500 font-black mb-1 uppercase">${item.category}</div>
+            <div class="text-sm font-bold text-white h-12 leading-tight mb-2">${item.name}</div>
+            <div class="flex justify-between items-center">
+                <span class="text-lg font-mono font-black text-green-500">${item.price.toFixed(2)} ₼</span>
+                <i class="fas fa-plus-circle text-slate-500 hover:text-red-500"></i>
+            </div>
+        </div>
+    `).join('');
+}
+
+// MASA SEÇ
+function selectTable(tableId) {
+    activeTable = tableId;
+    document.getElementById('active-table-title').textContent = `MASA ${tableId}`;
+    
+    document.querySelectorAll('.table-btn').forEach(btn => {
+        btn.classList.remove('active-table');
+        if (btn.textContent === tableId) {
+            btn.classList.add('active-table');
+        }
+    });
+    
+    updateOrderDisplay();
+}
+
+// MASADA ÜRÜN EKLE
+function addToTable(itemId) {
+    const menuItem = menu.find(item => item.id === itemId);
+    if (!menuItem) return;
+    
+    let table = tables[activeTable];
+    let existing = table.find(i => i.id === itemId);
+    
+    if (existing) {
+        existing.count++;
+    } else {
+        table.push({ 
+            id: menuItem.id,
+            name: menuItem.name, 
+            price: menuItem.price, 
+            count: 1
         });
+    }
+    
+    saveData();
+    updateOrderDisplay();
+    showNotification(`${menuItem.name} əlavə edildi`);
+}
 
-        // SAAT GÜNCELLE
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleTimeString('az-AZ');
-            document.getElementById('table-time').textContent = now.toLocaleTimeString('az-AZ', {hour12: false});
-        }
-
-        // KATEGORİ SEÇ
-        function selectCategory(category) {
-            activeCategory = category;
-            document.getElementById('current-category-title').textContent = category;
+// SİPARİŞ LİSTESİNİ GÜNCELLE
+function updateOrderDisplay() {
+    const list = document.getElementById('order-items');
+    const totalDisplay = document.getElementById('total-price');
+    let items = tables[activeTable];
+    let total = 0;
+    
+    if (items.length === 0) {
+        list.innerHTML = `
+            <div class="text-center py-10 text-slate-500">
+                <i class="fas fa-shopping-cart text-4xl mb-3"></i>
+                <div>Sifariş yoxdur</div>
+            </div>
+        `;
+    } else {
+        list.innerHTML = '';
+        items.forEach((item, index) => {
+            const itemTotal = item.price * item.count;
+            total += itemTotal;
             
-            // Kategori butonlarını aktif yap
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent === category) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            renderMenu();
-        }
-
-        // MENÜYÜ GÖSTER
-        function renderMenu() {
-            const grid = document.getElementById('menu-grid');
-            const filtered = menu.filter(item => item.category === activeCategory);
-            
-            grid.innerHTML = filtered.map(item => `
-                <div onclick="addToTable(${item.id})" 
-                     class="menu-item bg-slate-900 p-4 rounded-xl animate__animated animate__fadeIn">
-                    <div class="text-[10px] text-red-500 font-black mb-1 uppercase">${item.category}</div>
-                    <div class="text-sm font-bold text-white h-12 leading-tight mb-2">${item.name}</div>
+            list.innerHTML += `
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 mb-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <span class="font-bold text-red-500 mr-3 text-lg">${item.count}x</span>
+                            <span class="font-bold">${item.name}</span>
+                        </div>
+                    </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-lg font-mono font-black text-green-500">${item.price.toFixed(2)} ₼</span>
-                        <i class="fas fa-plus-circle text-slate-500 hover:text-red-500"></i>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // MASA SEÇ
-        function selectTable(tableId) {
-            activeTable = tableId;
-            document.getElementById('active-table-title').textContent = `MASA ${tableId}`;
-            
-            // Masa butonlarını aktif yap
-            document.querySelectorAll('.table-btn').forEach(btn => {
-                btn.classList.remove('active-table');
-                if (btn.textContent === tableId) {
-                    btn.classList.add('active-table');
-                }
-            });
-            
-            updateOrderDisplay();
-        }
-
-        // MASADA ÜRÜN EKLE
-        function addToTable(itemId) {
-            const menuItem = menu.find(item => item.id === itemId);
-            if (!menuItem) return;
-            
-            let table = tables[activeTable];
-            let existing = table.find(i => i.id === itemId);
-            
-            if (existing) {
-                existing.count++;
-                existing.totalPrice = existing.price * existing.count;
-            } else {
-                table.push({ 
-                    id: menuItem.id,
-                    name: menuItem.name, 
-                    price: menuItem.price, 
-                    count: 1,
-                    totalPrice: menuItem.price
-                });
-            }
-            
-            saveData();
-            updateOrderDisplay();
-            
-            // Bildirim
-            showNotification(`${menuItem.name} əlavə edildi`);
-        }
-
-        // SİPARİŞ LİSTESİNİ GÜNCELLE
-        function updateOrderDisplay() {
-            const list = document.getElementById('order-items');
-            const totalDisplay = document.getElementById('total-price');
-            let items = tables[activeTable];
-            let total = 0;
-            
-            if (items.length === 0) {
-                list.innerHTML = `
-                    <div class="text-center py-10 text-slate-500">
-                        <i class="fas fa-shopping-cart text-4xl mb-3"></i>
-                        <div>Sifariş yoxdur</div>
-                        <div class="text-sm mt-2">Menyudan məhsul seçin</div>
-                    </div>
-                `;
-            } else {
-                list.innerHTML = '';
-                items.forEach((item, index) => {
-                    const itemTotal = item.price * item.count;
-                    total += itemTotal;
-                    
-                    list.innerHTML += `
-                        <div class="order-row bg-slate-800/60 p-3 rounded-xl border border-slate-700 mb-2 animate__animated animate__slideInRight">
-                            <div class="flex justify-between items-center mb-2">
-                                <div class="flex items-center">
-                                    <span class="font-bold text-red-500 mr-3 text-lg">${item.count}x</span>
-                                    <span class="font-bold">${item.name}</span>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-2">
-                                    <button onclick="updateQuantity(${index}, -1)" class="quantity-btn">
-                                        <i class="fas fa-minus text-xs"></i>
-                                    </button>
-                                    <span class="font-bold w-8 text-center">${item.count}</span>
-                                    <button onclick="updateQuantity(${index}, 1)" class="quantity-btn">
-                                        <i class="fas fa-plus text-xs"></i>
-                                    </button>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-green-400 text-lg">${itemTotal.toFixed(2)} ₼</div>
-                                    <button onclick="removeFromTable(${index})" 
-                                            class="text-xs text-red-500 hover:text-red-400 mt-1">
-                                        <i class="fas fa-trash mr-1"></i>Sil
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            totalDisplay.textContent = total.toFixed(2) + " ₼";
-        }
-
-        // MİKTAR GÜNCELLE
-        function updateQuantity(index, change) {
-            let table = tables[activeTable];
-            if (table[index]) {
-                table[index].count += change;
-                if (table[index].count <= 0) {
-                    table.splice(index, 1);
-                } else {
-                    table[index].totalPrice = table[index].price * table[index].count;
-                }
-                saveData();
-                updateOrderDisplay();
-            }
-        }
-
-        // ÜRÜN TAMAMEN ÇIKAR
-        function removeFromTable(index) {
-            tables[activeTable].splice(index, 1);
-            saveData();
-            updateOrderDisplay();
-            showNotification('Məhsul silindi');
-        }
-
-        // MASAYI TEMİZLE
-        function clearCurrentTable() {
-            if (tables[activeTable].length === 0) return;
-            
-            if (confirm(`${activeTable} masasını təmizləmək istədiyinizə əminsiniz?`)) {
-                tables[activeTable] = [];
-                saveData();
-                updateOrderDisplay();
-                showNotification('Masa təmizləndi');
-            }
-        }
-
-        // FİŞ MODAL GÖSTER
-        function showReceiptModal() {
-            const items = tables[activeTable];
-            if (items.length === 0) {
-                showNotification('Fiş çıxarmaq üçün sifariş yoxdur!', 'error');
-                return;
-            }
-            
-            const now = new Date();
-            receiptCounter++;
-            
-            // Fiş numarası
-            document.getElementById('receipt-no').textContent = receiptCounter.toString().padStart(4, '0');
-            
-            // Tarih ve saat
-            document.getElementById('receipt-date').textContent = now.toLocaleDateString('az-AZ');
-            document.getElementById('receipt-time').textContent = now.toLocaleTimeString('az-AZ');
-            document.getElementById('receipt-table').textContent = `MASA ${activeTable}`;
-            
-            // Öğeler
-            const itemsDiv = document.getElementById('receipt-items');
-            let itemsHTML = '';
-            let total = 0;
-            
-            items.forEach(item => {
-                const itemTotal = item.price * item.count;
-                total += itemTotal;
-                itemsHTML += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dotted #eee; padding-bottom: 2px;">
-                        <div>
-                            <span style="font-weight: bold;">${item.count}x</span> ${item.name}
-                        </div>
-                        <div>${itemTotal.toFixed(2)}</div>
-                    </div>
-                `;
-            });
-            
-            itemsDiv.innerHTML = itemsHTML;
-            document.getElementById('receipt-total').textContent = total.toFixed(2) + ' AZN';
-            
-            // Modal göster
-            document.getElementById('receipt-modal').style.display = 'block';
-        }
-
-        // FİŞ YAZDIR - 80mm termal yazıcı için
-        function printReceiptNow() {
-            const receiptElement = document.getElementById('receipt-print');
-            
-            // Yazdırma penceresi aç
-            const printWindow = window.open('', '_blank', 'width=80mm,height=600');
-            
-            // 80mm termal fiş formatında HTML oluştur
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>MAMBA PUB Fiş #${receiptCounter}</title>
-                    <meta charset="UTF-8">
-                    <style>
-                        @page {
-                            margin: 0;
-                            padding: 0;
-                            size: 80mm auto;
-                        }
-                        body {
-                            width: 80mm;
-                            margin: 0;
-                            padding: 0;
-                            font-family: 'Courier New', monospace;
-                            font-size: 11px;
-                            background: white;
-                            color: black;
-                        }
-                        .receipt {
-                            width: 80mm;
-                            padding: 10px;
-                            box-sizing: border-box;
-                        }
-                        hr {
-                            border: none;
-                            border-top: 1px dashed #000;
-                            margin: 8px 0;
-                        }
-                        .text-center { text-align: center; }
-                        .bold { font-weight: bold; }
-                        .total { font-size: 14px; font-weight: bold; }
-                    </style>
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                            setTimeout(function() {
-                                window.close();
-                            }, 500);
-                        };
-                    <\/script>
-                </head>
-                <body>
-                    <div class="receipt">
-                        ${receiptElement.innerHTML}
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            
-            // Masayı temizle ve kaydet
-            tables[activeTable] = [];
-            saveData();
-            updateOrderDisplay();
-            
-            showNotification(`Fiş #${receiptCounter} çap edildi`);
-            closeModal();
-        }
-
-        // MODAL KAPAT
-        function closeModal() {
-            document.getElementById('receipt-modal').style.display = 'none';
-        }
-
-        // VERİ KAYDET
-        function saveData() {
-            try {
-                localStorage.setItem('mamba_tables', JSON.stringify(tables));
-                localStorage.setItem('mamba_active_table', activeTable);
-                localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
-                localStorage.setItem('mamba_menu', JSON.stringify(menu));
-                
-                document.getElementById('data-status').innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Saxlanıldı';
-                updateStorageInfo();
-                
-            } catch(e) {
-                document.getElementById('data-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-1"></i>Xəta';
-            }
-        }
-
-        // STORAGE BİLGİSİ
-        function updateStorageInfo() {
-            const used = JSON.stringify(tables).length + JSON.stringify(menu).length;
-            const kb = (used / 1024).toFixed(1);
-            document.getElementById('storage-info').textContent = `${kb} KB yaddaş istifadəsi`;
-        }
-
-        // ADMIN PANEL TOGGLE
-        function toggleAdminPanel() {
-            const panel = document.getElementById('admin-panel');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                panel.style.display = 'block';
-                loadMenuList();
-            }
-        }
-
-        // MENÜ LİSTESİ YÜKLE
-        function loadMenuList() {
-            const menuList = document.getElementById('menu-list');
-            menuList.innerHTML = '';
-            
-            menu.forEach(item => {
-                menuList.innerHTML += `
-                    <tr class="border-b border-slate-700">
-                        <td class="py-3">
-                            <input type="text" value="${item.name}" 
-                                   onchange="updateMenuItem(${item.id}, 'name', this.value)"
-                                   class="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-white w-full">
-                        </td>
-                        <td class="py-3">
-                            <select onchange="updateMenuItem(${item.id}, 'category', this.value)"
-                                    class="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-white">
-                                <option value="İçkilər" ${item.category === 'İçkilər' ? 'selected' : ''}>İçkilər</option>
-                                <option value="Mezeler" ${item.category === 'Mezeler' ? 'selected' : ''}>Mezeler</option>
-                                <option value="İsti Yeməklər" ${item.category === 'İsti Yeməklər' ? 'selected' : ''}>İsti Yeməklər</option>
-                                <option value="Setlər" ${item.category === 'Setlər' ? 'selected' : ''}>Setlər</option>
-                                <option value="Digər" ${item.category === 'Digər' ? 'selected' : ''}>Digər</option>
-                            </select>
-                        </td>
-                        <td class="py-3">
-                            <input type="number" step="0.01" value="${item.price.toFixed(2)}" 
-                                   onchange="updateMenuItem(${item.id}, 'price', parseFloat(this.value))"
-                                   class="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-white w-24">
-                        </td>
-                        <td class="py-3">
-                            <button onclick="deleteMenuItem(${item.id})" 
-                                    class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs">
-                                <i class="fas fa-trash"></i>
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateQuantity(${index}, -1)" class="quantity-btn">
+                                <i class="fas fa-minus text-xs"></i>
                             </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        // YENİ MENÜ ÖĞESİ EKLE
-        function addNewMenuItem() {
-            const name = document.getElementById('new-item-name').value;
-            const price = parseFloat(document.getElementById('new-item-price').value);
-            const category = document.getElementById('new-item-category').value;
-            
-            if (!name || !price || price <= 0) {
-                showNotification('Xahiş edirik düzgün məlumat daxil edin!', 'error');
-                return;
-            }
-            
-            const newItem = {
-                id: nextItemId++,
-                name: name,
-                price: price,
-                category: category
-            };
-            
-            menu.push(newItem);
-            saveData();
-            loadMenuList();
-            renderMenu();
-            
-            // Inputları temizle
-            document.getElementById('new-item-name').value = '';
-            document.getElementById('new-item-price').value = '';
-            
-            showNotification('Məhsul uğurla əlavə edildi');
-        }
-
-        // MENÜ ÖĞESİNİ GÜNCELLE
-        function updateMenuItem(id, field, value) {
-            const item = menu.find(item => item.id === id);
-            if (item) {
-                item[field] = value;
-                saveData();
-                renderMenu();
-            }
-        }
-
-        // MENÜ ÖĞESİNİ SİL
-        function deleteMenuItem(id) {
-            if (confirm('Bu məhsulu silmək istədiyinizə əminsiniz?')) {
-                menu = menu.filter(item => item.id !== id);
-                saveData();
-                loadMenuList();
-                renderMenu();
-                showNotification('Məhsul silindi');
-            }
-        }
-
-        // TOPLU QİYMƏT DEĞİŞİKLİĞİ
-        function changeAllPrices(percent, type) {
-            if (!confirm(`Bütün məhsulların qiymətlərini ${percent}% ${type === 'increase' ? 'artırmaq' : 'azaltmaq'} istəyirsiniz?`)) {
-                return;
-            }
-            
-            menu.forEach(item => {
-                if (type === 'increase') {
-                    item.price *= (1 + percent / 100);
-                } else {
-                    item.price *= (1 - percent / 100);
-                }
-                item.price = Math.round(item.price * 100) / 100; // 2 decimal
-            });
-            
-            saveData();
-            loadMenuList();
-            renderMenu();
-            showNotification(`Bütün qiymətlər ${percent}% ${type === 'increase' ? 'artırıldı' : 'azaldıldı'}`);
-        }
-
-        // ÖZEL FAİZ DEĞİŞİKLİĞİ
-        function changeCustomPercent() {
-            const percent = parseFloat(document.getElementById('custom-percent').value);
-            if (!percent || isNaN(percent)) {
-                showNotification('Xahiş edirik faiz daxil edin!', 'error');
-                return;
-            }
-            
-            const type = confirm(`${percent}% artırmaq istəyirsiniz? (OK = Artır, Cancel = Azalt)`) ? 'increase' : 'decrease';
-            changeAllPrices(percent, type);
-            document.getElementById('custom-percent').value = '';
-        }
-
-        // MENÜ VERİSİNİ EXPORT ET
-        function exportMenuData() {
-            const data = {
-                menu: menu,
-                exportDate: new Date().toISOString(),
-                version: '2.0'
-            };
-            
-            const dataStr = JSON.stringify(data, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `mamba_menu_backup_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            showNotification('Menyu məlumatları export edildi');
-        }
-
-        // MENÜ VERİSİNİ IMPORT ET
-        function importMenuData() {
-            document.getElementById('file-import').click();
-        }
-
-        // FILE INPUT CHANGE EVENT
-        document.getElementById('file-import').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.menu && Array.isArray(data.menu)) {
-                        menu = data.menu;
-                        nextItemId = Math.max(...menu.map(item => item.id), 0) + 1;
-                        saveData();
-                        loadMenuList();
-                        renderMenu();
-                        showNotification('Menyu məlumatları uğurla yükləndi');
-                    } else {
-                        showNotification('Yanlış fayl formatı!', 'error');
-                    }
-                } catch(err) {
-                    showNotification('Fayl oxuma xətası!', 'error');
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        // TÜM VERİLERİ SIFIRLA
-        function resetAllData() {
-            if (confirm('BÜTÜN MƏLUMATLARI SIFIRLAMAQ İSTƏYİRSİNİZ?\n\nBu əməliyyat geri alına bilməz!')) {
-                localStorage.clear();
-                menu = [];
-                tables = {
-                    "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
-                    "BAR": [], "TERAS": []
-                };
-                receiptCounter = 1000;
-                nextItemId = 1;
-                
-                saveData();
-                loadMenuList();
-                renderMenu();
-                updateOrderDisplay();
-                
-                showNotification('Bütün məlumatlar sıfırlandı', 'warning');
-            }
-        }
-
-        // BİLDİRİM
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg font-bold shadow-xl animate__animated animate__fadeInRight z-50 ${type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-green-600'}`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
-                    <span>${message}</span>
+                            <span class="font-bold w-8 text-center">${item.count}</span>
+                            <button onclick="updateQuantity(${index}, 1)" class="quantity-btn">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-green-400">${itemTotal.toFixed(2)} ₼</div>
+                            <button onclick="removeFromTable(${index})" 
+                                    class="text-xs text-red-500 hover:text-red-400 mt-1">
+                                <i class="fas fa-trash mr-1"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.remove('animate__fadeInRight');
-                notification.classList.add('animate__fadeOutRight');
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-
-        // KLAVYE KISA YOLLARI
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                showReceiptModal();
-            }
-            if (e.key === 'Escape') {
-                closeModal();
-                document.getElementById('admin-panel').style.display = 'none';
-            }
-            if (e.ctrlKey && e.key === 'a') {
-                e.preventDefault();
-                toggleAdminPanel();
-            }
         });
-    </script>
+    }
     
-    <!-- FontAwesome -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    totalDisplay.textContent = total.toFixed(2) + " ₼";
+}
+
+// MİKTAR GÜNCELLE
+function updateQuantity(index, change) {
+    let table = tables[activeTable];
+    if (table[index]) {
+        table[index].count += change;
+        if (table[index].count <= 0) {
+            table.splice(index, 1);
+        }
+        saveData();
+        updateOrderDisplay();
+    }
+}
+
+// ÜRÜN TAMAMEN ÇIKAR
+function removeFromTable(index) {
+    tables[activeTable].splice(index, 1);
+    saveData();
+    updateOrderDisplay();
+}
+
+// MASAYI TEMİZLE
+function clearCurrentTable() {
+    if (tables[activeTable].length === 0) return;
+    
+    if (confirm(`${activeTable} masasını təmizləmək istədiyinizə əminsiniz?`)) {
+        tables[activeTable] = [];
+        saveData();
+        updateOrderDisplay();
+    }
+}
+
+// FİŞ MODAL GÖSTER
+function showReceiptModal() {
+    const items = tables[activeTable];
+    if (items.length === 0) {
+        alert('Fiş çıxarmaq üçün sifariş yoxdur!');
+        return;
+    }
+    
+    const now = new Date();
+    receiptCounter++;
+    localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
+    
+    // Fiş numarası
+    document.getElementById('receipt-no').textContent = receiptCounter.toString().padStart(4, '0');
+    
+    // Tarih ve saat
+    document.getElementById('receipt-date').textContent = now.toLocaleDateString('az-AZ');
+    document.getElementById('receipt-time').textContent = now.toLocaleTimeString('az-AZ');
+    document.getElementById('receipt-table').textContent = `MASA ${activeTable}`;
+    
+    // Öğeler
+    const itemsDiv = document.getElementById('receipt-items');
+    let itemsHTML = '';
+    let total = 0;
+    
+    items.forEach(item => {
+        const itemTotal = item.price * item.count;
+        total += itemTotal;
+        itemsHTML += `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <div>
+                    <span style="font-weight: bold;">${item.count}x</span> ${item.name}
+                </div>
+                <div>${itemTotal.toFixed(2)}</div>
+            </div>
+        `;
+    });
+    
+    itemsDiv.innerHTML = itemsHTML;
+    document.getElementById('receipt-total').textContent = total.toFixed(2) + ' AZN';
+    
+    // Modal göster
+    document.getElementById('receipt-modal').style.display = 'flex';
+}
+
+// DİREKT YAZDIR (BASİT YÖNTEM)
+function directPrint() {
+    // Önce modalı kapat
+    closeModal();
+    
+    // Yazdırma için hazırla
+    const receiptContent = document.getElementById('receipt-print').outerHTML;
+    
+    // Gizli div'e kopyala
+    const printContainer = document.getElementById('print-container');
+    printContainer.innerHTML = receiptContent;
+    printContainer.style.display = 'block';
+    
+    // Yazdır
+    window.print();
+    
+    // Gizli div'i temizle
+    setTimeout(() => {
+        printContainer.innerHTML = '';
+        printContainer.style.display = 'none';
+        
+        // Masayı temizle
+        tables[activeTable] = [];
+        saveData();
+        updateOrderDisplay();
+        
+        // Bildirim
+        showNotification(`Fiş #${receiptCounter} çap edildi`);
+    }, 100);
+}
+
+// MODAL KAPAT
+function closeModal() {
+    document.getElementById('receipt-modal').style.display = 'none';
+}
+
+// VERİ KAYDET
+function saveData() {
+    try {
+        localStorage.setItem('mamba_tables', JSON.stringify(tables));
+        localStorage.setItem('mamba_active_table', activeTable);
+        localStorage.setItem('mamba_menu', JSON.stringify(menu));
+        
+        document.getElementById('data-status').innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Saxlanıldı';
+        updateStorageInfo();
+        
+    } catch(e) {
+        document.getElementById('data-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-1"></i>Xəta';
+    }
+}
+
+// STORAGE BİLGİSİ
+function updateStorageInfo() {
+    const used = JSON.stringify(tables).length + JSON.stringify(menu).length;
+    const kb = (used / 1024).toFixed(1);
+    document.getElementById('storage-info').textContent = `${kb} KB`;
+}
+
+// BİLDİRİM
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 px-4 py-3 rounded-lg font-bold shadow-xl bg-green-600';
+    notification.innerHTML = `
+        <div class="flex items-center gap-2">
+            <i class="fas fa-check-circle"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
+
+// KLASİK ALERT İLE HATA YÖNETİMİ
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.log('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
+    return false;
+};
+
+// Başlangıç
+selectCategory('İçkilər');
+selectTable('1');
+// ]]>
+</script>
 </body>
 </html>
