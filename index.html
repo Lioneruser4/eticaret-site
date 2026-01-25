@@ -3,102 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAMBA PUB POS</title>
+    <title>MAMBA PUB POS Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; margin: 0; padding: 0; }
-        .table-btn.active { background: #ef4444; }
-        .has-order { border-color: #22c55e; }
+        body { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc; 
+            font-family: 'Segoe UI', system-ui;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .active-table { 
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            color: white !important;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+        .has-order { 
+            border: 3px solid #22c55e !important;
+            position: relative;
+        }
+        .has-order::after {
+            content: '●';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #22c55e;
+            font-size: 12px;
+        }
+        .menu-item { 
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #334155;
+        }
+        .menu-item:hover { 
+            transform: translateY(-3px); 
+            border-color: #ef4444;
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
+        }
+        .cart-item:hover {
+            background: rgba(30, 41, 59, 0.8);
+        }
+        .receipt-print {
+            width: 80mm;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            background: white;
+            color: black;
+        }
+        @media print {
+            body * { visibility: hidden; }
+            .receipt-print, .receipt-print * { visibility: visible; }
+            .receipt-print {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
-<body class="h-screen flex">
-    <!-- SOL MENÜ -->
-    <div class="w-1/4 bg-slate-900 p-4 border-r border-slate-800">
-        <h1 class="text-2xl font-bold text-red-500 mb-6">MAMBA PUB</h1>
-        
-        <!-- MASALAR -->
-        <div class="space-y-2 mb-6">
-            <div class="text-slate-400 text-sm font-bold mb-2">MASALAR</div>
-            <div id="tables" class="grid grid-cols-2 gap-2">
-                <!-- Masalar buraya gelecek -->
+<body class="h-screen flex flex-col">
+    <!-- ÜST MENÜ -->
+    <div class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center shadow-lg">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold text-white">
+                <i class="fas fa-beer text-red-500 mr-2"></i>
+                MAMBA PUB POS
+            </h1>
+            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full">
+                <i class="fas fa-print text-green-500"></i>
+                <span class="text-sm">XPRINTER</span>
+            </div>
+        </div>
+        <div class="text-right">
+            <div id="clock" class="text-lg font-mono font-bold"></div>
+            <div class="text-sm text-slate-400" id="date"></div>
+        </div>
+    </div>
+
+    <!-- ANA İÇERİK -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- SOL MENÜ - MASALAR -->
+        <div class="w-1/5 bg-slate-900/50 border-r border-slate-800 p-4 overflow-y-auto">
+            <h2 class="text-lg font-bold mb-4 text-slate-300">
+                <i class="fas fa-table mr-2"></i>Masalar
+            </h2>
+            <div class="grid grid-cols-2 gap-2" id="table-list">
+                <!-- Masalar buraya yüklenecek -->
+            </div>
+            
+            <div class="mt-8">
+                <h2 class="text-lg font-bold mb-4 text-slate-300">
+                    <i class="fas fa-tags mr-2"></i>Kategoriler
+                </h2>
+                <div class="space-y-2" id="category-list">
+                    <!-- Kategoriler buraya yüklenecek -->
+                </div>
             </div>
         </div>
 
-        <!-- KATEGORİLER -->
-        <div class="space-y-2">
-            <div class="text-slate-400 text-sm font-bold mb-2">KATEGORİLER</div>
-            <div id="categories" class="space-y-2">
-                <!-- Kategoriler buraya gelecek -->
+        <!-- ORTA ALAN - MENÜ -->
+        <div class="w-3/5 p-6 overflow-y-auto">
+            <div class="mb-6">
+                <div class="text-2xl font-bold" id="current-category">İsti Yeməklər</div>
+                <div class="text-slate-400" id="item-count">15 məhsul</div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4" id="menu-items">
+                <!-- Menü öğeleri buraya yüklenecek -->
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL - SİPARİŞ -->
+        <div class="w-1/5 bg-slate-900/30 border-l border-slate-800 p-4 flex flex-col">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold" id="current-table-name">MASA 1</h2>
+                <div class="text-sm text-slate-400" id="table-time">15:30</div>
+            </div>
+            
+            <!-- SİPARİŞ LİSTESİ -->
+            <div class="flex-1 overflow-y-auto mb-4" id="cart-items">
+                <!-- Siparişler buraya yüklenecek -->
+            </div>
+            
+            <!-- TOPLAM -->
+            <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                <div class="flex justify-between mb-2">
+                    <span class="text-slate-300">Cəmi:</span>
+                    <span id="subtotal" class="font-bold">0.00 ₼</span>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <span class="text-slate-300">Ümumi:</span>
+                    <span id="total" class="text-2xl font-bold text-green-500">0.00 ₼</span>
+                </div>
+                
+                <!-- BUTONLAR -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="printReceipt()" class="bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2">
+                        <i class="fas fa-print"></i> ÇAP ET
+                    </button>
+                    <button onclick="clearTable()" class="bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold">
+                        Təmizlə
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ORTA ALAN - MENÜ -->
-    <div class="w-2/4 p-4 overflow-auto">
-        <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <!-- Menü öğeleri buraya gelecek -->
+    <!-- ÇEK YAZDIRMA ALANI (GİZLİ) -->
+    <div class="receipt-print" id="receipt" style="display: none;">
+        <div style="text-align: center;">
+            <div style="font-weight: bold; font-size: 16px;">MAMBA PUB</div>
+            <div style="font-size: 11px;">Qəbala şossesi 123, Bakı</div>
+            <div style="font-size: 11px;">Tel: (012) 123-45-67</div>
+            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
+            <div style="font-size: 11px;" id="receipt-date"></div>
+            <div style="font-size: 11px;">Çek No: <span id="receipt-no"></span></div>
+            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
+            <div style="font-weight: bold; font-size: 14px;" id="receipt-table"></div>
+            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
         </div>
-    </div>
-
-    <!-- SAĞ ALAN - SİPARİŞ -->
-    <div class="w-1/4 bg-slate-900 p-4 border-l border-slate-800">
-        <h2 id="current-table" class="text-xl font-bold mb-4">MASA 1</h2>
         
-        <!-- SİPARİŞ LİSTESİ -->
-        <div id="order-list" class="mb-4 space-y-2 max-h-96 overflow-auto">
-            <!-- Siparişler buraya gelecek -->
+        <div id="receipt-items" style="font-size: 12px; margin: 10px 0;"></div>
+        
+        <div style="border-top: 1px dashed black; margin: 10px 0;"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+            <span>CƏMİ:</span>
+            <span id="receipt-total">0.00</span>
         </div>
-
-        <!-- TOPLAM -->
-        <div class="border-t border-slate-700 pt-4">
-            <div class="flex justify-between mb-2">
-                <span>Toplam:</span>
-                <span id="total" class="font-bold">0.00 ₼</span>
-            </div>
-            <button onclick="printReceipt()" class="w-full bg-red-600 py-3 rounded font-bold hover:bg-red-700">
-                ÇAP ET
-            </button>
+        
+        <div style="border-top: 1px dashed black; margin: 10px 0;"></div>
+        <div style="text-align: center; font-size: 11px; margin-top: 15px;">
+            TƏŞƏKKÜRLƏR!<br>
+            Nuş Olsun!<br>
+            <span style="font-size: 10px;">POS v3.0 - XPRINTER</span>
         </div>
     </div>
 
     <script>
-        // MASALAR
-        const tables = {
-            "1": [], "2": [], "3": [], "4": [], "5": [], 
-            "6": [], "7": [], "8": [], "K1": [], "K2": []
-        };
-
-        // MENÜ
-        const menu = {
-            "İsti": [
-                {name: "Gürcü xəngəli", price: 8.00},
-                {name: "Tabaka", price: 18.00},
-                {name: "Kartof qızardılmış", price: 5.00}
+        // VERİTABANI
+        const menuData = {
+            "İsti Yeməklər": [
+                {id: 1, name: "Gürcü Xəngəli", price: 8.00, code: "IST-001"},
+                {id: 2, name: "Tabaka Toyuq", price: 18.00, code: "IST-002"},
+                {id: 3, name: "Kartof Qızardılmış", price: 5.00, code: "IST-003"},
+                {id: 4, name: "Toyuq Şiş", price: 7.50, code: "IST-004"},
+                {id: 5, name: "Lüle Kebab", price: 9.00, code: "IST-005"},
+                {id: 6, name: "Qovurma", price: 12.00, code: "IST-006"}
             ],
-            "Meze": [
-                {name: "Pivə 1.80m", price: 1.80},
-                {name: "Semiçka", price: 2.00},
-                {name: "Çips", price: 4.00}
+            "Məzələr": [
+                {id: 7, name: "Pivə 1.80m", price: 1.80, code: "MEZ-001"},
+                {id: 8, name: "Semiçka", price: 2.00, code: "MEZ-002"},
+                {id: 9, name: "Çips", price: 4.00, code: "MEZ-003"},
+                {id: 10, name: "Qoz-Fındıq", price: 3.50, code: "MEZ-004"},
+                {id: 11, name: "Zeytun", price: 3.00, code: "MEZ-005"}
             ],
-            "İçki": [
-                {name: "Xırdalan 0.5L", price: 1.80},
-                {name: "Cola 1L", price: 3.00},
-                {name: "Su 0.5L", price: 0.80}
+            "İçkilər": [
+                {id: 12, name: "Xırdalan 0.5L", price: 1.80, code: "ICK-001"},
+                {id: 13, name: "Cola 1L", price: 3.00, code: "ICK-002"},
+                {id: 14, name: "Fanta 0.5L", price: 1.50, code: "ICK-003"},
+                {id: 15, name: "Su 0.5L", price: 0.80, code: "ICK-004"},
+                {id: 16, name: "Araq 50ml", price: 3.50, code: "ICK-005"},
+                {id: 17, name: "Vodka 50ml", price: 4.00, code: "ICK-006"}
+            ],
+            "Setlər": [
+                {id: 18, name: "SET 1 (Xəngəl+Cola)", price: 20.00, code: "SET-001"},
+                {id: 19, name: "SET 2 (Tabaka+2 Pivə)", price: 25.00, code: "SET-002"},
+                {id: 20, name: "UŞAQ SET", price: 15.00, code: "SET-003"}
             ]
         };
 
-        let currentTable = "1";
+        const tables = [
+            {id: 1, name: "MASA 1", orders: []},
+            {id: 2, name: "MASA 2", orders: []},
+            {id: 3, name: "MASA 3", orders: []},
+            {id: 4, name: "MASA 4", orders: []},
+            {id: 5, name: "MASA 5", orders: []},
+            {id: 6, name: "MASA 6", orders: []},
+            {id: 7, name: "BAR", orders: []},
+            {id: 8, name: "TERAS", orders: []},
+            {id: 9, name: "KABİNET 1", orders: []},
+            {id: 10, name: "KABİNET 2", orders: []}
+        ];
+
+        let currentTable = tables[0];
+        let currentCategory = "İsti Yeməklər";
+        let receiptCounter = localStorage.getItem('receipt_counter') || 1000;
+
+        // SAYFA YÜKLENDİĞİNDE
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTables();
+            loadCategories();
+            loadMenuItems();
+            updateClock();
+            setInterval(updateClock, 1000);
+            loadCart();
+        });
+
+        // SAAT VE TARİH
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = 
+                now.toLocaleTimeString('az-AZ', {hour12: false});
+            document.getElementById('date').textContent = 
+                now.toLocaleDateString('az-AZ', {weekday: 'long', day: 'numeric', month: 'long'});
+        }
 
         // MASALARI YÜKLE
         function loadTables() {
-            const tablesDiv = document.getElementById('tables');
-            tablesDiv.innerHTML = '';
-            Object.keys(tables).forEach(table => {
-                const hasOrder = tables[table].length > 0;
-                tablesDiv.innerHTML += `
-                    <button onclick="selectTable('${table}')" 
-                            class="p-3 rounded border ${currentTable === table ? 'active table-btn' : 'bg-slate-800'} ${hasOrder ? 'has-order border-green-500' : 'border-slate-700'}">
-                        ${table.startsWith('K') ? 'KABİNET ' + table.slice(1) : 'MASA ' + table}
+            const tableList = document.getElementById('table-list');
+            tableList.innerHTML = '';
+            
+            tables.forEach(table => {
+                const hasOrder = table.orders.length > 0;
+                tableList.innerHTML += `
+                    <button onclick="selectTable(${table.id})" 
+                            class="p-3 rounded-lg border ${currentTable.id === table.id ? 'active-table' : 'bg-slate-800 border-slate-700'} ${hasOrder ? 'has-order' : ''} transition-colors">
+                        <div class="font-bold">${table.name}</div>
+                        <div class="text-xs text-slate-400 mt-1">${table.orders.length} məhsul</div>
                     </button>
                 `;
             });
@@ -106,133 +271,273 @@
 
         // KATEGORİLERİ YÜKLE
         function loadCategories() {
-            const catsDiv = document.getElementById('categories');
-            catsDiv.innerHTML = '';
-            Object.keys(menu).forEach(cat => {
-                catsDiv.innerHTML += `
-                    <button onclick="loadMenu('${cat}')" 
-                            class="w-full p-3 text-left rounded bg-slate-800 hover:bg-slate-700">
-                        ${cat}
+            const categoryList = document.getElementById('category-list');
+            categoryList.innerHTML = '';
+            
+            Object.keys(menuData).forEach(category => {
+                categoryList.innerHTML += `
+                    <button onclick="selectCategory('${category}')" 
+                            class="w-full p-3 text-left rounded-lg ${currentCategory === category ? 'bg-red-600 text-white' : 'bg-slate-800 hover:bg-slate-700'} transition-colors">
+                        <i class="fas fa-utensils mr-2"></i>${category}
                     </button>
                 `;
             });
         }
 
-        // MENÜ YÜKLE
-        function loadMenu(category) {
-            const menuGrid = document.getElementById('menu-grid');
-            menuGrid.innerHTML = '';
-            menu[category].forEach(item => {
-                menuGrid.innerHTML += `
-                    <div onclick="addItem('${item.name}', ${item.price})" 
-                         class="p-4 rounded bg-slate-800 border border-slate-700 hover:border-red-500 cursor-pointer">
-                        <div class="font-bold">${item.name}</div>
-                        <div class="text-green-500 font-bold mt-2">${item.price.toFixed(2)} ₼</div>
+        // KATEGORİ SEÇ
+        function selectCategory(category) {
+            currentCategory = category;
+            document.getElementById('current-category').textContent = category;
+            document.getElementById('item-count').textContent = `${menuData[category].length} məhsul`;
+            loadCategories();
+            loadMenuItems();
+        }
+
+        // MENÜ ÖĞELERİNİ YÜKLE
+        function loadMenuItems() {
+            const menuItems = document.getElementById('menu-items');
+            const items = menuData[currentCategory];
+            
+            menuItems.innerHTML = '';
+            items.forEach(item => {
+                menuItems.innerHTML += `
+                    <div onclick="addToCart(${item.id})" 
+                         class="menu-item bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-red-500">
+                        <div class="text-sm text-slate-400 mb-1">${item.code}</div>
+                        <div class="font-bold text-white mb-2">${item.name}</div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-green-500">${item.price.toFixed(2)} ₼</span>
+                            <i class="fas fa-plus-circle text-slate-500 hover:text-red-500"></i>
+                        </div>
                     </div>
                 `;
             });
         }
 
-        // MAS SEÇ
-        function selectTable(table) {
-            currentTable = table;
-            document.getElementById('current-table').innerText = 
-                table.startsWith('K') ? 'KABİNET ' + table.slice(1) : 'MASA ' + table;
+        // MASA SEÇ
+        function selectTable(tableId) {
+            currentTable = tables.find(t => t.id === tableId);
+            document.getElementById('current-table-name').textContent = currentTable.name;
+            document.getElementById('table-time').textContent = new Date().toLocaleTimeString('az-AZ', {hour12: false});
             loadTables();
-            updateOrderList();
+            loadCart();
         }
 
-        // ÜRÜN EKLE
-        function addItem(name, price) {
-            const table = tables[currentTable];
-            const existing = table.find(item => item.name === name);
+        // SEPETE EKLE
+        function addToCart(itemId) {
+            const category = Object.keys(menuData).find(cat => 
+                menuData[cat].find(item => item.id === itemId)
+            );
+            const item = menuData[category].find(item => item.id === itemId);
             
-            if (existing) {
-                existing.quantity++;
+            const existingItem = currentTable.orders.find(order => order.id === itemId);
+            if (existingItem) {
+                existingItem.quantity++;
             } else {
-                table.push({name, price, quantity: 1});
+                currentTable.orders.push({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    code: item.code,
+                    quantity: 1
+                });
             }
             
-            updateOrderList();
+            loadCart();
             loadTables();
+            
+            // Bildirim
+            showNotification(`${item.name} əlavə edildi`, 'success');
         }
 
-        // SİPARİŞ LİSTESİNİ GÜNCELLE
-        function updateOrderList() {
-            const orderList = document.getElementById('order-list');
-            const table = tables[currentTable];
-            let total = 0;
+        // SEPETİ YÜKLE
+        function loadCart() {
+            const cartItems = document.getElementById('cart-items');
+            const orders = currentTable.orders;
             
-            if (table.length === 0) {
-                orderList.innerHTML = '<div class="text-slate-500 text-center">Sipariş yok</div>';
+            if (orders.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="text-center py-10 text-slate-500">
+                        <i class="fas fa-shopping-cart text-4xl mb-3"></i>
+                        <div>Sifariş yoxdur</div>
+                    </div>
+                `;
             } else {
-                orderList.innerHTML = '';
-                table.forEach((item, index) => {
+                cartItems.innerHTML = '';
+                let subtotal = 0;
+                
+                orders.forEach((item, index) => {
                     const itemTotal = item.price * item.quantity;
-                    total += itemTotal;
+                    subtotal += itemTotal;
                     
-                    orderList.innerHTML += `
-                        <div class="flex justify-between items-center p-2 bg-slate-800 rounded">
-                            <div>
-                                <span class="text-red-500 font-bold">${item.quantity}x</span> ${item.name}
+                    cartItems.innerHTML += `
+                        <div class="cart-item bg-slate-800/30 p-3 rounded-lg mb-2 border border-slate-700">
+                            <div class="flex justify-between items-start mb-1">
+                                <div>
+                                    <div class="font-bold">${item.name}</div>
+                                    <div class="text-xs text-slate-400">${item.price.toFixed(2)} ₼</div>
+                                </div>
+                                <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-400">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span>${itemTotal.toFixed(2)} ₼</span>
-                                <button onclick="removeItem(${index})" class="text-red-500">×</button>
+                            <div class="flex justify-between items-center mt-2">
+                                <div class="flex items-center gap-2">
+                                    <button onclick="updateQuantity(${index}, -1)" class="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+                                        <i class="fas fa-minus text-xs"></i>
+                                    </button>
+                                    <span class="font-bold">${item.quantity}</span>
+                                    <button onclick="updateQuantity(${index}, 1)" class="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+                                        <i class="fas fa-plus text-xs"></i>
+                                    </button>
+                                </div>
+                                <div class="font-bold text-green-500">${itemTotal.toFixed(2)} ₼</div>
                             </div>
                         </div>
                     `;
                 });
             }
             
-            document.getElementById('total').innerText = total.toFixed(2) + ' ₼';
+            document.getElementById('subtotal').textContent = subtotal.toFixed(2) + ' ₼';
+            document.getElementById('total').textContent = subtotal.toFixed(2) + ' ₼';
         }
 
-        // ÜRÜN ÇIKAR
-        function removeItem(index) {
-            tables[currentTable].splice(index, 1);
-            updateOrderList();
+        // MİKTAR GÜNCELLE
+        function updateQuantity(index, change) {
+            currentTable.orders[index].quantity += change;
+            if (currentTable.orders[index].quantity <= 0) {
+                currentTable.orders.splice(index, 1);
+            }
+            loadCart();
             loadTables();
         }
 
-        // ÇAP ET
+        // SEPETTEN ÇIKAR
+        function removeFromCart(index) {
+            currentTable.orders.splice(index, 1);
+            loadCart();
+            loadTables();
+        }
+
+        // MASAYI TEMİZLE
+        function clearTable() {
+            if (currentTable.orders.length === 0) return;
+            
+            if (confirm(`${currentTable.name} masasını təmizləmək istədiyinizə əminsiniz?`)) {
+                currentTable.orders = [];
+                loadCart();
+                loadTables();
+                showNotification('Masa təmizləndi', 'info');
+            }
+        }
+
+        // ÇEK YAZDIR
         function printReceipt() {
-            const table = tables[currentTable];
-            if (table.length === 0) {
-                alert('Sipariş yok!');
+            if (currentTable.orders.length === 0) {
+                showNotification('Çap etmək üçün sifariş yoxdur!', 'error');
                 return;
             }
             
-            let receipt = 'MAMBA PUB\n';
-            receipt += '=============\n';
-            receipt += (currentTable.startsWith('K') ? 'KABİNET ' + currentTable.slice(1) : 'MASA ' + currentTable) + '\n';
-            receipt += '=============\n\n';
+            // Çek numarasını artır
+            receiptCounter++;
+            localStorage.setItem('receipt_counter', receiptCounter);
             
+            const now = new Date();
             let total = 0;
-            table.forEach(item => {
+            let itemsHTML = '';
+            
+            currentTable.orders.forEach(item => {
                 const itemTotal = item.price * item.quantity;
                 total += itemTotal;
-                receipt += `${item.quantity}x ${item.name} - ${itemTotal.toFixed(2)} ₼\n`;
+                
+                itemsHTML += `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                        <div>${item.quantity} x ${item.name}</div>
+                        <div>${itemTotal.toFixed(2)}</div>
+                    </div>
+                `;
             });
             
-            receipt += '\n=============\n';
-            receipt += `TOPLAM: ${total.toFixed(2)} ₼\n`;
-            receipt += '=============\n';
-            receipt += new Date().toLocaleString('az-AZ');
+            // Çek verilerini doldur
+            document.getElementById('receipt-date').textContent = 
+                now.toLocaleString('az-AZ');
+            document.getElementById('receipt-no').textContent = receiptCounter;
+            document.getElementById('receipt-table').textContent = currentTable.name;
+            document.getElementById('receipt-items').innerHTML = itemsHTML;
+            document.getElementById('receipt-total').textContent = total.toFixed(2) + ' AZN';
+            
+            // Yazdır
+            const receiptElement = document.getElementById('receipt');
+            receiptElement.style.display = 'block';
             
             const printWindow = window.open('', '_blank');
-            printWindow.document.write('<pre>' + receipt + '</pre>');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>MAMBA PUB Çek</title>
+                    <style>
+                        @media print {
+                            @page { margin: 0; size: 80mm auto; }
+                            body { width: 80mm; font-family: 'Courier New', monospace; }
+                        }
+                        .receipt { width: 80mm; padding: 10px; font-size: 12px; }
+                    </style>
+                </head>
+                <body onload="window.print(); window.close();">
+                    ${receiptElement.outerHTML}
+                </body>
+                </html>
+            `);
             printWindow.document.close();
-            printWindow.print();
+            
+            receiptElement.style.display = 'none';
+            
+            // Masa temizle
+            currentTable.orders = [];
+            loadCart();
+            loadTables();
+            
+            showNotification('Çek çap edildi!', 'success');
         }
 
-        // SAYFA YÜKLENDİĞİNDE
-        window.onload = function() {
-            loadTables();
-            loadCategories();
-            loadMenu('İsti');
-            selectTable('1');
-        };
+        // BİLDİRİM GÖSTER
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg font-bold z-50 animate__animated animate__fadeInRight`;
+            
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-blue-600',
+                warning: 'bg-yellow-600'
+            };
+            
+            notification.className += ` ${colors[type]}`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // KLAVYE KISA YOLLARI
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                printReceipt();
+            }
+            if (e.key === 'Escape') {
+                clearTable();
+            }
+        });
     </script>
 </body>
 </html>
