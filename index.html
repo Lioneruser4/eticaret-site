@@ -1,184 +1,211 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pub POS - Sipariş Sistemi</title>
+    <title>PUB POS - İdarəetmə Paneli</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; }
-        .menu-card { transition: all 0.3s ease; border: 1px solid #1e293b; }
-        .menu-card:active { transform: scale(0.95); }
-        .neon-text { text-shadow: 0 0 10px #ef4444; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        body { background-color: #0b0f19; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .menu-item { transition: all 0.2s ease; border: 1px solid #1e293b; cursor: pointer; }
+        .menu-item:active { transform: scale(0.92); }
+        .category-btn { transition: all 0.3s ease; }
+        .active-table { background-color: #ef4444 !important; color: white !important; border-color: #f87171 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
-    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shadow-xl">
-        <h1 class="text-2xl font-black tracking-tighter text-red-500 animate__animated animate__fadeInLeft">PUB <span class="text-white">CONTROL</span></h1>
-        <div class="text-slate-400 font-mono" id="current-time"></div>
-    </header>
+    <div class="bg-slate-900 p-4 border-b border-slate-800 flex flex-wrap gap-3 justify-center shadow-2xl">
+        <button onclick="masaSec(1)" id="btn-masa-1" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 active-table">Masa 1</button>
+        <button onclick="masaSec(2)" id="btn-masa-2" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700">Masa 2</button>
+        <button onclick="masaSec(3)" id="btn-masa-3" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700">Masa 3</button>
+        <button onclick="masaSec(4)" id="btn-masa-4" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700">Masa 4</button>
+        <button onclick="masaSec(5)" id="btn-masa-5" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700">Masa 5</button>
+        <button onclick="masaSec(6)" id="btn-masa-6" class="table-btn px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700">Masa 6</button>
+        <button onclick="masaSec('Kabinet')" id="btn-masa-Kabinet" class="table-btn px-8 py-2 bg-amber-600/20 text-amber-500 rounded-lg font-black border border-amber-600/50">KABİNET</button>
+    </div>
 
     <div class="flex flex-1 overflow-hidden">
         
-        <div class="w-2/3 p-6 overflow-y-auto custom-scrollbar">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                
-                <button onclick="sepeteEkle('Pivə', 1.80)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🍺</div>
-                    <div class="text-xl font-bold">Pivə</div>
-                    <div class="text-red-400 font-mono mt-1">1.80 AZN</div>
-                </button>
-
-                <button onclick="sepeteEkle('Semiçka', 2.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🌻</div>
-                    <div class="text-xl font-bold">Semiçka</div>
-                    <div class="text-red-400 font-mono mt-1">2.00 AZN</div>
-                </button>
-
-                <button onclick="sepeteEkle('Sardelka', 6.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🌭</div>
-                    <div class="text-xl font-bold">Sardelka</div>
-                    <div class="text-red-400 font-mono mt-1">6.00 AZN</div>
-                </button>
-
-                <button onclick="sepeteEkle('Turşu', 3.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🥒</div>
-                    <div class="text-xl font-bold">Turşu</div>
-                    <div class="text-red-400 font-mono mt-1">3.00 AZN</div>
-                </button>
-
-                <button onclick="sepeteEkle('Qovurma', 12.00)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🥘</div>
-                    <div class="text-xl font-bold">Qovurma</div>
-                    <div class="text-red-400 font-mono mt-1">12.00 AZN</div>
-                </button>
-
-                <button onclick="sepeteEkle('Boğaz', 1.50)" class="menu-card bg-slate-800 p-6 rounded-2xl hover:bg-slate-700 hover:border-red-500 group">
-                    <div class="text-4xl mb-3 group-hover:animate-bounce">🍗</div>
-                    <div class="text-xl font-bold">Boğaz</div>
-                    <div class="text-red-400 font-mono mt-1">1.50 AZN</div>
-                </button>
-
+        <div class="w-3/4 p-4 overflow-y-auto custom-scroll">
+            
+            <div class="flex gap-2 mb-6 overflow-x-auto pb-2 custom-scroll">
+                <button onclick="filtrele('isti')" class="category-btn whitespace-nowrap bg-red-600 px-4 py-2 rounded-full text-sm font-bold">İsti Yeməklər</button>
+                <button onclick="filtrele('meze')" class="category-btn whitespace-nowrap bg-slate-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-700">Pivə Məzələri</button>
+                <button onclick="filtrele('pive')" class="category-btn whitespace-nowrap bg-slate-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-700">Pivələr</button>
+                <button onclick="filtrele('set')" class="category-btn whitespace-nowrap bg-slate-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-700">Setlər</button>
+                <button onclick="filtrele('ickiler')" class="category-btn whitespace-nowrap bg-slate-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-700">İçkilər</button>
+                <button onclick="filtrele('qelyan')" class="category-btn whitespace-nowrap bg-slate-800 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-700">Qəlyan</button>
             </div>
+
+            <div id="menu-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                </div>
         </div>
 
-        <div class="w-1/3 bg-slate-900 border-l border-slate-800 p-6 flex flex-col shadow-2xl">
-            <div class="mb-6">
-                <label class="text-xs uppercase text-slate-500 font-bold tracking-widest">Masa No</label>
-                <input type="number" id="masa-no" value="1" class="bg-slate-800 border-none text-white text-2xl font-bold rounded-lg w-full p-2 mt-1 focus:ring-2 focus:ring-red-500 outline-none">
+        <div class="w-1/4 bg-slate-900 border-l border-slate-800 flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-800 bg-slate-900/50">
+                <h2 class="text-xl font-black text-white flex justify-between">
+                    <span>SİFARİŞ</span>
+                    <span id="current-table-label" class="text-red-500">Masa 1</span>
+                </h2>
             </div>
 
-            <div class="flex-grow overflow-y-auto custom-scrollbar pr-2" id="sepet-listesi">
-                <div class="text-slate-600 text-center mt-20 italic animate__animated animate__pulse animate__infinite">Sipariş bekliyor...</div>
-            </div>
-
-            <div class="border-t border-slate-700 pt-6 mt-4">
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-slate-400 text-lg">Toplam Tutar:</span>
-                    <span id="toplam-fiyat" class="text-3xl font-mono font-bold text-green-400">0.00 AZN</span>
+            <div id="order-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
                 </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="sepetiTemizle()" class="bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-bold transition">TEMİZLE</button>
-                    <button onclick="cekCikar()" class="bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-900/20 transition animate__animated animate__pulse animate__infinite">ÇEK ÇIKAR</button>
+
+            <div class="p-4 bg-slate-950 border-t border-slate-800">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-slate-400 font-bold uppercase text-xs tracking-widest">Cəmi Məbləğ:</span>
+                    <span id="total-price" class="text-2xl font-mono font-bold text-green-400">0.00 ₼</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="hesabiCixart()" class="bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black text-lg shadow-lg transition-all animate__animated animate__pulse animate__infinite">HESABI ÇIXART</button>
+                    <button onclick="temizle()" class="text-slate-500 text-sm font-bold py-1 hover:text-white transition">Siyahını Təmizlə</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="fis-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-white text-black p-8 w-80 shadow-2xl rounded-sm font-mono animate__animated animate__zoomIn">
-            <div class="text-center border-b-2 border-dashed border-black pb-4 mb-4">
-                <h2 class="text-2xl font-bold">PUB CONTROL</h2>
-                <p id="fis-tarih" class="text-xs"></p>
-                <p id="fis-masa" class="font-bold mt-2"></p>
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 backdrop-blur-md">
+        <div class="bg-white text-black p-6 w-full max-w-sm rounded-lg font-mono shadow-2xl animate__animated animate__zoomIn">
+            <div class="text-center border-b-2 border-dashed border-gray-300 pb-4 mb-4">
+                <h2 class="text-2xl font-black italic">PUB LOGO</h2>
+                <p class="text-xs text-gray-500" id="receipt-date"></p>
+                <p class="text-lg font-bold mt-2" id="receipt-table"></p>
             </div>
-            <div id="fis-icerik" class="space-y-1 text-sm mb-4">
-                </div>
-            <div class="border-t-2 border-dashed border-black pt-4">
-                <div class="flex justify-between font-bold text-lg">
-                    <span>TOPLAM:</span>
-                    <span id="fis-toplam"></span>
-                </div>
+            <div id="receipt-items" class="space-y-1 mb-4 text-sm"></div>
+            <div class="border-t-2 border-dashed border-gray-300 pt-4 flex justify-between font-black text-xl">
+                <span>CƏMİ:</span>
+                <span id="receipt-total"></span>
             </div>
-            <button onclick="modalKapat()" class="w-full mt-6 bg-black text-white py-2 no-print">KAPAT</button>
+            <button onclick="closeModal()" class="w-full mt-6 bg-black text-white py-3 rounded font-bold">BAĞLA</button>
         </div>
     </div>
 
     <script>
-        let sepet = [];
-        let toplam = 0;
+        const menuData = [
+            { id: 1, cat: 'isti', name: 'Gürcü xəngəli', price: 0.80 },
+            { id: 2, cat: 'isti', name: 'Yarpaq xəngəli', price: 6.00 },
+            { id: 3, cat: 'isti', name: 'Tabaka', price: 18.00 },
+            { id: 4, cat: 'isti', name: 'Çığirtma', price: 18.00 },
+            { id: 5, cat: 'isti', name: 'Qovurma', price: 12.00 },
+            { id: 6, cat: 'isti', name: 'Monastr toyuq', price: 12.00 },
+            { id: 7, cat: 'isti', name: 'Sardelka', price: 6.00 },
+            { id: 8, cat: 'meze', name: 'Semiçka (ağ, qara)', price: 2.00 },
+            { id: 9, cat: 'meze', name: 'Cips', price: 3.00 },
+            { id: 10, cat: 'meze', name: 'Pendir çubuqları', price: 6.00 },
+            { id: 11, cat: 'meze', name: 'Kartof fri', price: 3.00 },
+            { id: 12, cat: 'meze', name: 'Boğaz (hisə verilmiş)', price: 1.50 },
+            { id: 13, cat: 'pive', name: 'Nzs', price: 1.30 },
+            { id: 14, cat: 'pive', name: 'Xırdalan', price: 1.80 },
+            { id: 15, cat: 'set', name: 'SET 1', price: 20.00 },
+            { id: 16, cat: 'set', name: 'SET 2', price: 25.00 },
+            { id: 17, cat: 'set', name: 'SET 3', price: 30.00 },
+            { id: 18, cat: 'set', name: 'SET 4', price: 40.00 },
+            { id: 19, cat: 'ickiler', name: 'Cola (banka)', price: 2.50 },
+            { id: 20, cat: 'ickiler', name: 'Bizon (böyük)', price: 3.00 },
+            { id: 21, cat: 'qelyan', name: 'Çaşqa Qəlyan', price: 12.00 },
+            { id: 22, cat: 'qelyan', name: 'Qreyfrut Qəlyan', price: 18.00 }
+        ];
 
-        function sepeteEkle(ad, fiyat) {
-            sepet.push({
-                ad: ad, 
-                fiyat: fiyat, 
-                saat: new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})
-            });
-            toplam += fiyat;
-            guncelleArayuz();
+        let activeTable = 1;
+        let tableOrders = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 'Kabinet': [] };
+
+        function initMenu() {
+            filtrele('isti');
+            masaSec(1);
         }
 
-        function guncelleArayuz() {
-            const liste = document.getElementById('sepet-listesi');
-            const toplamText = document.getElementById('toplam-fiyat');
+        function filtrele(cat) {
+            const grid = document.getElementById('menu-grid');
+            const items = menuData.filter(i => i.cat === cat);
             
-            if (sepet.length === 0) {
-                liste.innerHTML = '<div class="text-slate-600 text-center mt-20 italic">Sipariş bekliyor...</div>';
-            } else {
-                liste.innerHTML = sepet.map((item, index) => `
-                    <div class="flex justify-between items-start bg-slate-800/50 p-3 rounded-lg mb-2 animate__animated animate__fadeInRight">
-                        <div>
-                            <div class="font-bold text-white">${item.ad}</div>
-                            <div class="text-xs text-slate-500">${item.saat} - Girdi</div>
-                        </div>
-                        <div class="text-red-400 font-mono font-bold">${item.fiyat.toFixed(2)} m</div>
-                    </div>
-                `).join('');
-            }
-            toplamText.innerText = `${toplam.toFixed(2)} AZN`;
-        }
-
-        function sepetiTemizle() {
-            if(confirm("Tüm masayı sıfırlamak istiyor musunuz?")) {
-                sepet = [];
-                toplam = 0;
-                guncelleArayuz();
-            }
-        }
-
-        function cekCikar() {
-            if(sepet.length === 0) return alert("Masa boş!");
-
-            const simdi = new Date();
-            document.getElementById('fis-tarih').innerText = simdi.toLocaleString();
-            document.getElementById('fis-masa').innerText = "MASA NO: " + document.getElementById('masa-no').value;
-            
-            let icerik = sepet.map(item => `
-                <div class="flex justify-between">
-                    <span>${item.ad}</span>
-                    <span>${item.fiyat.toFixed(2)}</span>
+            grid.innerHTML = items.map(i => `
+                <div onclick="addToOrder('${i.name}', ${i.price})" class="menu-item bg-slate-800/50 p-4 rounded-xl hover:bg-slate-700 hover:border-red-500 animate__animated animate__fadeIn">
+                    <div class="text-sm font-bold text-slate-300 h-10 overflow-hidden">${i.name}</div>
+                    <div class="text-red-500 font-mono font-bold mt-2">${i.price.toFixed(2)} ₼</div>
                 </div>
             `).join('');
             
-            document.getElementById('fis-icerik').innerHTML = icerik;
-            document.getElementById('fis-toplam').innerText = toplam.toFixed(2) + " AZN";
+            // Buton rengini güncelle
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.replace('bg-red-600', 'bg-slate-800');
+            });
+            event?.target.classList.replace('bg-slate-800', 'bg-red-600');
+        }
+
+        function masaSec(id) {
+            activeTable = id;
+            document.querySelectorAll('.table-btn').forEach(b => b.classList.remove('active-table'));
+            document.getElementById(`btn-masa-${id}`).classList.add('active-table');
+            document.getElementById('current-table-label').innerText = id === 'Kabinet' ? id : `Masa ${id}`;
+            renderOrders();
+        }
+
+        function addToOrder(name, price) {
+            tableOrders[activeTable].push({ name, price, time: new Date().toLocaleTimeString('az-AZ', {hour:'2-digit', minute:'2-digit'}) });
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const list = document.getElementById('order-list');
+            const totalDisplay = document.getElementById('total-price');
+            const orders = tableOrders[activeTable];
             
-            document.getElementById('fis-modal').classList.remove('hidden');
+            let total = 0;
+            if (orders.length === 0) {
+                list.innerHTML = `<div class="text-slate-600 text-center mt-10 italic">Sifariş yoxdur</div>`;
+            } else {
+                list.innerHTML = orders.map((item, idx) => {
+                    total += item.price;
+                    return `
+                        <div class="flex justify-between items-center bg-slate-800/80 p-3 rounded-lg border-l-4 border-red-500 animate__animated animate__slideInRight">
+                            <div>
+                                <div class="text-sm font-bold text-white">${item.name}</div>
+                                <div class="text-[10px] text-slate-500">${item.time}</div>
+                            </div>
+                            <div class="font-mono font-bold text-red-400">${item.price.toFixed(2)} ₼</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            totalDisplay.innerText = total.toFixed(2) + " ₼";
         }
 
-        function modalKapat() {
-            document.getElementById('fis-modal').classList.add('hidden');
+        function temizle() {
+            if(confirm("Bu masanın bütün sifarişləri silinsin?")) {
+                tableOrders[activeTable] = [];
+                renderOrders();
+            }
         }
 
-        // Saat güncelleme
-        setInterval(() => {
-            document.getElementById('current-time').innerText = new Date().toLocaleTimeString();
-        }, 1000);
+        function hesabiCixart() {
+            const orders = tableOrders[activeTable];
+            if(orders.length === 0) return alert("Masa boşdur!");
+
+            let total = orders.reduce((sum, item) => sum + item.price, 0);
+            document.getElementById('receipt-date').innerText = new Date().toLocaleString('az-AZ');
+            document.getElementById('receipt-table').innerText = activeTable === 'Kabinet' ? "KABİNET" : `MASA NO: ${activeTable}`;
+            
+            document.getElementById('receipt-items').innerHTML = orders.map(i => `
+                <div class="flex justify-between">
+                    <span>${i.name}</span>
+                    <span>${i.price.toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('receipt-total').innerText = total.toFixed(2) + " AZN";
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        initMenu();
     </script>
 </body>
 </html>
