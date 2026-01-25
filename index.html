@@ -14,6 +14,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     
     <b:skin><![CDATA[
+        /* Blogger-in bütün yazı məhdudiyyətlərini sıfırlayırıq */
         body, html { 
             margin: 0 !important; 
             padding: 0 !important; 
@@ -50,56 +51,53 @@
             box-shadow: 0 0 5px #22c55e;
         }
         
+        /* Menü öğeleri */
         .menu-item { 
-            transition: all 0.3s; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             border: 1px solid #1e293b; 
             cursor: pointer; 
             background: linear-gradient(145deg, #0f172a, #1e293b);
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
         }
         .menu-item:hover { 
             border-color: #ef4444; 
-            transform: translateY(-2px); 
-            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
+            transform: translateY(-4px) scale(1.02); 
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
         }
         
+        /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 10px; }
         .custom-scroll::-webkit-scrollbar-thumb { 
             background: linear-gradient(135deg, #ef4444, #dc2626); 
             border-radius: 10px; 
         }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { 
+            background: linear-gradient(135deg, #dc2626, #b91c1c); 
+        }
         
-        /* YAZDIRMA STİLİ - SADECE FİŞ */
+        /* Yazdırma */
         @media print {
-            body * { 
-                visibility: hidden !important;
-                display: none !important;
-            }
-            #receipt-print, #receipt-print * { 
-                visibility: visible !important;
-                display: block !important;
-            }
+            .no-print { display: none !important; }
             #receipt-print { 
-                position: absolute !important; 
-                left: 0 !important; 
-                top: 0 !important; 
-                width: 80mm !important;
-                font-size: 12px !important;
+                display: block !important; 
+                width: 80mm !important; 
+                color: black !important; 
                 background: white !important;
-                color: black !important;
-                padding: 10px !important;
-                margin: 0 !important;
                 font-family: 'Courier New', monospace !important;
+                font-size: 11px !important;
+                margin: 0 !important;
+                padding: 10px !important;
             }
             @page { 
                 margin: 0 !important; 
                 size: 80mm auto !important; 
             }
         }
+        #receipt-print { display: none; }
         
-        /* MODAL */
+        /* Modal */
         .modal { 
             display: none; 
             position: fixed; 
@@ -107,12 +105,26 @@
             left: 0; 
             width: 100%; 
             height: 100%; 
-            background: rgba(0,0,0,0.95); 
+            background: rgba(0,0,0,0.9); 
             z-index: 1000; 
-            align-items: center;
-            justify-content: center;
+            backdrop-filter: blur(5px);
         }
         
+        /* Admin Panel */
+        #admin-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+        
+        /* Quantity kontrol */
         .quantity-btn {
             width: 24px;
             height: 24px;
@@ -128,6 +140,7 @@
             background: #475569;
         }
         
+        /* Blogger gizleme */
         .section, .widget, .post, .post-body, .Blog1 { 
             display: block !important; 
             width: 100% !important; 
@@ -136,171 +149,52 @@
             padding: 0 !important; 
         }
         iframe.b-gadget, .status-msg-wrap { display: none !important; }
-        
-        /* Fiş görünümü */
-        .receipt-box {
-            width: 80mm;
-            background: white;
-            color: black;
-            font-family: 'Courier New', monospace;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
     ]]></b:skin>
 </head>
 <body>
 
-<!-- ANA POS SİSTEMİ -->
-<div class='no-print flex flex-col h-screen w-full' id='app-root'>
-    <!-- ÜST BAR -->
-    <header class='bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center px-6 shadow-2xl'>
-        <div class="flex items-center gap-4">
-            <h1 class="text-3xl font-black tracking-tighter text-white">
-                MAMBA <span class="text-red-600">PUB</span>
-            </h1>
-            <div class="bg-slate-800 px-3 py-1 rounded-full text-xs">
-                <i class="fas fa-database text-green-400 mr-1"></i>
-                <span id="data-status">Aktiv</span>
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <div id="clock" class="text-slate-300 font-mono text-lg font-bold">15:50:30</div>
-            <button onclick="showReceiptModal()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-                <i class="fas fa-receipt"></i> Fiş Çıkar
-            </button>
-        </div>
-    </header>
-
-    <!-- MASALAR -->
-    <div id="table-nav" class="flex gap-2 p-4 bg-slate-900/50 border-b border-slate-800 overflow-x-auto">
-        <div class="flex gap-2 flex-nowrap">
-            <button onclick="selectCategory('İçkilər')" class="category-btn px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500">İçkilər</button>
-            <button onclick="selectCategory('Mezeler')" class="category-btn px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500">Mezeler</button>
-            <button onclick="selectCategory('İsti Yeməklər')" class="category-btn px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500">İsti Yeməklər</button>
-            <button onclick="selectCategory('Setlər')" class="category-btn px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500">Setlər</button>
-            <button onclick="selectCategory('Digər')" class="category-btn px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500">Digər</button>
-        </div>
-    </div>
-
-    <div class="flex flex-1 overflow-hidden">
-        <!-- MENÜ ALANI -->
-        <div class="w-3/4 p-6 overflow-y-auto custom-scroll">
-            <div class="mb-4">
-                <h2 id="current-category-title" class="text-2xl font-bold text-white">İçkilər</h2>
-                <p class="text-slate-400">Aşağıdakı məhsullardan seçim edin</p>
-            </div>
-            
-            <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <!-- MENÜ ÖĞELERİ BURAYA YÜKLENECEK -->
-            </div>
-        </div>
-
-        <!-- SİPARİŞ ALANI -->
-        <div class="w-1/4 bg-slate-900 border-l border-slate-800 flex flex-col">
-            <!-- MASA BAŞLIĞI -->
-            <div class="p-4 border-b border-slate-800 bg-slate-900/80">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 id="active-table-title" class="text-xl font-black text-white">MASA 1</h2>
-                    <div class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">
-                        <i class="fas fa-clock mr-1"></i>
-                        <span id="table-time">15:30</span>
-                    </div>
-                </div>
-                
-                <!-- MASALAR -->
-                <div class="flex gap-2 overflow-x-auto pb-2">
-                    <button onclick="selectTable('1')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">1</button>
-                    <button onclick="selectTable('2')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">2</button>
-                    <button onclick="selectTable('3')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">3</button>
-                    <button onclick="selectTable('4')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">4</button>
-                    <button onclick="selectTable('5')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">5</button>
-                    <button onclick="selectTable('6')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">6</button>
-                    <button onclick="selectTable('BAR')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">BAR</button>
-                    <button onclick="selectTable('TERAS')" class="table-btn px-3 py-1 bg-slate-800 rounded border border-slate-700 text-sm">TERAS</button>
-                </div>
-            </div>
-
-            <!-- SİPARİŞ LİSTESİ -->
-            <div id="order-items" class="flex-1 overflow-y-auto p-4 custom-scroll">
-                <!-- SİPARİŞLER BURAYA -->
-            </div>
-
-            <!-- TOPLAM VE BUTONLAR -->
-            <div class="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
-                <div class="flex justify-between items-end">
-                    <span class="text-slate-400 font-bold text-sm">ÜMUMİ:</span>
-                    <span id="total-price" class="text-3xl font-mono font-black text-green-500">0.00 ₼</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="showReceiptModal()" class="bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                        Fiş Çıkar
-                    </button>
-                    <button onclick="clearCurrentTable()" class="bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-bold text-white">
-                        Təmizlə
-                    </button>
-                </div>
-                
-                <div class="text-center text-xs text-slate-500">
-                    <i class="fas fa-hdd mr-1"></i>
-                    <span id="storage-info">Yaddaşda</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- FİŞ MODAL -->
-<div id="receipt-modal" class="modal">
-    <div class="receipt-box animate__animated animate__fadeIn">
-        <!-- FİŞ İÇERİĞİ -->
-        <div id="receipt-print">
-            <center>
-                <b style="font-size: 18px; display: block; margin-bottom: 5px;">MAMBA PUB</b>
-                <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                <span style="font-size: 11px;" id="receipt-date"></span><br>
-                <span style="font-size: 11px;">Fiş No: <span id="receipt-no">0001</span></span><br>
-                <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-                <b style="font-size: 14px; display: block; padding: 4px 0;" id="receipt-table">MASA 1</b>
-                <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-            </center>
-            
-            <div id="receipt-items" style="font-size: 12px; margin: 10px 0;">
-                <!-- Fiş öğeleri buraya -->
-            </div>
-            
-            <hr style="border-top: 1px dashed #000; margin: 10px 0;">
-            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
-                <span>TOPLAM:</span>
-                <span id="receipt-total">0.00</span>
-            </div>
-            
-            <center style="margin-top: 20px; font-size: 11px;">
-                <b>TƏŞƏKKÜRLƏR!</b><br>
-                Nuş Olsun!
-            </center>
-            <hr style="border-top: 1px dashed #000; margin: 8px 0;">
-            <center style="font-size: 9px; color: #666;">
-                Çek tarixi: <span id="receipt-time"></span>
-            </center>
-        </div>
+<!-- İFRAME İLE YENİ SİSTEM -->
+<div style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999;">
+    <script>
+        // Cache önlemek için her yüklemede yeni timestamp
+        var timestamp = new Date().getTime();
+        var random = Math.random().toString(36).substring(7);
+        var posUrl = 'https://lioneruser4.github.io/saskioyunu/?v=3.0&nocache=' + timestamp + '&r=' + random;
         
-        <!-- BUTONLAR -->
-        <div style="display: flex; gap: 10px; padding: 15px 0 0 0;">
-            <button onclick="directPrint()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded font-bold">
-                <i class="fas fa-print mr-2"></i>YAZDIR
-            </button>
-            <button onclick="closeModal()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold">
-                <i class="fas fa-times mr-2"></i>KAPAT
-            </button>
-        </div>
-    </div>
+        document.write('<iframe id="pos-iframe" src="' + posUrl + '" style="width:100%; height:100%; border:none;"></iframe>');
+        
+        // Her 30 dakikada bir cache temizle
+        setInterval(function() {
+            var iframe = document.getElementById('pos-iframe');
+            var newTimestamp = new Date().getTime();
+            var newUrl = 'https://lioneruser4.github.io/saskioyunu/?v=3.0&refresh=' + newTimestamp;
+            iframe.src = newUrl;
+        }, 1800000); // 30 dakika
+    </script>
 </div>
 
-<!-- YAZDIRMA İÇİN GİZLİ ALAN -->
-<div id="print-container" style="display: none;"></div>
+<!-- ALTERNATİF: Eski kod yedek olarak kalsın (gizli) -->
+<div style="display:none !important;">
+    <div class='no-print flex flex-col h-screen w-full' id='app-root'>
+        <header class='bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center shadow-xl shrink-0'>
+            <div class='flex items-center gap-6'>
+                <h1 class='text-3xl font-black italic text-white'>MAMBA <span class='text-red-600'>PUB</span> <span class="text-sm text-slate-400">v3.0</span></h1>
+                <button class='bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2' onclick='toggleAdminPanel()'>
+                    <i class="fas fa-cog"></i>Admin
+                </button>
+            </div>
+            <div class='flex items-center gap-4'>
+                <div class='text-slate-300 font-mono font-bold text-xl' id='clock'>00:00:00</div>
+                <button class='bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2' onclick='showReceiptModal()'>
+                    <i class="fas fa-receipt"></i> Fiş Çıkar
+                </button>
+            </div>
+        </header>
+
+        <!-- Diğer HTML kodu buraya... -->
+        
+    </div>
+</div>
 
 <div style='display:none !important;'>
     <b:section id='main' showaddelement='false'>
@@ -315,355 +209,47 @@ if (localStorage.getItem('pos_version') !== '3.0') {
     localStorage.clear();
     sessionStorage.clear();
     localStorage.setItem('pos_version', '3.0');
+    
+    // Cache temizle
+    if ('caches' in window) {
+        caches.keys().then(function(names) {
+            for (let name of names) caches.delete(name);
+        });
+    }
 }
 
-// MENÜ VERİTABANI
-let menu = JSON.parse(localStorage.getItem('mamba_menu')) || [
-    { id: 1, name: 'Pivə 1.80m', price: 1.80, category: 'İçkilər' },
-    { id: 2, name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
-    { id: 3, name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
-    { id: 4, name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
-    { id: 5, name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
-    { id: 6, name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
-    { id: 7, name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
-    { id: 8, name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
-    { id: 9, name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
+// Sayfa yüklendiğinde kontrol
+window.addEventListener('load', function() {
+    console.log('MAMBA POS v3.0 loaded - No Cache');
     
-    { id: 11, name: 'Semiçka', price: 2.00, category: 'Mezeler' },
-    { id: 12, name: 'Sardelka', price: 6.00, category: 'Mezeler' },
-    { id: 13, name: 'Turşu', price: 3.00, category: 'Mezeler' },
-    { id: 14, name: 'Çips', price: 4.00, category: 'Mezeler' },
-    { id: 15, name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
-    
-    { id: 16, name: 'Tabaka Toyuq', price: 18.00, category: 'İsti Yeməklər' },
-    { id: 17, name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
-    { id: 18, name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
-    { id: 19, name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
-    { id: 20, name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
-    
-    { id: 21, name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
-    { id: 22, name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
-    { id: 23, name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
-    { id: 24, name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
-    
-    { id: 25, name: 'Boğaz', price: 1.50, category: 'Digər' },
-    { id: 26, name: 'Qəlyan', price: 12.00, category: 'Digər' },
-    { id: 27, name: 'Nargilə', price: 15.00, category: 'Digər' },
-    { id: 28, name: 'Çay', price: 1.00, category: 'Digər' }
-];
-
-// DEĞİŞKENLER
-let activeTable = localStorage.getItem('mamba_active_table') || "1";
-let activeCategory = "İçkilər";
-let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
-    "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
-    "BAR": [], "TERAS": []
-};
-let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
-
-// SAYFA YÜKLENDİĞİNDE
-document.addEventListener('DOMContentLoaded', function() {
-    updateClock();
-    setInterval(updateClock, 1000);
-    selectCategory('İçkilər');
-    selectTable(activeTable);
-    updateStorageInfo();
+    // IFrame yüklendi mi kontrol et
+    setTimeout(function() {
+        var iframe = document.getElementById('pos-iframe');
+        if (iframe) {
+            iframe.onload = function() {
+                console.log('POS system loaded successfully');
+            };
+        }
+    }, 1000);
 });
 
-// SAAT GÜNCELLE
-function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('az-AZ');
-    document.getElementById('table-time').textContent = now.toLocaleTimeString('az-AZ', {hour12: false});
-}
-
-// KATEGORİ SEÇ
-function selectCategory(category) {
-    activeCategory = category;
-    document.getElementById('current-category-title').textContent = category;
-    
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.remove('active-cat');
-        if (btn.textContent === category) {
-            btn.classList.add('active-cat');
-        }
-    });
-    
-    renderMenu();
-}
-
-// MENÜYÜ GÖSTER
-function renderMenu() {
-    const grid = document.getElementById('menu-grid');
-    const filtered = menu.filter(item => item.category === activeCategory);
-    
-    grid.innerHTML = filtered.map(item => `
-        <div onclick="addToTable(${item.id})" 
-             class="menu-item bg-slate-900 p-4 rounded-xl">
-            <div class="text-[10px] text-red-500 font-black mb-1 uppercase">${item.category}</div>
-            <div class="text-sm font-bold text-white h-12 leading-tight mb-2">${item.name}</div>
-            <div class="flex justify-between items-center">
-                <span class="text-lg font-mono font-black text-green-500">${item.price.toFixed(2)} ₼</span>
-                <i class="fas fa-plus-circle text-slate-500 hover:text-red-500"></i>
-            </div>
-        </div>
-    `).join('');
-}
-
-// MASA SEÇ
-function selectTable(tableId) {
-    activeTable = tableId;
-    document.getElementById('active-table-title').textContent = `MASA ${tableId}`;
-    
-    document.querySelectorAll('.table-btn').forEach(btn => {
-        btn.classList.remove('active-table');
-        if (btn.textContent === tableId) {
-            btn.classList.add('active-table');
-        }
-    });
-    
-    updateOrderDisplay();
-}
-
-// MASADA ÜRÜN EKLE
-function addToTable(itemId) {
-    const menuItem = menu.find(item => item.id === itemId);
-    if (!menuItem) return;
-    
-    let table = tables[activeTable];
-    let existing = table.find(i => i.id === itemId);
-    
-    if (existing) {
-        existing.count++;
-    } else {
-        table.push({ 
-            id: menuItem.id,
-            name: menuItem.name, 
-            price: menuItem.price, 
-            count: 1
-        });
-    }
-    
-    saveData();
-    updateOrderDisplay();
-    showNotification(`${menuItem.name} əlavə edildi`);
-}
-
-// SİPARİŞ LİSTESİNİ GÜNCELLE
-function updateOrderDisplay() {
-    const list = document.getElementById('order-items');
-    const totalDisplay = document.getElementById('total-price');
-    let items = tables[activeTable];
-    let total = 0;
-    
-    if (items.length === 0) {
-        list.innerHTML = `
-            <div class="text-center py-10 text-slate-500">
-                <i class="fas fa-shopping-cart text-4xl mb-3"></i>
-                <div>Sifariş yoxdur</div>
-            </div>
-        `;
-    } else {
-        list.innerHTML = '';
-        items.forEach((item, index) => {
-            const itemTotal = item.price * item.count;
-            total += itemTotal;
-            
-            list.innerHTML += `
-                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 mb-2">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center">
-                            <span class="font-bold text-red-500 mr-3 text-lg">${item.count}x</span>
-                            <span class="font-bold">${item.name}</span>
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <button onclick="updateQuantity(${index}, -1)" class="quantity-btn">
-                                <i class="fas fa-minus text-xs"></i>
-                            </button>
-                            <span class="font-bold w-8 text-center">${item.count}</span>
-                            <button onclick="updateQuantity(${index}, 1)" class="quantity-btn">
-                                <i class="fas fa-plus text-xs"></i>
-                            </button>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-bold text-green-400">${itemTotal.toFixed(2)} ₼</div>
-                            <button onclick="removeFromTable(${index})" 
-                                    class="text-xs text-red-500 hover:text-red-400 mt-1">
-                                <i class="fas fa-trash mr-1"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    }
-    
-    totalDisplay.textContent = total.toFixed(2) + " ₼";
-}
-
-// MİKTAR GÜNCELLE
-function updateQuantity(index, change) {
-    let table = tables[activeTable];
-    if (table[index]) {
-        table[index].count += change;
-        if (table[index].count <= 0) {
-            table.splice(index, 1);
-        }
-        saveData();
-        updateOrderDisplay();
-    }
-}
-
-// ÜRÜN TAMAMEN ÇIKAR
-function removeFromTable(index) {
-    tables[activeTable].splice(index, 1);
-    saveData();
-    updateOrderDisplay();
-}
-
-// MASAYI TEMİZLE
-function clearCurrentTable() {
-    if (tables[activeTable].length === 0) return;
-    
-    if (confirm(`${activeTable} masasını təmizləmək istədiyinizə əminsiniz?`)) {
-        tables[activeTable] = [];
-        saveData();
-        updateOrderDisplay();
-    }
-}
-
-// FİŞ MODAL GÖSTER
-function showReceiptModal() {
-    const items = tables[activeTable];
-    if (items.length === 0) {
-        alert('Fiş çıxarmaq üçün sifariş yoxdur!');
-        return;
-    }
-    
-    const now = new Date();
-    receiptCounter++;
-    localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
-    
-    // Fiş numarası
-    document.getElementById('receipt-no').textContent = receiptCounter.toString().padStart(4, '0');
-    
-    // Tarih ve saat
-    document.getElementById('receipt-date').textContent = now.toLocaleDateString('az-AZ');
-    document.getElementById('receipt-time').textContent = now.toLocaleTimeString('az-AZ');
-    document.getElementById('receipt-table').textContent = `MASA ${activeTable}`;
-    
-    // Öğeler
-    const itemsDiv = document.getElementById('receipt-items');
-    let itemsHTML = '';
-    let total = 0;
-    
-    items.forEach(item => {
-        const itemTotal = item.price * item.count;
-        total += itemTotal;
-        itemsHTML += `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                <div>
-                    <span style="font-weight: bold;">${item.count}x</span> ${item.name}
-                </div>
-                <div>${itemTotal.toFixed(2)}</div>
-            </div>
-        `;
-    });
-    
-    itemsDiv.innerHTML = itemsHTML;
-    document.getElementById('receipt-total').textContent = total.toFixed(2) + ' AZN';
-    
-    // Modal göster
-    document.getElementById('receipt-modal').style.display = 'flex';
-}
-
-// DİREKT YAZDIR (BASİT YÖNTEM)
-function directPrint() {
-    // Önce modalı kapat
-    closeModal();
-    
-    // Yazdırma için hazırla
-    const receiptContent = document.getElementById('receipt-print').outerHTML;
-    
-    // Gizli div'e kopyala
-    const printContainer = document.getElementById('print-container');
-    printContainer.innerHTML = receiptContent;
-    printContainer.style.display = 'block';
-    
-    // Yazdır
-    window.print();
-    
-    // Gizli div'i temizle
-    setTimeout(() => {
-        printContainer.innerHTML = '';
-        printContainer.style.display = 'none';
+// Eğer iframe yüklenmezse alternatif göster
+setTimeout(function() {
+    var iframe = document.getElementById('pos-iframe');
+    if (iframe && (!iframe.contentDocument || iframe.contentDocument.body.innerHTML.length < 100)) {
+        console.log('IFrame failed, showing backup system');
+        document.getElementById('app-root').style.display = 'flex';
+        iframe.style.display = 'none';
         
-        // Masayı temizle
-        tables[activeTable] = [];
-        saveData();
-        updateOrderDisplay();
-        
-        // Bildirim
-        showNotification(`Fiş #${receiptCounter} çap edildi`);
-    }, 100);
-}
-
-// MODAL KAPAT
-function closeModal() {
-    document.getElementById('receipt-modal').style.display = 'none';
-}
-
-// VERİ KAYDET
-function saveData() {
-    try {
-        localStorage.setItem('mamba_tables', JSON.stringify(tables));
-        localStorage.setItem('mamba_active_table', activeTable);
-        localStorage.setItem('mamba_menu', JSON.stringify(menu));
-        
-        document.getElementById('data-status').innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Saxlanıldı';
-        updateStorageInfo();
-        
-    } catch(e) {
-        document.getElementById('data-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-1"></i>Xəta';
+        // Yedek sistemi başlat
+        initBackupSystem();
     }
+}, 5000);
+
+function initBackupSystem() {
+    // Yedek sistem kodu buraya gelecek
+    alert('Ana sistem yüklenemedi. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.');
 }
-
-// STORAGE BİLGİSİ
-function updateStorageInfo() {
-    const used = JSON.stringify(tables).length + JSON.stringify(menu).length;
-    const kb = (used / 1024).toFixed(1);
-    document.getElementById('storage-info').textContent = `${kb} KB`;
-}
-
-// BİLDİRİM
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 px-4 py-3 rounded-lg font-bold shadow-xl bg-green-600';
-    notification.innerHTML = `
-        <div class="flex items-center gap-2">
-            <i class="fas fa-check-circle"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 2000);
-}
-
-// KLASİK ALERT İLE HATA YÖNETİMİ
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-    console.log('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
-    return false;
-};
-
-// Başlangıç
-selectCategory('İçkilər');
-selectTable('1');
 // ]]>
 </script>
 </body>
