@@ -2,1070 +2,237 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAMBA PUB POS v3.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAMBA PUB POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
-        .active-table { background: linear-gradient(135deg, #ef4444, #dc2626) !important; border-color: #f87171 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        .active-cat { background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white !important; }
-        .has-order { position: relative; border-color: #22c55e !important; background: linear-gradient(135deg, #1e293b, #0f172a) !important; }
-        .has-order::after { content: ''; position: absolute; top: 4px; right: 4px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 5px #22c55e; }
-        
-        .menu-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #1e293b; cursor: pointer; background: linear-gradient(145deg, #0f172a, #1e293b); border-radius: 16px; position: relative; overflow: hidden; }
-        .menu-card:hover { border-color: #ef4444; transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2); }
-        
-        .edit-overlay { display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); flex-direction: column; align-items: center; justify-content: center; gap: 8px; z-index: 10; backdrop-filter: blur(5px); }
-        .edit-mode .edit-overlay { display: flex; }
-
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-
-        /* PRINTER AYARLARI */
-        @media print {
-            .no-print { display: none !important; }
-            #receipt-print { display: block !important; width: 100% !important; background: white !important; color: black !important; padding: 0; margin: 0; font-family: 'Courier New', monospace !important; }
-            body { background: white !important; }
-            @page { margin: 0; size: auto; }
-        }
-        #receipt-print { display: none; }
-        
-        /* MODAL STYLES */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; backdrop-filter: blur(5px); }
-        .modal-content { background: linear-gradient(145deg, #0f172a, #1e293b); border-radius: 20px; padding: 30px; width: 90%; max-width: 500px; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); }
-        
-        /* DISCOUNT BADGE */
-        .discount-badge { position: absolute; top: 8px; right: 8px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
-        
-        /* STATUS INDICATORS */
-        .status-paid { background: linear-gradient(135deg, #22c55e, #16a34a) !important; }
-        .status-pending { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
-        
-        /* ANIMATIONS */
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .pulse-animation { animation: pulse 2s infinite; }
-        
-        /* QUANTITY CONTROLS */
-        .quantity-btn { width: 28px; height: 28px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-        .quantity-btn:hover { background: #475569; transform: scale(1.1); }
+        body { background: #0f172a; color: white; font-family: sans-serif; margin: 0; padding: 0; }
+        .table-btn.active { background: #ef4444; }
+        .has-order { border-color: #22c55e; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
-
-    <div class="no-print flex flex-col h-full w-full">
-        <header class="bg-gradient-to-r from-slate-900 to-slate-950 p-4 border-b border-slate-800 flex justify-between items-center shadow-2xl">
-            <div class="flex items-center gap-6">
-                <h1 class="text-3xl font-black italic tracking-tighter bg-gradient-to-r from-white to-red-400 bg-clip-text text-transparent">
-                    MAMBA <span class="text-red-600">PUB</span> <span class="text-sm font-normal text-slate-400">v3.0</span>
-                </h1>
-                <div class="flex gap-2">
-                    <button onclick="toggleEditMode()" id="edit-btn" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-xs px-5 py-2.5 rounded-full font-bold uppercase transition-all flex items-center gap-2">
-                        <i class="fas fa-edit"></i> Menyunu Düzenle
-                    </button>
-                    <button onclick="showPrinterSettings()" class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-xs px-5 py-2.5 rounded-full font-bold uppercase transition-all flex items-center gap-2">
-                        <i class="fas fa-print"></i> Printer
-                    </button>
-                    <button onclick="showReports()" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-xs px-5 py-2.5 rounded-full font-bold uppercase transition-all flex items-center gap-2">
-                        <i class="fas fa-chart-bar"></i> Hesabat
-                    </button>
-                </div>
+<body class="h-screen flex">
+    <!-- SOL MENÜ -->
+    <div class="w-1/4 bg-slate-900 p-4 border-r border-slate-800">
+        <h1 class="text-2xl font-bold text-red-500 mb-6">MAMBA PUB</h1>
+        
+        <!-- MASALAR -->
+        <div class="space-y-2 mb-6">
+            <div class="text-slate-400 text-sm font-bold mb-2">MASALAR</div>
+            <div id="tables" class="grid grid-cols-2 gap-2">
+                <!-- Masalar buraya gelecek -->
             </div>
-            <div class="flex items-center gap-6">
-                <div class="text-right">
-                    <div id="date" class="text-slate-400 text-sm font-bold"></div>
-                    <div id="clock" class="text-slate-300 font-mono font-black text-xl"></div>
-                </div>
-                <div class="h-10 w-px bg-slate-700"></div>
-                <div class="text-right">
-                    <div class="text-slate-400 text-sm font-bold">Günlük Gəlir</div>
-                    <div id="daily-revenue" class="text-green-500 font-mono font-black text-xl">0.00 ₼</div>
-                </div>
-            </div>
-        </header>
+        </div>
 
-        <div id="table-nav" class="flex gap-3 p-4 bg-slate-900/50 border-b border-slate-800 justify-center overflow-x-auto shadow-inner"></div>
-
-        <div class="flex flex-1 overflow-hidden">
-            <div class="w-3/4 flex flex-col bg-gradient-to-br from-slate-950/50 to-slate-900/30">
-                <div class="flex items-center bg-slate-900/20 border-b border-slate-800/50">
-                    <div id="cat-nav" class="flex-1 flex gap-3 p-4 overflow-x-auto custom-scroll"></div>
-                    <div class="flex gap-2 mr-4">
-                        <button id="add-item-btn" onclick="addNewItem()" class="hidden bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 px-5 py-2.5 rounded-xl text-xs font-bold animate__animated animate__fadeIn flex items-center gap-2">
-                            <i class="fas fa-plus"></i> YENİ MƏHSUL
-                        </button>
-                        <button onclick="showPriceManagement()" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
-                            <i class="fas fa-tags"></i> Qiymət
-                        </button>
-                    </div>
-                </div>
-                <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4 p-6 overflow-y-auto custom-scroll"></div>
-            </div>
-
-            <div class="w-1/4 bg-gradient-to-b from-slate-900 to-slate-950 border-l border-slate-800 flex flex-col shadow-2xl">
-                <div class="p-5 border-b border-slate-800 bg-slate-800/20 relative">
-                    <h2 id="table-title" class="text-2xl font-black text-red-500 italic uppercase text-center tracking-tighter mb-1">Masa 1</h2>
-                    <div class="flex justify-center gap-4">
-                        <button onclick="applyDiscount(10)" class="text-xs bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 px-3 py-1 rounded-lg font-bold">
-                            -10%
-                        </button>
-                        <button onclick="splitBill()" class="text-xs bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 px-3 py-1 rounded-lg font-bold">
-                            Böl
-                        </button>
-                        <button onclick="saveOrder()" class="text-xs bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 px-3 py-1 rounded-lg font-bold">
-                            Saxla
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="cart-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll"></div>
-                
-                <div class="p-6 bg-gradient-to-t from-slate-950 to-slate-900 border-t border-slate-800">
-                    <div class="space-y-3 mb-5">
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-400 font-bold text-xs uppercase">Cəmi:</span>
-                            <span id="subtotal-price" class="text-2xl font-mono font-bold">0.00 ₼</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-400 font-bold text-xs uppercase">Endirim:</span>
-                            <span id="discount-amount" class="text-xl font-mono font-bold text-amber-500">0.00 ₼</span>
-                        </div>
-                        <hr class="border-slate-700">
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-300 font-bold text-sm uppercase">ÖDƏNİLƏCƏK:</span>
-                            <span id="total-price" class="text-4xl font-mono font-black text-green-500">0.00 ₼</span>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <button onclick="printReceipt()" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 py-4 rounded-xl font-black text-white shadow-xl transition-all active:scale-95 text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                            <i class="fas fa-print"></i> ÇAP ET
-                        </button>
-                        <button onclick="completePayment()" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 py-4 rounded-xl font-black text-white shadow-xl transition-all active:scale-95 text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                            <i class="fas fa-check"></i> ÖDƏ
-                        </button>
-                    </div>
-                    
-                    <div class="flex justify-between">
-                        <button onclick="clearCurrentTable()" class="text-slate-500 hover:text-red-400 text-xs font-bold uppercase transition flex items-center gap-1">
-                            <i class="fas fa-trash"></i> Masanı Sıfırla
-                        </button>
-                        <button onclick="showOrderHistory()" class="text-slate-500 hover:text-blue-400 text-xs font-bold uppercase transition flex items-center gap-1">
-                            <i class="fas fa-history"></i> Tarixçə
-                        </button>
-                    </div>
-                </div>
+        <!-- KATEGORİLER -->
+        <div class="space-y-2">
+            <div class="text-slate-400 text-sm font-bold mb-2">KATEGORİLER</div>
+            <div id="categories" class="space-y-2">
+                <!-- Kategoriler buraya gelecek -->
             </div>
         </div>
     </div>
 
-    <!-- RECEIPT TEMPLATE -->
-    <div id="receipt-print">
-        <div style="width: 280px; margin: 0 auto; font-family: 'Courier New', monospace; color: black; background: white; padding: 15px 10px;">
-            <center>
-                <h1 style="margin: 0; font-size: 24px; font-style: italic; font-weight: bold;">MAMBA PUB</h1>
-                <p style="font-size: 11px; margin: 3px 0;">Qəbala şossesi 123, Bakı</p>
-                <p style="font-size: 11px; margin: 3px 0;">Tel: (012) 123-45-67</p>
-                <hr style="border-top: 1px dashed black; margin: 8px 0;">
-                <p id="p-date" style="font-size: 11px; margin: 5px 0; font-weight: bold;"></p>
-                <p id="p-receipt-no" style="font-size: 11px; margin: 3px 0;">Çek No: <span id="receipt-number"></span></p>
-                <div id="p-table" style="font-size: 16px; font-weight: bold; border: 2px solid black; display: inline-block; padding: 4px 15px; margin: 8px 0;"></div>
-                <hr style="border-top: 1px dashed black; margin: 8px 0;">
-            </center>
-            <div id="p-items" style="font-size: 12px; line-height: 1.4;"></div>
-            <hr style="border-top: 1px dashed black; margin: 8px 0;">
-            <div style="font-size: 12px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>Cəmi:</span>
-                    <span id="p-subtotal">0.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>Endirim:</span>
-                    <span id="p-discount">0.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold;">
-                    <span>ÜMUMİ:</span>
-                    <span id="p-total">0.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px;">
-                    <span>Ödəniş növü:</span>
-                    <span id="p-payment-type">Nağd</span>
-                </div>
-            </div>
-            <hr style="border-top: 1px dashed black; margin: 8px 0;">
-            <center style="margin-top: 15px; font-size: 10px;">
-                TƏŞƏKKÜRLƏR!<br>
-                Yenidən gözləyirik!<br>
-                <span style="font-size: 9px;">MAMBA POS v3.0</span>
-            </center>
-            <hr style="border-top: 1px dashed black; margin: 8px 0;">
-            <center style="font-size: 9px; color: #666;">
-                Çek tarixi: <span id="p-print-time"></span><br>
-                Kassir: Admin
-            </center>
+    <!-- ORTA ALAN - MENÜ -->
+    <div class="w-2/4 p-4 overflow-auto">
+        <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Menü öğeleri buraya gelecek -->
         </div>
     </div>
 
-    <!-- PRINTER SETTINGS MODAL -->
-    <div id="printer-modal" class="modal flex items-center justify-center">
-        <div class="modal-content animate__animated animate__fadeIn">
-            <h3 class="text-xl font-black mb-6 text-center flex items-center justify-center gap-2">
-                <i class="fas fa-print text-red-500"></i> Printer Konfiqurasiyası
-            </h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-bold mb-2 text-slate-400">Printer Adı</label>
-                    <input type="text" id="printer-name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold mb-2 text-slate-400">Çap Eni (mm)</label>
-                    <input type="number" id="paper-width" value="80" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold mb-2 text-slate-400">Çek Nüsxəsi</label>
-                    <select id="copy-count" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500">
-                        <option value="1">1 nüsxə (Müştəri)</option>
-                        <option value="2">2 nüsxə (Müştəri + Arxiv)</option>
-                        <option value="3">3 nüsxə (Müştəri + Arxiv + Mətbəx)</option>
-                    </select>
-                </div>
-                <div class="flex gap-3 mt-6">
-                    <button onclick="savePrinterSettings()" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 py-3 rounded-xl font-bold transition-all">
-                        Saxla
-                    </button>
-                    <button onclick="hideModal('printer-modal')" class="flex-1 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 py-3 rounded-xl font-bold transition-all">
-                        Ləğv et
-                    </button>
-                </div>
-            </div>
+    <!-- SAĞ ALAN - SİPARİŞ -->
+    <div class="w-1/4 bg-slate-900 p-4 border-l border-slate-800">
+        <h2 id="current-table" class="text-xl font-bold mb-4">MASA 1</h2>
+        
+        <!-- SİPARİŞ LİSTESİ -->
+        <div id="order-list" class="mb-4 space-y-2 max-h-96 overflow-auto">
+            <!-- Siparişler buraya gelecek -->
         </div>
-    </div>
 
-    <!-- PRICE MANAGEMENT MODAL -->
-    <div id="price-modal" class="modal flex items-center justify-center">
-        <div class="modal-content animate__animated animate__fadeIn">
-            <h3 class="text-xl font-black mb-6 text-center flex items-center justify-center gap-2">
-                <i class="fas fa-tags text-amber-500"></i> Qiymət İdarəetmə
-            </h3>
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="applyPriceChange('increase', 5)" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 py-3 rounded-xl font-bold transition-all">
-                        +5% Artır
-                    </button>
-                    <button onclick="applyPriceChange('decrease', 5)" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 py-3 rounded-xl font-bold transition-all">
-                        -5% Azalt
-                    </button>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="applyPriceChange('increase', 10)" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 py-3 rounded-xl font-bold transition-all">
-                        +10% Artır
-                    </button>
-                    <button onclick="applyPriceChange('decrease', 10)" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 py-3 rounded-xl font-bold transition-all">
-                        -10% Azalt
-                    </button>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm font-bold mb-2 text-slate-400">Xüsusi Faiz</label>
-                    <div class="flex gap-2">
-                        <input type="number" id="custom-percent" placeholder="%" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-500">
-                        <button onclick="applyCustomPriceChange()" class="px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg font-bold">
-                            Tətbiq et
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-6">
-                    <button onclick="hideModal('price-modal')" class="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 py-3 rounded-xl font-bold transition-all">
-                        Bağla
-                    </button>
-                </div>
+        <!-- TOPLAM -->
+        <div class="border-t border-slate-700 pt-4">
+            <div class="flex justify-between mb-2">
+                <span>Toplam:</span>
+                <span id="total" class="font-bold">0.00 ₼</span>
             </div>
+            <button onclick="printReceipt()" class="w-full bg-red-600 py-3 rounded font-bold hover:bg-red-700">
+                ÇAP ET
+            </button>
         </div>
     </div>
 
     <script>
-        // GLOBAL VARIABLES
-        let isEditMode = false;
-        let activeTable = localStorage.getItem('mamba_active_table') || "1";
-        let activeCat = "isti";
-        let dailyRevenue = parseFloat(localStorage.getItem('mamba_daily_revenue')) || 0;
-        let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
-        let discountPercentage = 0;
-        let printerSettings = JSON.parse(localStorage.getItem('mamba_printer_settings')) || {
-            name: "EPSON TM-T88V",
-            paperWidth: 80,
-            copies: 1
+        // MASALAR
+        const tables = {
+            "1": [], "2": [], "3": [], "4": [], "5": [], 
+            "6": [], "7": [], "8": [], "K1": [], "K2": []
         };
 
-        // DEFAULT MENU DATA
-        const defaultMenu = {
-            isti: [
-                {name:'Gürcü xəngəli', price:8.00, cost:4.50, barcode:'001'},
-                {name:'Tabaka', price:18.00, cost:9.00, barcode:'002'},
-                {name:'Kartof qızardılmış', price:5.00, cost:2.00, barcode:'003'},
-                {name:'Toyuq şiş', price:7.50, cost:3.50, barcode:'004'}
+        // MENÜ
+        const menu = {
+            "İsti": [
+                {name: "Gürcü xəngəli", price: 8.00},
+                {name: "Tabaka", price: 18.00},
+                {name: "Kartof qızardılmış", price: 5.00}
             ],
-            meze: [
-                {name:'Pivə 1.80m', price:1.80, cost:0.90, barcode:'101'},
-                {name:'Semiçka', price:2.00, cost:1.00, barcode:'102'},
-                {name:'Çips', price:4.00, cost:1.50, barcode:'103'},
-                {name:'Qoz-fındıq', price:3.50, cost:1.80, barcode:'104'}
+            "Meze": [
+                {name: "Pivə 1.80m", price: 1.80},
+                {name: "Semiçka", price: 2.00},
+                {name: "Çips", price: 4.00}
             ],
-            ickiler: [
-                {name:'Xırdalan 0.5L', price:1.80, cost:0.90, barcode:'201'},
-                {name:'Cola 1L', price:3.00, cost:1.50, barcode:'202'},
-                {name:'Fanta 0.5L', price:1.50, cost:0.75, barcode:'203'},
-                {name:'Su 0.5L', price:0.80, cost:0.40, barcode:'204'},
-                {name:'Araq 50ml', price:3.50, cost:1.75, barcode:'205'}
-            ],
-            setler: [
-                {name:'SET 1 (Xəngəl+Cola)', price:20.00, cost:10.00, barcode:'301'},
-                {name:'SET 2 (Tabaka+2 Pivə)', price:25.00, cost:12.50, barcode:'302'},
-                {name:'UŞAQ SET', price:15.00, cost:7.50, barcode:'303'}
-            ],
-            qelyan: [
-                {name:'Adi qəlyan', price:8.00, cost:4.00, barcode:'401'},
-                {name:'Premium qəlyan', price:12.00, cost:6.00, barcode:'402'},
-                {name:'Qəlyan+çay', price:10.00, cost:5.00, barcode:'403'}
+            "İçki": [
+                {name: "Xırdalan 0.5L", price: 1.80},
+                {name: "Cola 1L", price: 3.00},
+                {name: "Su 0.5L", price: 0.80}
             ]
         };
 
-        let allMenu = JSON.parse(localStorage.getItem('mamba_menu')) || defaultMenu;
-        let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
-            "1":[], "2":[], "3":[], "4":[], "5":[], "6":[], 
-            "7":[], "8":[], "9":[], "10":[],
-            "TERAS":[], "BAR":[], "K1":[], "K2":[], "VIP":[]
-        };
-        
-        let orderHistory = JSON.parse(localStorage.getItem('mamba_order_history')) || [];
-        let savedOrders = JSON.parse(localStorage.getItem('mamba_saved_orders')) || {};
+        let currentTable = "1";
 
-        // INITIALIZATION
-        document.addEventListener('DOMContentLoaded', function() {
-            initApp();
-        });
-
-        function initApp() {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            renderTableNav();
-            renderCatNav();
-            changeCat('isti');
-            switchTable(activeTable);
-            updateDailyRevenue();
-            
-            // Load printer settings
-            document.getElementById('printer-name').value = printerSettings.name;
-            document.getElementById('paper-width').value = printerSettings.paperWidth;
-            document.getElementById('copy-count').value = printerSettings.copies;
-        }
-
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('date').innerText = now.toLocaleDateString('az-AZ', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            document.getElementById('clock').innerText = now.toLocaleTimeString('az-AZ');
-        }
-
-        function updateDailyRevenue() {
-            document.getElementById('daily-revenue').innerText = dailyRevenue.toFixed(2) + " ₼";
-        }
-
-        // EDIT MODE FUNCTIONS
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            document.body.classList.toggle('edit-mode', isEditMode);
-            document.getElementById('add-item-btn').classList.toggle('hidden', !isEditMode);
-            document.getElementById('edit-btn').innerHTML = isEditMode ? 
-                '<i class="fas fa-check"></i> Bitir' : 
-                '<i class="fas fa-edit"></i> Menyunu Düzenle';
-            document.getElementById('edit-btn').classList.toggle('bg-gradient-to-r from-green-600 to-green-700', isEditMode);
-            document.getElementById('edit-btn').classList.toggle('bg-gradient-to-r from-blue-600 to-blue-700', !isEditMode);
-            renderMenu();
-        }
-
-        // TABLE MANAGEMENT
-        function renderTableNav() {
-            const nav = document.getElementById('table-nav');
-            const tableGroups = {
-                "İçəri": ["1", "2", "3", "4", "5", "6"],
-                "Xaric": ["7", "8", "9", "10", "TERAS"],
-                "Xüsusi": ["BAR", "K1", "K2", "VIP"]
-            };
-            
-            nav.innerHTML = '';
-            
-            Object.entries(tableGroups).forEach(([groupName, tableIds]) => {
-                if (groupName !== "İçəri") {
-                    nav.innerHTML += `<div class="text-slate-500 text-xs font-bold uppercase tracking-wider px-2">${groupName}</div>`;
-                }
-                
-                tableIds.forEach(id => {
-                    const table = tables[id] || [];
-                    const hasOrder = table.length > 0;
-                    nav.innerHTML += `
-                        <button onclick="switchTable('${id}')" 
-                                class="px-6 py-3 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl font-bold border border-slate-700 transition-all shrink-0 flex flex-col items-center min-w-[100px] ${activeTable == id ? 'active-table' : ''} ${hasOrder ? 'has-order' : ''}">
-                            <span class="text-lg">${id}</span>
-                            <span class="text-xs text-slate-400 mt-1">${table.reduce((sum, item) => sum + (item.price * item.count), 0).toFixed(2)} ₼</span>
-                        </button>
-                    `;
-                });
-            });
-        }
-
-        function renderCatNav() {
-            const cats = {
-                isti:'İsti Yeməklər',
-                meze:'Məzələr',
-                ickiler:'İçkilər',
-                setler:'Setlər',
-                qelyan:'Qəlyan'
-            };
-            
-            const nav = document.getElementById('cat-nav');
-            nav.innerHTML = Object.entries(cats).map(([key, label]) => `
-                <button onclick="changeCat('${key}')" 
-                        class="cat-btn px-6 py-3 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl text-sm font-bold uppercase shrink-0 transition-all flex items-center gap-2 ${activeCat == key ? 'active-cat' : ''}">
-                    <i class="fas ${getCatIcon(key)}"></i>
-                    ${label}
-                </button>
-            `).join('');
-        }
-
-        function getCatIcon(cat) {
-            const icons = {
-                isti: 'fa-utensils',
-                meze: 'fa-cheese',
-                ickiler: 'fa-beer',
-                setler: 'fa-box',
-                qelyan: 'fa-smoking'
-            };
-            return icons[cat] || 'fa-circle';
-        }
-
-        function changeCat(cat) { 
-            activeCat = cat; 
-            renderCatNav(); 
-            renderMenu(); 
-        }
-
-        // MENU RENDERING
-        function renderMenu() {
-            const grid = document.getElementById('menu-grid');
-            if (!allMenu[activeCat]) allMenu[activeCat] = [];
-            
-            grid.innerHTML = allMenu[activeCat].map((item, index) => {
-                const profit = item.price - item.cost;
-                const profitMargin = ((profit / item.cost) * 100).toFixed(1);
-                const isProfitable = profitMargin > 50;
-                
-                return `
-                    <div class="menu-card p-4 animate__animated animate__fadeIn" 
-                         onclick="${isEditMode ? '' : `addItemToCart('${item.name}', ${item.price})`}"
-                         data-barcode="${item.barcode || ''}">
-                        ${isProfitable ? '<div class="discount-badge">+${profitMargin}%</div>' : ''}
-                        <div class="text-[10px] text-red-500 font-bold mb-2 uppercase tracking-tighter flex justify-between">
-                            <span>${activeCat}</span>
-                            <span>${item.barcode || ''}</span>
-                        </div>
-                        <div class="text-sm font-bold text-white h-12 overflow-hidden leading-tight mb-2">${item.name}</div>
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <div class="text-xl font-mono font-black text-green-500">${item.price.toFixed(2)} ₼</div>
-                                <div class="text-[10px] text-slate-400">Maya: ${item.cost?.toFixed(2) || '0.00'} ₼</div>
-                            </div>
-                            ${!isEditMode ? `
-                                <div class="text-2xl text-slate-600 hover:text-red-500 transition-colors">
-                                    <i class="fas fa-cart-plus"></i>
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="edit-overlay">
-                            <button onclick="editItem(${index})" 
-                                    class="bg-gradient-to-r from-blue-600 to-blue-700 w-3/4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                <i class="fas fa-edit"></i> DÜZƏLİŞ
-                            </button>
-                            <button onclick="deleteItem(${index})" 
-                                    class="bg-gradient-to-r from-red-600 to-red-700 w-3/4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                <i class="fas fa-trash"></i> SİL
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            if (allMenu[activeCat].length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-20">
-                        <i class="fas fa-inbox text-6xl text-slate-700 mb-4"></i>
-                        <div class="text-slate-500 font-bold text-lg">Məhsul tapılmadı</div>
-                        <div class="text-slate-600 text-sm mt-2">Bu kateqoriyada məhsul yoxdur</div>
-                    </div>
-                `;
-            }
-        }
-
-        // MENU ITEM OPERATIONS
-        function editItem(i) {
-            const item = allMenu[activeCat][i];
-            const name = prompt("Məhsul adı:", item.name);
-            if (name === null) return;
-            
-            const price = prompt("Satış qiyməti:", item.price);
-            if (price === null) return;
-            
-            const cost = prompt("Maya dəyəri:", item.cost || 0);
-            if (cost === null) return;
-            
-            const barcode = prompt("Barkod:", item.barcode || '');
-            
-            allMenu[activeCat][i] = {
-                name: name,
-                price: parseFloat(price),
-                cost: parseFloat(cost),
-                barcode: barcode
-            };
-            
-            saveMenu();
-        }
-
-        function deleteItem(i) {
-            if (confirm("Bu məhsulu silmək istədiyinizə əminsiniz?")) {
-                allMenu[activeCat].splice(i, 1);
-                saveMenu();
-            }
-        }
-
-        function addNewItem() {
-            const name = prompt("Yeni məhsul adı:");
-            if (!name) return;
-            
-            const price = prompt("Satış qiyməti:");
-            if (!price) return;
-            
-            const cost = prompt("Maya dəyəri:", parseFloat(price) * 0.5);
-            const barcode = prompt("Barkod (isteğe bağlı):");
-            
-            allMenu[activeCat].push({
-                name: name,
-                price: parseFloat(price),
-                cost: parseFloat(cost || price * 0.5),
-                barcode: barcode || ''
-            });
-            
-            saveMenu();
-        }
-
-        function saveMenu() {
-            localStorage.setItem('mamba_menu', JSON.stringify(allMenu));
-            renderMenu();
-        }
-
-        // TABLE OPERATIONS
-        function switchTable(id) {
-            activeTable = id;
-            localStorage.setItem('mamba_active_table', id);
-            discountPercentage = 0;
-            renderTableNav();
-            document.getElementById('table-title').innerText = id === 'K1' ? 'KABİNET 1' : 
-                                                               id === 'K2' ? 'KABİNET 2' : 
-                                                               id === 'VIP' ? 'VIP OTAQ' :
-                                                               id === 'BAR' ? 'BAR' :
-                                                               id === 'TERAS' ? 'TERAS' : 
-                                                               'MASA ' + id;
-            updateUI();
-        }
-
-        // CART OPERATIONS
-        function addItemToCart(name, price) {
-            let table = tables[activeTable] || [];
-            let item = table.find(i => i.name === name);
-            
-            if (item) {
-                item.count++;
-            } else {
-                table.push({
-                    name: name,
-                    price: price,
-                    count: 1,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            
-            saveData();
-            
-            // Animation feedback
-            const cartList = document.getElementById('cart-list');
-            cartList.scrollTop = cartList.scrollHeight;
-        }
-
-        function updateUI() {
-            const list = document.getElementById('cart-list');
-            let table = tables[activeTable] || [];
-            let subtotal = 0;
-            
-            if (table.length === 0) {
-                list.innerHTML = `
-                    <div class="text-center py-20 animate__animated animate__fadeIn">
-                        <i class="fas fa-shopping-cart text-6xl text-slate-700 mb-4"></i>
-                        <div class="text-slate-500 font-bold text-lg">Sifariş yoxdur</div>
-                        <div class="text-slate-600 text-sm mt-2">Məhsul əlavə etmək üçün menyudan seçin</div>
-                    </div>
-                `;
-            } else {
-                list.innerHTML = '';
-                table.forEach((item, index) => {
-                    const itemTotal = item.price * item.count;
-                    subtotal += itemTotal;
-                    
-                    list.innerHTML += `
-                        <div class="bg-gradient-to-br from-slate-800/60 to-slate-900/60 p-4 rounded-2xl border border-slate-700/50 flex justify-between items-center animate__animated animate__fadeIn">
-                            <div class="flex-1">
-                                <div class="font-bold text-sm mb-1">${item.name}</div>
-                                <div class="text-slate-400 text-xs">${item.price.toFixed(2)} ₼</div>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <div class="flex items-center gap-2">
-                                    <button onclick="adjustQuantity(${index}, -1)" class="quantity-btn">
-                                        <i class="fas fa-minus text-xs"></i>
-                                    </button>
-                                    <span class="font-bold text-lg min-w-[30px] text-center">${item.count}</span>
-                                    <button onclick="adjustQuantity(${index}, 1)" class="quantity-btn">
-                                        <i class="fas fa-plus text-xs"></i>
-                                    </button>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-white">${itemTotal.toFixed(2)} ₼</div>
-                                    <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-400 text-xs font-bold mt-1">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            const discountAmount = subtotal * (discountPercentage / 100);
-            const total = subtotal - discountAmount;
-            
-            document.getElementById('subtotal-price').innerText = subtotal.toFixed(2) + " ₼";
-            document.getElementById('discount-amount').innerText = discountAmount.toFixed(2) + " ₼";
-            document.getElementById('total-price').innerText = total.toFixed(2) + " ₼";
-        }
-
-        function adjustQuantity(index, change) {
-            let table = tables[activeTable] || [];
-            if (table[index]) {
-                table[index].count += change;
-                if (table[index].count <= 0) {
-                    table.splice(index, 1);
-                }
-                saveData();
-            }
-        }
-
-        function removeFromCart(index) {
-            let table = tables[activeTable] || [];
-            if (table[index]) {
-                table.splice(index, 1);
-                saveData();
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('mamba_tables', JSON.stringify(tables));
-            updateUI();
-            renderTableNav();
-        }
-
-        // DISCOUNT FUNCTIONS
-        function applyDiscount(percent) {
-            discountPercentage = percent;
-            updateUI();
-            
-            // Show notification
-            showNotification(`${percent}% endirim tətbiq edildi`, 'success');
-        }
-
-        // PAYMENT FUNCTIONS
-        function completePayment() {
-            let table = tables[activeTable] || [];
-            if (table.length === 0) {
-                showNotification('Ödəniş üçün sifariş yoxdur!', 'error');
-                return;
-            }
-            
-            const subtotal = table.reduce((sum, item) => sum + (item.price * item.count), 0);
-            const discountAmount = subtotal * (discountPercentage / 100);
-            const total = subtotal - discountAmount;
-            
-            // Show payment method selection
-            const method = confirm("Nağd ödəniş? (OK = Nağd, Cancel = Kart)") ? 'Nağd' : 'Kart';
-            
-            // Add to daily revenue
-            dailyRevenue += total;
-            localStorage.setItem('mamba_daily_revenue', dailyRevenue.toString());
-            updateDailyRevenue();
-            
-            // Save to history
-            const order = {
-                id: 'ORD' + Date.now(),
-                table: activeTable,
-                items: [...table],
-                subtotal: subtotal,
-                discount: discountAmount,
-                total: total,
-                paymentMethod: method,
-                timestamp: new Date().toISOString(),
-                status: 'paid'
-            };
-            
-            orderHistory.unshift(order);
-            if (orderHistory.length > 1000) orderHistory = orderHistory.slice(0, 1000);
-            localStorage.setItem('mamba_order_history', JSON.stringify(orderHistory));
-            
-            // Print receipt
-            printReceipt(method);
-            
-            // Clear table
-            tables[activeTable] = [];
-            discountPercentage = 0;
-            saveData();
-            
-            showNotification('Ödəniş uğurla tamamlandı!', 'success');
-        }
-
-        // PRINTING FUNCTIONS
-        function printReceipt(paymentMethod = 'Nağd') {
-            const items = tables[activeTable] || [];
-            if (items.length === 0) {
-                showNotification('Çap etmək üçün sifariş yoxdur!', 'error');
-                return;
-            }
-            
-            // Increment receipt number
-            receiptCounter++;
-            localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
-            
-            const subtotal = items.reduce((sum, item) => sum + (item.price * item.count), 0);
-            const discountAmount = subtotal * (discountPercentage / 100);
-            const total = subtotal - discountAmount;
-            const now = new Date();
-            
-            // Populate receipt template
-            document.getElementById('p-date').innerText = now.toLocaleString('az-AZ');
-            document.getElementById('p-receipt-no').innerHTML = `Çek No: <span id="receipt-number">${receiptCounter}</span>`;
-            document.getElementById('p-table').innerText = activeTable === 'K1' ? 'KABİNET 1' : 
-                                                          activeTable === 'K2' ? 'KABİNET 2' : 
-                                                          activeTable === 'VIP' ? 'VIP OTAQ' :
-                                                          activeTable === 'BAR' ? 'BAR' :
-                                                          activeTable === 'TERAS' ? 'TERAS' : 
-                                                          'MASA ' + activeTable;
-            
-            document.getElementById('p-items').innerHTML = items.map(item => {
-                const itemTotal = item.price * item.count;
-                return `
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <div style="flex:3;">${item.count} x ${item.name}</div>
-                        <div style="flex:1; text-align:right;">${item.price.toFixed(2)}</div>
-                        <div style="flex:1; text-align:right; font-weight:bold;">${itemTotal.toFixed(2)}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            document.getElementById('p-subtotal').innerText = subtotal.toFixed(2) + ' AZN';
-            document.getElementById('p-discount').innerText = discountAmount.toFixed(2) + ' AZN';
-            document.getElementById('p-total').innerText = total.toFixed(2) + ' AZN';
-            document.getElementById('p-payment-type').innerText = paymentMethod;
-            document.getElementById('p-print-time').innerText = now.toLocaleTimeString('az-AZ', {hour12: false});
-            
-            // Print based on printer settings
-            const copies = printerSettings.copies || 1;
-            
-            for (let i = 0; i < copies; i++) {
-                setTimeout(() => {
-                    window.print();
-                }, i * 1000);
-            }
-            
-            showNotification('Çek çap edildi!', 'success');
-        }
-
-        // PRINTER SETTINGS
-        function showPrinterSettings() {
-            showModal('printer-modal');
-        }
-
-        function savePrinterSettings() {
-            printerSettings = {
-                name: document.getElementById('printer-name').value,
-                paperWidth: parseInt(document.getElementById('paper-width').value),
-                copies: parseInt(document.getElementById('copy-count').value)
-            };
-            
-            localStorage.setItem('mamba_printer_settings', JSON.stringify(printerSettings));
-            hideModal('printer-modal');
-            showNotification('Printer ayarları saxlandı!', 'success');
-        }
-
-        // PRICE MANAGEMENT
-        function showPriceManagement() {
-            showModal('price-modal');
-        }
-
-        function applyPriceChange(type, percent) {
-            const confirmChange = confirm(`Bütün məhsulların qiymətlərini ${type === 'increase' ? 'artırmaq' : 'azaltmaq'} istədiyinizə əminsiniz?`);
-            if (!confirmChange) return;
-            
-            Object.keys(allMenu).forEach(category => {
-                allMenu[category].forEach(item => {
-                    if (type === 'increase') {
-                        item.price *= (1 + percent / 100);
-                    } else {
-                        item.price *= (1 - percent / 100);
-                    }
-                    item.price = Math.round(item.price * 100) / 100; // Round to 2 decimal places
-                });
-            });
-            
-            saveMenu();
-            hideModal('price-modal');
-            showNotification(`Qiymətlər ${percent}% ${type === 'increase' ? 'artırıldı' : 'azaldıldı'}!`, 'success');
-        }
-
-        function applyCustomPriceChange() {
-            const percent = parseFloat(document.getElementById('custom-percent').value);
-            if (!percent || isNaN(percent)) {
-                showNotification('Xahiş edirik faiz daxil edin!', 'error');
-                return;
-            }
-            
-            const type = confirm(`${percent}% artırmaq istəyirsiniz? (OK = Artır, Cancel = Azalt)`) ? 'increase' : 'decrease';
-            applyPriceChange(type, percent);
-        }
-
-        // ORDER HISTORY
-        function showOrderHistory() {
-            if (orderHistory.length === 0) {
-                showNotification('Hələ heç bir sifariş yoxdur!', 'info');
-                return;
-            }
-            
-            let historyHtml = '<h3 class="text-xl font-black mb-4">Sifariş Tarixçəsi</h3>';
-            historyHtml += '<div class="space-y-3 max-h-96 overflow-y-auto">';
-            
-            orderHistory.slice(0, 20).forEach(order => {
-                const date = new Date(order.timestamp);
-                historyHtml += `
-                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <div class="font-bold">${order.table}</div>
-                                <div class="text-slate-400 text-xs">${date.toLocaleString('az-AZ')}</div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-black text-green-500">${order.total.toFixed(2)} ₼</div>
-                                <div class="text-xs ${order.paymentMethod === 'Nağd' ? 'text-amber-500' : 'text-blue-500'}">
-                                    ${order.paymentMethod}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-sm text-slate-300">
-                            ${order.items.slice(0, 2).map(item => `${item.count}x ${item.name}`).join(', ')}
-                            ${order.items.length > 2 ? ` və ${order.items.length - 2} digər` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            historyHtml += '</div>';
-            
-            alertWithHTML('Sifariş Tarixçəsi', historyHtml);
-        }
-
-        function saveOrder() {
-            let table = tables[activeTable] || [];
-            if (table.length === 0) {
-                showNotification('Saxlamaq üçün sifariş yoxdur!', 'error');
-                return;
-            }
-            
-            const orderName = prompt('Sifariş adını daxil edin:');
-            if (!orderName) return;
-            
-            savedOrders[orderName] = {
-                table: activeTable,
-                items: JSON.parse(JSON.stringify(table)),
-                timestamp: new Date().toISOString()
-            };
-            
-            localStorage.setItem('mamba_saved_orders', JSON.stringify(savedOrders));
-            showNotification('Sifariş saxlandı!', 'success');
-        }
-
-        function splitBill() {
-            let table = tables[activeTable] || [];
-            if (table.length === 0) {
-                showNotification('Bölmək üçün sifariş yoxdur!', 'error');
-                return;
-            }
-            
-            const parts = parseInt(prompt('Neçə hissəyə bölmək istəyirsiniz?', '2'));
-            if (!parts || parts < 2) return;
-            
-            const subtotal = table.reduce((sum, item) => sum + (item.price * item.count), 0);
-            const discountAmount = subtotal * (discountPercentage / 100);
-            const total = subtotal - discountAmount;
-            const perPart = total / parts;
-            
-            alert(`Hesab ${parts} hissəyə bölündü:\n\nHər bir hissə: ${perPart.toFixed(2)} ₼\nÜmumi: ${total.toFixed(2)} ₼`);
-        }
-
-        function clearCurrentTable() {
-            let table = tables[activeTable] || [];
-            if (table.length === 0) {
-                showNotification('Masa artıq boşdur!', 'info');
-                return;
-            }
-            
-            const confirmClear = confirm(`"${activeTable}" masasını təmizləmək istədiyinizə əminsiniz?`);
-            if (confirmClear) {
-                tables[activeTable] = [];
-                discountPercentage = 0;
-                saveData();
-                showNotification('Masa təmizləndi!', 'success');
-            }
-        }
-
-        function showReports() {
-            const totalOrders = orderHistory.length;
-            const totalRevenue = orderHistory.reduce((sum, order) => sum + order.total, 0);
-            const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-            
-            const today = new Date().toDateString();
-            const todayOrders = orderHistory.filter(order => 
-                new Date(order.timestamp).toDateString() === today
-            );
-            const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
-            
-            const reportHtml = `
-                <h3 class="text-xl font-black mb-6 text-center">Günlük Hesabat</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-800/50 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-green-500">${todayRevenue.toFixed(2)}</div>
-                        <div class="text-sm text-slate-400">Bugünkü Gəlir</div>
-                    </div>
-                    <div class="bg-slate-800/50 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-blue-500">${todayOrders.length}</div>
-                        <div class="text-sm text-slate-400">Bugünkü Sifariş</div>
-                    </div>
-                    <div class="bg-slate-800/50 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-amber-500">${totalRevenue.toFixed(2)}</div>
-                        <div class="text-sm text-slate-400">Ümumi Gəlir</div>
-                    </div>
-                    <div class="bg-slate-800/50 p-4 rounded-xl text-center">
-                        <div class="text-3xl font-black text-purple-500">${avgOrder.toFixed(2)}</div>
-                        <div class="text-sm text-slate-400">Orta Sifariş</div>
-                    </div>
-                </div>
-                <div class="mt-6">
-                    <button onclick="exportReport()" class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 py-3 rounded-xl font-bold">
-                        <i class="fas fa-download mr-2"></i> Export et
+        // MASALARI YÜKLE
+        function loadTables() {
+            const tablesDiv = document.getElementById('tables');
+            tablesDiv.innerHTML = '';
+            Object.keys(tables).forEach(table => {
+                const hasOrder = tables[table].length > 0;
+                tablesDiv.innerHTML += `
+                    <button onclick="selectTable('${table}')" 
+                            class="p-3 rounded border ${currentTable === table ? 'active table-btn' : 'bg-slate-800'} ${hasOrder ? 'has-order border-green-500' : 'border-slate-700'}">
+                        ${table.startsWith('K') ? 'KABİNET ' + table.slice(1) : 'MASA ' + table}
                     </button>
-                </div>
-            `;
-            
-            alertWithHTML('Hesabat Paneli', reportHtml);
+                `;
+            });
         }
 
-        function exportReport() {
-            const data = {
-                dailyRevenue: dailyRevenue,
-                totalOrders: orderHistory.length,
-                orderHistory: orderHistory,
-                menu: allMenu,
-                tables: tables
-            };
-            
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = `mamba_report_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            showNotification('Hesabat export edildi!', 'success');
+        // KATEGORİLERİ YÜKLE
+        function loadCategories() {
+            const catsDiv = document.getElementById('categories');
+            catsDiv.innerHTML = '';
+            Object.keys(menu).forEach(cat => {
+                catsDiv.innerHTML += `
+                    <button onclick="loadMenu('${cat}')" 
+                            class="w-full p-3 text-left rounded bg-slate-800 hover:bg-slate-700">
+                        ${cat}
+                    </button>
+                `;
+            });
         }
 
-        // UTILITY FUNCTIONS
-        function showModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-        }
-
-        function hideModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        function showNotification(message, type = 'info') {
-            const colors = {
-                success: 'bg-gradient-to-r from-green-600 to-green-700',
-                error: 'bg-gradient-to-r from-red-600 to-red-700',
-                warning: 'bg-gradient-to-r from-amber-600 to-amber-700',
-                info: 'bg-gradient-to-r from-blue-600 to-blue-700'
-            };
-            
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-xl font-bold shadow-2xl animate__animated animate__fadeInRight z-50`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.remove('animate__fadeInRight');
-                notification.classList.add('animate__fadeOutRight');
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-
-        function alertWithHTML(title, html) {
-            const modal = document.createElement('div');
-            modal.className = 'modal flex items-center justify-center';
-            modal.innerHTML = `
-                <div class="modal-content animate__animated animate__fadeIn">
-                    <h3 class="text-xl font-black mb-4">${title}</h3>
-                    ${html}
-                    <div class="mt-6">
-                        <button onclick="this.closest('.modal').remove()" 
-                                class="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 py-3 rounded-xl font-bold transition-all">
-                            Bağla
-                        </button>
+        // MENÜ YÜKLE
+        function loadMenu(category) {
+            const menuGrid = document.getElementById('menu-grid');
+            menuGrid.innerHTML = '';
+            menu[category].forEach(item => {
+                menuGrid.innerHTML += `
+                    <div onclick="addItem('${item.name}', ${item.price})" 
+                         class="p-4 rounded bg-slate-800 border border-slate-700 hover:border-red-500 cursor-pointer">
+                        <div class="font-bold">${item.name}</div>
+                        <div class="text-green-500 font-bold mt-2">${item.price.toFixed(2)} ₼</div>
                     </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
+                `;
+            });
         }
 
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
-            }
+        // MAS SEÇ
+        function selectTable(table) {
+            currentTable = table;
+            document.getElementById('current-table').innerText = 
+                table.startsWith('K') ? 'KABİNET ' + table.slice(1) : 'MASA ' + table;
+            loadTables();
+            updateOrderList();
         }
+
+        // ÜRÜN EKLE
+        function addItem(name, price) {
+            const table = tables[currentTable];
+            const existing = table.find(item => item.name === name);
+            
+            if (existing) {
+                existing.quantity++;
+            } else {
+                table.push({name, price, quantity: 1});
+            }
+            
+            updateOrderList();
+            loadTables();
+        }
+
+        // SİPARİŞ LİSTESİNİ GÜNCELLE
+        function updateOrderList() {
+            const orderList = document.getElementById('order-list');
+            const table = tables[currentTable];
+            let total = 0;
+            
+            if (table.length === 0) {
+                orderList.innerHTML = '<div class="text-slate-500 text-center">Sipariş yok</div>';
+            } else {
+                orderList.innerHTML = '';
+                table.forEach((item, index) => {
+                    const itemTotal = item.price * item.quantity;
+                    total += itemTotal;
+                    
+                    orderList.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-slate-800 rounded">
+                            <div>
+                                <span class="text-red-500 font-bold">${item.quantity}x</span> ${item.name}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>${itemTotal.toFixed(2)} ₼</span>
+                                <button onclick="removeItem(${index})" class="text-red-500">×</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('total').innerText = total.toFixed(2) + ' ₼';
+        }
+
+        // ÜRÜN ÇIKAR
+        function removeItem(index) {
+            tables[currentTable].splice(index, 1);
+            updateOrderList();
+            loadTables();
+        }
+
+        // ÇAP ET
+        function printReceipt() {
+            const table = tables[currentTable];
+            if (table.length === 0) {
+                alert('Sipariş yok!');
+                return;
+            }
+            
+            let receipt = 'MAMBA PUB\n';
+            receipt += '=============\n';
+            receipt += (currentTable.startsWith('K') ? 'KABİNET ' + currentTable.slice(1) : 'MASA ' + currentTable) + '\n';
+            receipt += '=============\n\n';
+            
+            let total = 0;
+            table.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                receipt += `${item.quantity}x ${item.name} - ${itemTotal.toFixed(2)} ₼\n`;
+            });
+            
+            receipt += '\n=============\n';
+            receipt += `TOPLAM: ${total.toFixed(2)} ₼\n`;
+            receipt += '=============\n';
+            receipt += new Date().toLocaleString('az-AZ');
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<pre>' + receipt + '</pre>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // SAYFA YÜKLENDİĞİNDE
+        window.onload = function() {
+            loadTables();
+            loadCategories();
+            loadMenu('İsti');
+            selectTable('1');
+        };
     </script>
 </body>
 </html>
