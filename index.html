@@ -1,117 +1,156 @@
-<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html>
-<html b:css='false' b:defaultwidgetversion='2' b:layoutsversion='3' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b' xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+<html lang="az">
 <head>
-    <title>Mamba Pub POS - Pro Edition</title>
-    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'/>
-    <script src='https://cdn.tailwindcss.com'></script>
-    <b:skin><![CDATA[
-        body, html { margin: 0; padding: 0; height: 100%; background: #020617; overflow: hidden; font-family: sans-serif; }
-        .active-table { background: #ef4444 !important; border-color: #f87171 !important; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mamba Pub POS - Professional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        .menu-item { transition: all 0.2s; border: 1px solid #1e293b; cursor: pointer; background: #0f172a; position: relative; overflow: hidden; }
+        .menu-item:hover { border-color: #ef4444; transform: translateY(-2px); }
+        .active-table { background: #ef4444 !important; border-color: #f87171 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
         .active-cat { background: #ef4444 !important; color: white !important; }
         .has-order { position: relative; }
         .has-order::after { content: ''; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; }
-        
-        .edit-mode .item-edit-btn { display: flex !important; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        .edit-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); flex-direction: column; align-items: center; justify-content: center; gap: 5px; z-index: 10; }
+        .edit-mode .edit-overlay { display: flex; }
 
         @media print {
             body * { visibility: hidden; }
             #receipt-modal, #receipt-modal * { visibility: visible; }
             #receipt-modal { position: absolute; left: 0; top: 0; width: 100%; background: white !important; }
             .no-print { display: none !important; }
-            #receipt-content { color: black !important; width: 100% !important; border: none !important; }
+            #receipt-content { color: black !important; width: 100% !important; border: none !important; padding: 0; }
             @page { margin: 0; }
         }
-    ]]></b:skin>
+    </style>
 </head>
-<body class='text-slate-100'>
+<body class="h-screen flex flex-col">
 
-    <div class='h-screen flex flex-col overflow-hidden'>
-        <header class='bg-slate-900 p-3 border-b border-slate-800 flex justify-between items-center px-6 no-print'>
-            <div class='flex items-center gap-4'>
-                <h1 class='text-2xl font-black italic tracking-tighter'>MAMBA <span class='text-red-600'>PUB</span></h1>
-                <button onclick='toggleEditMode()' class='bg-blue-600 hover:bg-blue-500 text-[10px] px-3 py-1 rounded-full font-bold uppercase'>Menyunu Düzenle</button>
-            </div>
-            <div id='clock' class='text-slate-400 font-mono font-bold'>00:00:00</div>
-        </header>
+    <header class="bg-slate-900 p-3 border-b border-slate-800 flex justify-between items-center px-6 no-print">
+        <div class="flex items-center gap-6">
+            <h1 class="text-2xl font-black italic tracking-tighter text-white">MAMBA <span class="text-red-600">PUB</span></h1>
+            <button onclick="toggleEditMode()" id="edit-mode-btn" class="bg-blue-600 hover:bg-blue-500 text-[10px] px-4 py-1.5 rounded-full font-bold uppercase transition">Menyunu Düzenle</button>
+        </div>
+        <div id="clock" class="text-slate-400 font-mono font-bold text-lg">00:00:00</div>
+    </header>
 
-        <div id='table-nav' class='flex gap-2 p-3 bg-slate-900 border-b border-slate-800 justify-center overflow-x-auto no-print'></div>
+    <div id="table-nav" class="flex gap-2 p-3 bg-slate-900 border-b border-slate-800 justify-center overflow-x-auto no-print">
+        </div>
 
-        <div class='flex flex-1 overflow-hidden'>
-            <div class='w-3/4 flex flex-col border-r border-slate-800 no-print'>
-                <div class='flex items-center bg-slate-900/30 border-b border-slate-800/50'>
-                    <div id='cat-nav' class='flex-1 flex gap-2 p-4 overflow-x-auto custom-scroll'></div>
-                    <button onclick='addNewItem()' class='item-edit-btn hidden mr-4 bg-green-600 p-2 rounded-lg text-xs font-bold'>+ YENİ MƏHSUL</button>
-                </div>
-                <div id='menu-grid' class='grid grid-cols-2 md:grid-cols-4 gap-3 p-4 overflow-y-auto custom-scroll'></div>
-            </div>
-
-            <div class='w-1/4 bg-slate-900 flex flex-col no-print'>
-                <div class='p-4 border-b border-slate-800'><h2 id='active-table-title' class='text-xl font-black text-red-500 italic'>MASA 1</h2></div>
-                <div id='order-items' class='flex-1 overflow-y-auto p-3 space-y-2 custom-scroll'></div>
-                <div class='p-4 bg-slate-950 border-t border-slate-800'>
-                    <div class='flex justify-between items-center mb-4 text-green-500'>
-                        <span class='text-slate-500 font-bold text-xs'>CƏMİ:</span>
-                        <span id='total-price' class='text-2xl font-mono font-black'>0.00 ₼</span>
+    <div class="flex flex-1 overflow-hidden">
+        
+        <div class="w-3/4 flex flex-col bg-slate-950/50 no-print">
+            <div class="flex items-center bg-slate-900/30 border-b border-slate-800/50">
+                <div id="cat-nav" class="flex-1 flex gap-2 p-4 overflow-x-auto custom-scroll">
                     </div>
-                    <button onclick='showReceipt()' class='w-full bg-red-600 py-4 rounded-xl font-black text-white shadow-lg mb-2 active:scale-95 transition'>HESABI ÇIXART</button>
-                    <button onclick='clearCurrentTable()' class='w-full text-slate-600 text-[10px] font-bold uppercase hover:text-red-400'>Masanı Sıfırla</button>
+                <button id="add-item-btn" onclick="addNewItem()" class="hidden mr-6 bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-xs font-bold animate__animated animate__fadeIn">
+                    + YENİ MƏHSUL
+                </button>
+            </div>
+
+            <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 overflow-y-auto custom-scroll">
                 </div>
+        </div>
+
+        <div class="w-1/4 bg-slate-900 border-l border-slate-800 flex flex-col no-print shadow-2xl">
+            <div class="p-4 border-b border-slate-800 bg-slate-800/30">
+                <h2 id="active-table-title" class="text-xl font-black text-red-500 italic uppercase">Masa 1</h2>
+            </div>
+
+            <div id="order-items" class="flex-1 overflow-y-auto p-3 space-y-2 custom-scroll">
+                </div>
+
+            <div class="p-5 bg-slate-950 border-t border-slate-800">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-slate-500 font-bold text-xs uppercase tracking-widest">Cəmi:</span>
+                    <span id="total-price" class="text-3xl font-mono font-black text-green-500">0.00 ₼</span>
+                </div>
+                <button onclick="showReceipt()" class="w-full bg-red-600 hover:bg-red-500 py-4 rounded-xl font-black text-white shadow-lg mb-3 active:scale-95 transition-all uppercase tracking-tighter">HESABI ÇIXART (PRINT)</button>
+                <button onclick="clearCurrentTable()" class="w-full text-slate-600 text-[10px] font-bold uppercase hover:text-red-400 transition">Masanı Təmizlə</button>
             </div>
         </div>
     </div>
 
-    <div id='receipt-modal' class='hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[999] p-4'>
-        <div id='receipt-content' class='bg-white text-black p-6 w-full max-w-[300px] font-mono shadow-2xl rounded-sm'>
-            <div class='text-center border-b border-black pb-2 mb-2 uppercase'>
-                <h2 class='text-xl font-bold'>MAMBA PUB</h2>
-                <p id='r-date' class='text-[10px]'></p>
-                <p id='r-table' class='font-bold border border-black inline-block px-2 mt-1'></p>
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-[1000] p-4 backdrop-blur-sm">
+        <div id="receipt-content" class="bg-white text-black p-8 w-full max-w-[320px] font-mono shadow-2xl rounded-sm">
+            <div class="text-center border-b-2 border-black pb-3 mb-3">
+                <h2 class="text-2xl font-black italic">MAMBA PUB</h2>
+                <p id="r-date" class="text-[10px] mt-1 text-gray-600"></p>
+                <p id="r-table" class="font-bold text-lg border-2 border-black inline-block px-4 mt-2 uppercase"></p>
             </div>
-            <div id='r-list' class='text-sm mb-4 space-y-1'></div>
-            <div class='border-t border-black pt-2 flex justify-between font-bold text-lg'>
-                <span>CƏMİ:</span><span id='r-total'></span>
+            
+            <div id="r-list" class="text-sm mb-4 space-y-1">
+                </div>
+
+            <div class="border-t-2 border-black pt-3 flex justify-between font-black text-xl uppercase">
+                <span>Cəmi:</span>
+                <span id="r-total">0.00 AZN</span>
             </div>
-            <div class='text-center text-[8px] mt-4 border-t border-dashed border-black pt-2'>NUŞ OLSUN!</div>
-            <div class='flex gap-2 mt-6 no-print'>
-                <button onclick='window.print()' class='flex-1 bg-green-600 text-white py-3 font-bold rounded'>ÇAP ET</button>
-                <button onclick='closeModal()' class='flex-1 bg-slate-800 text-white py-3 font-bold rounded'>BAĞLA</button>
+            
+            <div class="text-center text-[10px] mt-6 border-t border-dashed border-gray-400 pt-3 italic">
+                Sistem: Yarpaq POS v2.0 <br> NUŞ OLSUN!
+            </div>
+
+            <div class="flex gap-2 mt-8 no-print">
+                <button onclick="window.print()" class="flex-1 bg-green-600 text-white py-4 font-black rounded-lg hover:bg-green-700 transition">ÇAP ET</button>
+                <button onclick="closeModal()" class="flex-1 bg-slate-800 text-white py-4 font-black rounded-lg hover:bg-slate-700 transition">BAĞLA</button>
             </div>
         </div>
     </div>
-
-    <div style='display:none !important;'><b:section id='main'><b:widget id='Blog1' type='Blog'/></b:section></div>
 
     <script>
-        // <![CDATA[
         let isEditMode = false;
         let activeTable = localStorage.getItem('mamba_active_table') || "1";
         let activeCat = "isti";
-        
-        // Menyu Yaddaşı
+
+        // Menyu Məlumatları (Yaddaşdan oxu və ya Default)
         const defaultMenu = {
-            isti: [{name:'Gürcü xəngəli',price:0.80},{name:'Tabaka',price:18.00}],
-            meze: [{name:'Pivə 1.80m',price:1.80},{name:'Semiçka',price:2.00}],
-            ickiler: [{name:'Cola 1L',price:3.00}],
-            setler: [{name:'SET 1',price:20.00}]
+            isti: [
+                { name: 'Gürcü xəngəli', price: 0.80 }, { name: 'Tabaka', price: 18.00 },
+                { name: 'Qovurma', price: 12.00 }, { name: 'Monastr toyuq', price: 12.00 }
+            ],
+            meze: [
+                { name: 'Pivə 1.80m', price: 1.80 }, { name: 'Semiçka', price: 2.00 },
+                { name: 'Boğaz', price: 1.50 }, { name: 'Turşu', price: 3.00 }
+            ],
+            ickiler: [
+                { name: 'Cola 1L', price: 3.00 }, { name: 'Bizon', price: 3.00 },
+                { name: 'Xırdalan', price: 1.80 }, { name: 'Su 0.5L', price: 1.00 }
+            ],
+            setler: [
+                { name: 'Səbət SET 1', price: 20.00 }, { name: 'SET 4 (40 AZN)', price: 40.00 }
+            ],
+            qelyan: [
+                { name: 'Çaşqa Qəlyan', price: 12.00 }, { name: 'Qreyfrut Qəlyan', price: 18.00 }
+            ]
         };
+
         let allMenu = JSON.parse(localStorage.getItem('mamba_menu')) || defaultMenu;
-        let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {"1":[],"2":[],"3":[],"4":[],"5":[],"6":[],"K1":[]};
+        let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
+            "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "K1": []
+        };
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
             document.body.classList.toggle('edit-mode', isEditMode);
-            renderMenu();
-            const btn = document.querySelector('button[onclick="toggleEditMode()"]');
+            document.getElementById('add-item-btn').classList.toggle('hidden', !isEditMode);
+            const btn = document.getElementById('edit-mode-btn');
             btn.innerText = isEditMode ? "Düzəlişi Bitir" : "Menyunu Düzenle";
             btn.classList.toggle('bg-green-600', isEditMode);
+            btn.classList.toggle('bg-blue-600', !isEditMode);
+            renderMenu();
         }
 
         function renderTableNav() {
-            document.getElementById('table-nav').innerHTML = Object.keys(tables).map(id => `
-                <button onclick="masaSec('${id}')" class="px-5 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 ${activeTable == id ? 'active-table' : ''} ${tables[id].length > 0 ? 'has-order' : ''}">
+            const nav = document.getElementById('table-nav');
+            nav.innerHTML = Object.keys(tables).map(id => `
+                <button onclick="masaSec('${id}')" class="px-6 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 transition shrink-0 ${activeTable == id ? 'active-table' : ''} ${tables[id].length > 0 ? 'has-order' : ''}">
                     ${id === 'K1' ? 'KABİNET' : 'Masa ' + id}
                 </button>
             `).join('');
@@ -119,8 +158,11 @@
 
         function renderCatNav() {
             const cats = {isti:'İsti Yeməklər', meze:'Pivə Məzələri', ickiler:'İçkilər', setler:'Setlər', qelyan:'Qəlyan'};
-            document.getElementById('cat-nav').innerHTML = Object.entries(cats).map(([key, label]) => `
-                <button onclick="changeCat('${key}')" id="cat-${key}" class="cat-btn px-5 py-2 bg-slate-800 rounded-full text-xs font-bold uppercase shrink-0 ${activeCat == key ? 'active-cat' : ''}">${label}</button>
+            const nav = document.getElementById('cat-nav');
+            nav.innerHTML = Object.entries(cats).map(([key, label]) => `
+                <button onclick="changeCat('${key}')" id="cat-${key}" class="cat-btn px-6 py-2.5 bg-slate-800 rounded-full text-xs font-bold uppercase tracking-wider shrink-0 transition ${activeCat == key ? 'active-cat' : ''}">
+                    ${label}
+                </button>
             `).join('');
         }
 
@@ -132,42 +174,43 @@
         }
 
         function renderMenu() {
+            const grid = document.getElementById('menu-grid');
             if (!allMenu[activeCat]) allMenu[activeCat] = [];
-            document.getElementById('menu-grid').innerHTML = allMenu[activeCat].map((item, index) => `
-                <div class="relative bg-slate-900 border border-slate-800 p-4 rounded-xl cursor-pointer hover:border-red-500 group" onclick="${isEditMode ? '' : `addToTable('${item.name}', ${item.price})`}">
-                    <div class="text-[9px] text-red-500 font-bold uppercase mb-1">${activeCat}</div>
-                    <div class="text-sm font-bold text-white h-10">${item.name}</div>
-                    <div class="text-lg font-mono font-black text-green-500 mt-2">${item.price.toFixed(2)} ₼</div>
+            
+            grid.innerHTML = allMenu[activeCat].map((item, index) => `
+                <div class="menu-item p-5 rounded-2xl animate__animated animate__fadeIn" onclick="${isEditMode ? '' : `addToTable('${item.name}', ${item.price})`}">
+                    <div class="text-[9px] text-red-500 font-bold mb-1 uppercase tracking-widest">${activeCat}</div>
+                    <div class="text-sm font-bold text-white h-10 leading-tight">${item.name}</div>
+                    <div class="text-xl font-mono font-black text-green-500 mt-2">${item.price.toFixed(2)} ₼</div>
                     
-                    ${isEditMode ? `
-                        <div class="absolute inset-0 bg-black/60 flex flex-col gap-1 items-center justify-center rounded-xl p-2">
-                            <button onclick="editItem(${index})" class="bg-blue-600 w-full py-1 rounded text-[10px] font-bold">QİYMƏT/AD</button>
-                            <button onclick="deleteItem(${index})" class="bg-red-600 w-full py-1 rounded text-[10px] font-bold">SİL</button>
-                        </div>
-                    ` : ''}
+                    <div class="edit-overlay rounded-2xl">
+                        <button onclick="editItem(${index})" class="bg-blue-600 w-3/4 py-1.5 rounded font-bold text-[10px]">REDAKTƏ</button>
+                        <button onclick="deleteItem(${index})" class="bg-red-600 w-3/4 py-1.5 rounded font-bold text-[10px]">SİL</button>
+                    </div>
                 </div>
             `).join('');
         }
 
+        // REDAKTƏ FUNKSİYALARI
         function editItem(index) {
             const item = allMenu[activeCat][index];
-            const newName = prompt("Məhsulun adı:", item.name);
-            const newPrice = prompt("Qiyməti (məs: 5.50):", item.price);
-            if (newName && newPrice) {
-                allMenu[activeCat][index] = { name: newName, price: parseFloat(newPrice) };
+            const name = prompt("Yeni ad:", item.name);
+            const price = prompt("Yeni qiymət:", item.price);
+            if (name && price) {
+                allMenu[activeCat][index] = { name, price: parseFloat(price) };
                 saveMenu();
             }
         }
 
         function deleteItem(index) {
-            if (confirm("Bu məhsulu menyudan silmək istəyirsiniz?")) {
+            if (confirm("Bu məhsul silinsin?")) {
                 allMenu[activeCat].splice(index, 1);
                 saveMenu();
             }
         }
 
         function addNewItem() {
-            const name = prompt("Yeni məhsulun adı:");
+            const name = prompt("Məhsul adı:");
             const price = prompt("Qiyməti:");
             if (name && price) {
                 allMenu[activeCat].push({ name, price: parseFloat(price) });
@@ -180,67 +223,96 @@
             renderMenu();
         }
 
+        // MASA VƏ SİFARİŞ FUNKSİYALARI
         function masaSec(id) {
             activeTable = id;
             localStorage.setItem('mamba_active_table', id);
             renderTableNav();
-            document.getElementById('active-table-title').innerText = id === 'K1' ? 'KABİNET' : 'MASA ' + id;
+            document.getElementById('active-table-title').innerText = id === 'K1' ? 'KABİNET' : 'Masa ' + id;
             updateDisplay();
         }
 
         function addToTable(name, price) {
             let table = tables[activeTable];
-            let exist = table.find(i => i.name === name);
-            if(exist) { exist.count++; } else { table.push({name, price, count:1}); }
-            save();
+            let existing = table.find(i => i.name === name);
+            if (existing) { existing.count++; } 
+            else { table.push({ name, price, count: 1 }); }
+            saveAndSync();
         }
 
         function updateDisplay() {
             const list = document.getElementById('order-items');
             let total = 0;
-            list.innerHTML = "";
+            list.innerHTML = tables[activeTable].length === 0 ? '<div class="text-slate-600 text-center mt-10 italic text-sm">Sifariş yoxdur</div>' : '';
+            
             tables[activeTable].forEach((item, index) => {
-                const subTotal = item.price * item.count;
-                total += subTotal;
+                const sub = item.price * item.count;
+                total += sub;
                 list.innerHTML += `
-                    <div class="bg-slate-800/60 p-3 rounded-lg border border-slate-700 flex justify-between items-center animate__animated animate__fadeInRight animate__faster">
-                        <div class="text-xs">
-                            <span class="text-red-500 font-black">${item.count}x</span> ${item.name}
-                            <div class="text-[9px] text-slate-500 mt-1">${item.price.toFixed(2)} ₼</div>
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 animate__animated animate__fadeInRight animate__faster">
+                        <div class="flex justify-between items-center">
+                            <span class="font-black text-red-500 mr-2">${item.count}x</span>
+                            <span class="flex-1 font-bold text-xs truncate">${item.name}</span>
+                            <span class="font-mono text-green-400 font-bold ml-2">${sub.toFixed(2)}</span>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span class="font-mono text-green-400 font-bold">${subTotal.toFixed(2)}</span>
-                            <button onclick="remove(${index})" class="text-red-500 font-bold px-1 text-lg">×</button>
+                        <div class="flex justify-between items-center mt-2 border-t border-slate-700/50 pt-1">
+                             <span class="text-[9px] text-slate-500 uppercase">Vahid: ${item.price.toFixed(2)} ₼</span>
+                             <button onclick="removeFromTable(${index})" class="text-[10px] text-red-400 font-black hover:text-red-200">SİL</button>
                         </div>
                     </div>`;
             });
             document.getElementById('total-price').innerText = total.toFixed(2) + " ₼";
         }
 
-        function remove(i) { tables[activeTable].splice(i,1); save(); }
-        function save() { localStorage.setItem('mamba_tables', JSON.stringify(tables)); updateDisplay(); renderTableNav(); }
-        function clearCurrentTable() { if(confirm('Masanı təmizləmək istəyirsiniz?')) { tables[activeTable] = []; save(); } }
-        function closeModal() { document.getElementById('receipt-modal').classList.add('hidden'); }
+        function removeFromTable(index) {
+            tables[activeTable].splice(index, 1);
+            saveAndSync();
+        }
 
+        function saveAndSync() {
+            localStorage.setItem('mamba_tables', JSON.stringify(tables));
+            updateDisplay();
+            renderTableNav();
+        }
+
+        function clearCurrentTable() {
+            if(confirm('Bu masadakı bütün sifarişlər silinsin?')) {
+                tables[activeTable] = [];
+                saveAndSync();
+            }
+        }
+
+        // ÇAP FUNKSİYASI
         function showReceipt() {
-            let items = tables[activeTable];
+            const items = tables[activeTable];
             if (items.length === 0) return;
-            let total = items.reduce((s, i) => s + (i.price * i.count), 0);
+            const total = items.reduce((s, i) => s + (i.price * i.count), 0);
+            
             document.getElementById('r-list').innerHTML = items.map(i => `
-                <div class="flex justify-between border-b border-gray-200 py-1">
-                    <span class="text-left">${i.count} x ${i.name}</span>
-                    <span class="text-right">${(i.price * i.count).toFixed(2)}</span>
+                <div class="flex justify-between border-b border-gray-100 py-1">
+                    <span class="text-left w-3/4">${i.count} x ${i.name}</span>
+                    <span class="text-right w-1/4 font-bold">${(i.price * i.count).toFixed(2)}</span>
                 </div>
             `).join('');
+
             document.getElementById('r-total').innerText = total.toFixed(2) + " AZN";
             document.getElementById('r-date').innerText = new Date().toLocaleString('az-AZ');
-            document.getElementById('r-table').innerText = activeTable === 'K1' ? 'KABİNET' : 'MASA ' + activeTable;
+            document.getElementById('r-table').innerText = activeTable === 'K1' ? 'KABİNET' : 'Masa ' + activeTable;
             document.getElementById('receipt-modal').classList.remove('hidden');
         }
 
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('az-AZ'); }, 1000);
-        renderTableNav(); renderCatNav(); changeCat('isti'); masaSec(activeTable);
-        // ]]>
+        function closeModal() { document.getElementById('receipt-modal').classList.add('hidden'); }
+
+        // SAAT
+        setInterval(() => { 
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('az-AZ'); 
+        }, 1000);
+
+        // İLK İŞƏ SALMA
+        renderTableNav();
+        renderCatNav();
+        changeCat('isti');
+        masaSec(activeTable);
     </script>
 </body>
 </html>
