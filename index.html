@@ -3,471 +3,503 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAMBA PUB POS Sistemi</title>
+    <title>Mamba Pub POS - Professional</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        body { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f8fafc; 
-            font-family: 'Segoe UI', system-ui;
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .active-table { 
-            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-            color: white !important;
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
-        }
-        .has-order { 
-            border: 3px solid #22c55e !important;
-            position: relative;
-        }
-        .has-order::after {
-            content: '●';
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            color: #22c55e;
-            font-size: 12px;
-        }
-        .menu-item { 
-            transition: all 0.2s ease;
-            cursor: pointer;
-            border: 1px solid #334155;
-        }
-        .menu-item:hover { 
-            transform: translateY(-3px); 
-            border-color: #ef4444;
-            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
-        }
-        .cart-item:hover {
-            background: rgba(30, 41, 59, 0.8);
-        }
-        .receipt-print {
-            width: 80mm;
-            font-family: 'Courier New', monospace;
-            padding: 10px;
-            background: white;
-            color: black;
-        }
+        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', sans-serif; }
+        .menu-item { transition: all 0.2s; border: 1px solid #1e293b; cursor: pointer; }
+        .menu-item:hover { border-color: #ef4444; background: #0f172a; }
+        .active-table { background: #ef4444 !important; border-color: #f87171 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+        .has-order { position: relative; }
+        .has-order::after { content: ''; position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #020617; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        
+        /* Yazdırma için */
         @media print {
             body * { visibility: hidden; }
-            .receipt-print, .receipt-print * { visibility: visible; }
-            .receipt-print {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 80mm;
-                font-size: 12px;
-            }
+            #print-receipt, #print-receipt * { visibility: visible; }
+            #print-receipt { position: absolute; left: 0; top: 0; width: 80mm; }
+            @page { margin: 0; size: auto; }
         }
     </style>
 </head>
-<body class="h-screen flex flex-col">
-    <!-- ÜST MENÜ -->
-    <div class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center shadow-lg">
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-slate-900 p-4 border-b border-slate-800 flex justify-between items-center px-8 shadow-2xl">
+        <h1 class="text-3xl font-black tracking-tighter text-white">MAMBA <span class="text-red-600">PUB</span> <span class="text-sm text-slate-400">v2.0</span></h1>
         <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-bold text-white">
-                <i class="fas fa-beer text-red-500 mr-2"></i>
-                MAMBA PUB POS
-            </h1>
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full">
-                <i class="fas fa-print text-green-500"></i>
-                <span class="text-sm">XPRINTER</span>
-            </div>
+            <div id="clock" class="text-slate-400 font-mono text-lg font-bold">15:50:30</div>
+            <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-2 rounded-lg font-bold">
+                <i class="fas fa-download mr-1"></i> Export
+            </button>
         </div>
-        <div class="text-right">
-            <div id="clock" class="text-lg font-mono font-bold"></div>
-            <div class="text-sm text-slate-400" id="date"></div>
-        </div>
+    </header>
+
+    <div id="table-nav" class="flex gap-2 p-4 bg-slate-900/50 border-b border-slate-800 justify-center flex-wrap">
     </div>
 
-    <!-- ANA İÇERİK -->
     <div class="flex flex-1 overflow-hidden">
-        <!-- SOL MENÜ - MASALAR -->
-        <div class="w-1/5 bg-slate-900/50 border-r border-slate-800 p-4 overflow-y-auto">
-            <h2 class="text-lg font-bold mb-4 text-slate-300">
-                <i class="fas fa-table mr-2"></i>Masalar
-            </h2>
-            <div class="grid grid-cols-2 gap-2" id="table-list">
-                <!-- Masalar buraya yüklenecek -->
-            </div>
-            
-            <div class="mt-8">
-                <h2 class="text-lg font-bold mb-4 text-slate-300">
-                    <i class="fas fa-tags mr-2"></i>Kategoriler
-                </h2>
-                <div class="space-y-2" id="category-list">
-                    <!-- Kategoriler buraya yüklenecek -->
+        
+        <div class="w-3/4 p-6 overflow-y-auto custom-scroll bg-slate-950/50">
+            <div class="mb-6 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-white">MENYU</h2>
+                <div class="text-slate-400 text-sm">
+                    <i class="fas fa-database mr-1"></i>
+                    <span id="data-status">Yaddaşda saxlanılır...</span>
                 </div>
+            </div>
+            <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             </div>
         </div>
 
-        <!-- ORTA ALAN - MENÜ -->
-        <div class="w-3/5 p-6 overflow-y-auto">
-            <div class="mb-6">
-                <div class="text-2xl font-bold" id="current-category">İsti Yeməklər</div>
-                <div class="text-slate-400" id="item-count">15 məhsul</div>
+        <div class="w-1/4 bg-slate-900 border-l border-slate-800 flex flex-col shadow-2xl">
+            <div class="p-5 border-b border-slate-800 bg-slate-900/80">
+                <h2 id="active-table-title" class="text-2xl font-black text-white italic">MASA 1</h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sifariş siyahısı</p>
+                <div class="mt-2 text-xs text-slate-400">
+                    <i class="fas fa-save mr-1"></i>
+                    <span id="auto-save">Avtomatik saxlanılır</span>
+                </div>
             </div>
-            
-            <div class="grid grid-cols-3 gap-4" id="menu-items">
-                <!-- Menü öğeleri buraya yüklenecek -->
-            </div>
-        </div>
 
-        <!-- SAĞ PANEL - SİPARİŞ -->
-        <div class="w-1/5 bg-slate-900/30 border-l border-slate-800 p-4 flex flex-col">
-            <div class="mb-4">
-                <h2 class="text-xl font-bold" id="current-table-name">MASA 1</h2>
-                <div class="text-sm text-slate-400" id="table-time">15:30</div>
+            <div id="order-items" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
             </div>
-            
-            <!-- SİPARİŞ LİSTESİ -->
-            <div class="flex-1 overflow-y-auto mb-4" id="cart-items">
-                <!-- Siparişler buraya yüklenecek -->
-            </div>
-            
-            <!-- TOPLAM -->
-            <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                <div class="flex justify-between mb-2">
-                    <span class="text-slate-300">Cəmi:</span>
-                    <span id="subtotal" class="font-bold">0.00 ₼</span>
+
+            <div class="p-6 bg-slate-950 border-t border-slate-800 space-y-4">
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-500 font-bold text-sm">ÜMUMİ MƏBLƏĞ:</span>
+                    <span id="total-price" class="text-3xl font-mono font-black text-green-500 leading-none">0.00 ₼</span>
                 </div>
-                <div class="flex justify-between mb-4">
-                    <span class="text-slate-300">Ümumi:</span>
-                    <span id="total" class="text-2xl font-bold text-green-500">0.00 ₼</span>
-                </div>
-                
-                <!-- BUTONLAR -->
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="printReceipt()" class="bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2">
-                        <i class="fas fa-print"></i> ÇAP ET
+                    <button onclick="printReceipt()" class="bg-red-600 hover:bg-red-500 py-3 rounded-xl font-black text-white shadow-lg transition-transform active:scale-95">
+                        <i class="fas fa-print mr-2"></i>ÇAP ET
                     </button>
-                    <button onclick="clearTable()" class="bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold">
-                        Təmizlə
+                    <button onclick="clearCurrentTable()" class="bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold text-white">
+                        <i class="fas fa-trash mr-2"></i>Sıfırla
                     </button>
+                </div>
+                <div class="text-center text-xs text-slate-500 mt-2">
+                    PC yaddaş: <span id="storage-info">LocalStorage aktiv</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ÇEK YAZDIRMA ALANI (GİZLİ) -->
-    <div class="receipt-print" id="receipt" style="display: none;">
-        <div style="text-align: center;">
-            <div style="font-weight: bold; font-size: 16px;">MAMBA PUB</div>
-            <div style="font-size: 11px;">Qəbala şossesi 123, Bakı</div>
-            <div style="font-size: 11px;">Tel: (012) 123-45-67</div>
-            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
-            <div style="font-size: 11px;" id="receipt-date"></div>
-            <div style="font-size: 11px;">Çek No: <span id="receipt-no"></span></div>
-            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
-            <div style="font-weight: bold; font-size: 14px;" id="receipt-table"></div>
-            <div style="border-top: 1px dashed black; margin: 5px 0;"></div>
-        </div>
+    <!-- Gizli çek alanı -->
+    <div id="print-receipt" style="display: none; width: 80mm; font-family: 'Courier New', monospace; padding: 10px;">
+        <center>
+            <b style="font-size: 16px;">MAMBA PUB</b><br>
+            <span style="font-size: 11px;">Restoran & Bar</span><br>
+            <span style="font-size: 10px;">Bakı, Azərbaycan</span><br>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+            <span style="font-size: 10px;" id="receipt-date"></span><br>
+            <span style="font-size: 10px;">Çek No: <span id="receipt-no"></span></span><br>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+            <b style="font-size: 14px;" id="receipt-table"></b><br>
+            <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+        </center>
         
         <div id="receipt-items" style="font-size: 12px; margin: 10px 0;"></div>
         
-        <div style="border-top: 1px dashed black; margin: 10px 0;"></div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+        <hr style="border-top: 1px dashed #000; margin: 10px 0;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
             <span>CƏMİ:</span>
-            <span id="receipt-total">0.00</span>
+            <span id="receipt-total"></span>
         </div>
         
-        <div style="border-top: 1px dashed black; margin: 10px 0;"></div>
-        <div style="text-align: center; font-size: 11px; margin-top: 15px;">
+        <center style="font-size: 10px; margin-top: 15px;">
             TƏŞƏKKÜRLƏR!<br>
             Nuş Olsun!<br>
-            <span style="font-size: 10px;">POS v3.0 - XPRINTER</span>
-        </div>
+            <span style="font-size: 9px;">POS v2.0 - XPRINTER</span>
+        </center>
+        <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+        <center style="font-size: 8px; color: #666;">
+            Çek tarixi: <span id="receipt-time"></span>
+        </center>
     </div>
 
     <script>
-        // VERİTABANI
-        const menuData = {
-            "İsti Yeməklər": [
-                {id: 1, name: "Gürcü Xəngəli", price: 8.00, code: "IST-001"},
-                {id: 2, name: "Tabaka Toyuq", price: 18.00, code: "IST-002"},
-                {id: 3, name: "Kartof Qızardılmış", price: 5.00, code: "IST-003"},
-                {id: 4, name: "Toyuq Şiş", price: 7.50, code: "IST-004"},
-                {id: 5, name: "Lüle Kebab", price: 9.00, code: "IST-005"},
-                {id: 6, name: "Qovurma", price: 12.00, code: "IST-006"}
-            ],
-            "Məzələr": [
-                {id: 7, name: "Pivə 1.80m", price: 1.80, code: "MEZ-001"},
-                {id: 8, name: "Semiçka", price: 2.00, code: "MEZ-002"},
-                {id: 9, name: "Çips", price: 4.00, code: "MEZ-003"},
-                {id: 10, name: "Qoz-Fındıq", price: 3.50, code: "MEZ-004"},
-                {id: 11, name: "Zeytun", price: 3.00, code: "MEZ-005"}
-            ],
-            "İçkilər": [
-                {id: 12, name: "Xırdalan 0.5L", price: 1.80, code: "ICK-001"},
-                {id: 13, name: "Cola 1L", price: 3.00, code: "ICK-002"},
-                {id: 14, name: "Fanta 0.5L", price: 1.50, code: "ICK-003"},
-                {id: 15, name: "Su 0.5L", price: 0.80, code: "ICK-004"},
-                {id: 16, name: "Araq 50ml", price: 3.50, code: "ICK-005"},
-                {id: 17, name: "Vodka 50ml", price: 4.00, code: "ICK-006"}
-            ],
-            "Setlər": [
-                {id: 18, name: "SET 1 (Xəngəl+Cola)", price: 20.00, code: "SET-001"},
-                {id: 19, name: "SET 2 (Tabaka+2 Pivə)", price: 25.00, code: "SET-002"},
-                {id: 20, name: "UŞAQ SET", price: 15.00, code: "SET-003"}
-            ]
-        };
-
-        const tables = [
-            {id: 1, name: "MASA 1", orders: []},
-            {id: 2, name: "MASA 2", orders: []},
-            {id: 3, name: "MASA 3", orders: []},
-            {id: 4, name: "MASA 4", orders: []},
-            {id: 5, name: "MASA 5", orders: []},
-            {id: 6, name: "MASA 6", orders: []},
-            {id: 7, name: "BAR", orders: []},
-            {id: 8, name: "TERAS", orders: []},
-            {id: 9, name: "KABİNET 1", orders: []},
-            {id: 10, name: "KABİNET 2", orders: []}
+        // GENİŞ MENÜ DATA
+        const menu = [
+            // İçkilər
+            { name: 'Pivə 1.80m', price: 1.80, category: 'İçkilər' },
+            { name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
+            { name: 'Bizon Böyük', price: 3.00, category: 'İçkilər' },
+            { name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
+            { name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
+            { name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
+            { name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
+            { name: 'Red Bull', price: 4.00, category: 'İçkilər' },
+            { name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
+            { name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
+            { name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
+            { name: 'Şərab stəkan', price: 3.00, category: 'İçkilər' },
+            
+            // Mezeler
+            { name: 'Semiçka', price: 2.00, category: 'Mezeler' },
+            { name: 'Sardelka', price: 6.00, category: 'Mezeler' },
+            { name: 'Turşu', price: 3.00, category: 'Mezeler' },
+            { name: 'Çips', price: 4.00, category: 'Mezeler' },
+            { name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
+            { name: 'Zeytun', price: 3.00, category: 'Mezeler' },
+            { name: 'Patates qızardması', price: 5.00, category: 'Mezeler' },
+            { name: 'Soğan halqası', price: 4.50, category: 'Mezeler' },
+            { name: 'Quru yemiş assisi', price: 8.00, category: 'Mezeler' },
+            { name: 'Pendir təbəqəsi', price: 5.00, category: 'Mezeler' },
+            
+            // İsti yeməklər
+            { name: 'Tabaka', price: 18.00, category: 'İsti Yeməklər' },
+            { name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
+            { name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
+            { name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
+            { name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
+            { name: 'Kartof qızardılmış', price: 5.50, category: 'İsti Yeməklər' },
+            { name: 'Gürcü xəngəli', price: 8.50, category: 'İsti Yeməklər' },
+            { name: 'Balıq tava', price: 13.00, category: 'İsti Yeməklər' },
+            { name: 'Qızardılmış qanad', price: 7.50, category: 'İsti Yeməklər' },
+            { name: 'Antrikot', price: 15.00, category: 'İsti Yeməklər' },
+            
+            // Setlər
+            { name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
+            { name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
+            { name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
+            { name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
+            { name: 'Uşaq seti', price: 15.00, category: 'Setlər' },
+            
+            // Digər
+            { name: 'Boğaz', price: 1.50, category: 'Digər' },
+            { name: 'Qəlyan', price: 12.00, category: 'Digər' },
+            { name: 'Nargilə', price: 15.00, category: 'Digər' },
+            { name: 'Çay', price: 1.00, category: 'Digər' },
+            { name: 'Türk qəhvəsi', price: 2.50, category: 'Digər' }
         ];
 
-        let currentTable = tables[0];
-        let currentCategory = "İsti Yeməklər";
-        let receiptCounter = localStorage.getItem('receipt_counter') || 1000;
-
-        // SAYFA YÜKLENDİĞİNDE
+        // Kategorilere göre grupla
+        const categories = [...new Set(menu.map(item => item.category))];
+        
+        // Çek sayacı
+        let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
+        
+        // İlk yükleme - verileri localStorage'dan al
+        let activeTable = localStorage.getItem('mamba_active_table') || "1";
+        let tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
+            "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
+            "7": [], "8": [], "9": [], "10": [], "BAR": [], "TERAS": [], "K1": [], "K2": [], "VIP": []
+        };
+        
+        // Satış geçmişi
+        let salesHistory = JSON.parse(localStorage.getItem('mamba_sales_history')) || [];
+        
+        // Otomatik kaydetme zamanlayıcısı
+        let autoSaveTimer;
+        
+        // Başlangıç
         document.addEventListener('DOMContentLoaded', function() {
-            loadTables();
-            loadCategories();
-            loadMenuItems();
+            renderTableNav();
+            renderCategories();
+            renderMenuItems(categories[0]);
+            masaSec(activeTable);
             updateClock();
             setInterval(updateClock, 1000);
-            loadCart();
+            
+            // 10 saniyede bir otomatik kaydet
+            autoSaveTimer = setInterval(saveAllData, 10000);
+            
+            // Kapatma öncesi kaydet
+            window.addEventListener('beforeunload', function() {
+                saveAllData();
+            });
+            
+            // Storage bilgisini göster
+            updateStorageInfo();
         });
-
-        // SAAT VE TARİH
+        
+        // Storage bilgisi
+        function updateStorageInfo() {
+            const used = JSON.stringify(tables).length + JSON.stringify(salesHistory).length;
+            const kb = (used / 1024).toFixed(2);
+            document.getElementById('storage-info').textContent = `${kb} KB istifadə olunur`;
+        }
+        
+        // Saat güncelle
         function updateClock() {
             const now = new Date();
-            document.getElementById('clock').textContent = 
-                now.toLocaleTimeString('az-AZ', {hour12: false});
-            document.getElementById('date').textContent = 
-                now.toLocaleDateString('az-AZ', {weekday: 'long', day: 'numeric', month: 'long'});
+            document.getElementById('clock').innerText = now.toLocaleTimeString('az-AZ');
         }
-
-        // MASALARI YÜKLE
-        function loadTables() {
-            const tableList = document.getElementById('table-list');
-            tableList.innerHTML = '';
+        
+        // Tüm verileri kaydet
+        function saveAllData() {
+            try {
+                localStorage.setItem('mamba_tables', JSON.stringify(tables));
+                localStorage.setItem('mamba_active_table', activeTable);
+                localStorage.setItem('mamba_sales_history', JSON.stringify(salesHistory));
+                localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
+                
+                document.getElementById('auto-save').innerHTML = '<i class="fas fa-check text-green-500 mr-1"></i> Son saxlanma: ' + new Date().toLocaleTimeString('az-AZ').substring(0,5);
+                updateStorageInfo();
+                
+                // IndexedDB'ye de yedekle (daha güvenli)
+                saveToIndexedDB();
+                
+            } catch(e) {
+                console.error('Yaddaş xətası:', e);
+                document.getElementById('auto-save').innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i> Yaddaş xətası';
+            }
+        }
+        
+        // IndexedDB ile yedekleme
+        function saveToIndexedDB() {
+            if (!window.indexedDB) return;
             
-            tables.forEach(table => {
-                const hasOrder = table.orders.length > 0;
-                tableList.innerHTML += `
-                    <button onclick="selectTable(${table.id})" 
-                            class="p-3 rounded-lg border ${currentTable.id === table.id ? 'active-table' : 'bg-slate-800 border-slate-700'} ${hasOrder ? 'has-order' : ''} transition-colors">
-                        <div class="font-bold">${table.name}</div>
-                        <div class="text-xs text-slate-400 mt-1">${table.orders.length} məhsul</div>
+            try {
+                const request = indexedDB.open('MambaPOSDatabase', 1);
+                
+                request.onupgradeneeded = function(event) {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('tables')) {
+                        db.createObjectStore('tables', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('sales')) {
+                        db.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains('menu')) {
+                        db.createObjectStore('menu', { keyPath: 'id' });
+                    }
+                };
+                
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['tables', 'sales'], 'readwrite');
+                    
+                    // Masaları kaydet
+                    const tablesStore = transaction.objectStore('tables');
+                    tablesStore.put({
+                        id: 'current_tables',
+                        data: tables,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Satışları kaydet
+                    const salesStore = transaction.objectStore('sales');
+                    if (salesHistory.length > 0) {
+                        const lastSale = salesHistory[0];
+                        salesStore.put({
+                            id: 'last_sale',
+                            data: lastSale,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                    
+                    transaction.oncomplete = function() {
+                        console.log('IndexedDB-yə yadda saxlanıldı');
+                    };
+                };
+            } catch(e) {
+                console.log('IndexedDB xətası:', e);
+            }
+        }
+        
+        // Kategorileri göster
+        function renderCategories() {
+            const nav = document.getElementById('table-nav');
+            nav.innerHTML = '<div class="flex gap-2 flex-wrap">';
+            
+            // Kategori butonları
+            categories.forEach(cat => {
+                nav.innerHTML += `
+                    <button onclick="renderMenuItems('${cat}')" 
+                            class="px-4 py-2 bg-slate-800 rounded-lg font-bold border border-slate-700 hover:border-red-500 transition">
+                        ${cat}
+                    </button>
+                `;
+            });
+            
+            nav.innerHTML += '</div><div class="mt-2 flex gap-2 flex-wrap" id="table-buttons"></div>';
+            renderTableButtons();
+        }
+        
+        // Masa butonları
+        function renderTableButtons() {
+            const container = document.getElementById('table-buttons');
+            container.innerHTML = '';
+            
+            Object.keys(tables).forEach(id => {
+                const hasOrder = tables[id].length > 0;
+                container.innerHTML += `
+                    <button onclick="masaSec('${id}')" 
+                            class="table-btn px-4 py-2 bg-slate-900 rounded-lg font-bold border ${hasOrder ? 'border-green-500' : 'border-slate-700'} ${activeTable == id ? 'active-table' : ''}">
+                        ${id}
                     </button>
                 `;
             });
         }
-
-        // KATEGORİLERİ YÜKLE
-        function loadCategories() {
-            const categoryList = document.getElementById('category-list');
-            categoryList.innerHTML = '';
+        
+        // Menü öğelerini göster
+        function renderMenuItems(category) {
+            const grid = document.getElementById('menu-grid');
+            const filteredItems = menu.filter(item => item.category === category);
             
-            Object.keys(menuData).forEach(category => {
-                categoryList.innerHTML += `
-                    <button onclick="selectCategory('${category}')" 
-                            class="w-full p-3 text-left rounded-lg ${currentCategory === category ? 'bg-red-600 text-white' : 'bg-slate-800 hover:bg-slate-700'} transition-colors">
-                        <i class="fas fa-utensils mr-2"></i>${category}
-                    </button>
-                `;
+            grid.innerHTML = filteredItems.map(item => `
+                <div onclick="addToTable('${item.name}', ${item.price})" 
+                     class="menu-item bg-slate-900 p-4 rounded-xl animate__animated animate__fadeInUp">
+                    <div class="text-[10px] text-red-500 font-black mb-1 uppercase">${item.category}</div>
+                    <div class="text-sm font-bold text-white h-12 leading-tight">${item.name}</div>
+                    <div class="text-xl font-mono font-black text-green-500 mt-2">${item.price.toFixed(2)} ₼</div>
+                </div>
+            `).join('');
+            
+            // Aktif kategoriyi vurgula
+            document.querySelectorAll('#table-nav button').forEach(btn => {
+                btn.classList.remove('bg-red-600');
             });
         }
-
-        // KATEGORİ SEÇ
-        function selectCategory(category) {
-            currentCategory = category;
-            document.getElementById('current-category').textContent = category;
-            document.getElementById('item-count').textContent = `${menuData[category].length} məhsul`;
-            loadCategories();
-            loadMenuItems();
+        
+        // Masa seç
+        function masaSec(id) {
+            activeTable = id;
+            saveAllData();
+            renderTableButtons();
+            document.getElementById('active-table-title').innerText = id;
+            updateDisplay();
         }
-
-        // MENÜ ÖĞELERİNİ YÜKLE
-        function loadMenuItems() {
-            const menuItems = document.getElementById('menu-items');
-            const items = menuData[currentCategory];
-            
-            menuItems.innerHTML = '';
-            items.forEach(item => {
-                menuItems.innerHTML += `
-                    <div onclick="addToCart(${item.id})" 
-                         class="menu-item bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-red-500">
-                        <div class="text-sm text-slate-400 mb-1">${item.code}</div>
-                        <div class="font-bold text-white mb-2">${item.name}</div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-bold text-green-500">${item.price.toFixed(2)} ₼</span>
-                            <i class="fas fa-plus-circle text-slate-500 hover:text-red-500"></i>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        // MASA SEÇ
-        function selectTable(tableId) {
-            currentTable = tables.find(t => t.id === tableId);
-            document.getElementById('current-table-name').textContent = currentTable.name;
-            document.getElementById('table-time').textContent = new Date().toLocaleTimeString('az-AZ', {hour12: false});
-            loadTables();
-            loadCart();
-        }
-
-        // SEPETE EKLE
-        function addToCart(itemId) {
-            const category = Object.keys(menuData).find(cat => 
-                menuData[cat].find(item => item.id === itemId)
-            );
-            const item = menuData[category].find(item => item.id === itemId);
-            
-            const existingItem = currentTable.orders.find(order => order.id === itemId);
-            if (existingItem) {
-                existingItem.quantity++;
+        
+        // Masaya ürün ekle
+        function addToTable(name, price) {
+            let table = tables[activeTable];
+            let existing = table.find(i => i.name === name);
+        
+            if (existing) {
+                existing.count++;
             } else {
-                currentTable.orders.push({
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    code: item.code,
-                    quantity: 1
-                });
+                table.push({ name, price, count: 1 });
             }
             
-            loadCart();
-            loadTables();
+            saveAllData();
+            updateDisplay();
+            renderTableButtons();
             
-            // Bildirim
-            showNotification(`${item.name} əlavə edildi`, 'success');
+            // Bildirim efekti
+            showNotification(`${name} əlavə edildi`);
         }
-
-        // SEPETİ YÜKLE
-        function loadCart() {
-            const cartItems = document.getElementById('cart-items');
-            const orders = currentTable.orders;
+        
+        // Ekranı güncelle
+        function updateDisplay() {
+            const list = document.getElementById('order-items');
+            const totalDisplay = document.getElementById('total-price');
+            let items = tables[activeTable];
+            let total = 0;
+        
+            list.innerHTML = '';
             
-            if (orders.length === 0) {
-                cartItems.innerHTML = `
+            if (items.length === 0) {
+                list.innerHTML = `
                     <div class="text-center py-10 text-slate-500">
                         <i class="fas fa-shopping-cart text-4xl mb-3"></i>
-                        <div>Sifariş yoxdur</div>
+                        <div class="text-sm">Sifariş yoxdur</div>
                     </div>
                 `;
             } else {
-                cartItems.innerHTML = '';
-                let subtotal = 0;
-                
-                orders.forEach((item, index) => {
-                    const itemTotal = item.price * item.quantity;
-                    subtotal += itemTotal;
-                    
-                    cartItems.innerHTML += `
-                        <div class="cart-item bg-slate-800/30 p-3 rounded-lg mb-2 border border-slate-700">
-                            <div class="flex justify-between items-start mb-1">
+                items.forEach((item, index) => {
+                    let itemTotal = item.price * item.count;
+                    total += itemTotal;
+                    list.innerHTML += `
+                        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700 animate__animated animate__slideInRight">
+                            <div class="flex justify-between items-center mb-2">
                                 <div>
-                                    <div class="font-bold">${item.name}</div>
-                                    <div class="text-xs text-slate-400">${item.price.toFixed(2)} ₼</div>
+                                    <span class="font-black text-red-500 text-lg mr-2">${item.count}x</span>
+                                    <span class="font-bold text-slate-200">${item.name}</span>
                                 </div>
-                                <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-400">
+                                <button onclick="removeFromTable(${index})" 
+                                        class="text-red-500 hover:text-red-400 text-sm">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
-                            <div class="flex justify-between items-center mt-2">
-                                <div class="flex items-center gap-2">
-                                    <button onclick="updateQuantity(${index}, -1)" class="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
-                                        <i class="fas fa-minus text-xs"></i>
-                                    </button>
-                                    <span class="font-bold">${item.quantity}</span>
-                                    <button onclick="updateQuantity(${index}, 1)" class="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
-                                        <i class="fas fa-plus text-xs"></i>
-                                    </button>
-                                </div>
-                                <div class="font-bold text-green-500">${itemTotal.toFixed(2)} ₼</div>
+                            <div class="flex justify-between text-xs text-slate-400">
+                                <span>Vahid: ${item.price.toFixed(2)} ₼</span>
+                                <span class="font-bold text-green-400">${itemTotal.toFixed(2)} ₼</span>
                             </div>
                         </div>
                     `;
                 });
             }
             
-            document.getElementById('subtotal').textContent = subtotal.toFixed(2) + ' ₼';
-            document.getElementById('total').textContent = subtotal.toFixed(2) + ' ₼';
+            totalDisplay.innerText = total.toFixed(2) + " ₼";
         }
-
-        // MİKTAR GÜNCELLE
-        function updateQuantity(index, change) {
-            currentTable.orders[index].quantity += change;
-            if (currentTable.orders[index].quantity <= 0) {
-                currentTable.orders.splice(index, 1);
-            }
-            loadCart();
-            loadTables();
+        
+        // Ürün çıkar
+        function removeFromTable(index) {
+            tables[activeTable].splice(index, 1);
+            saveAllData();
+            updateDisplay();
+            renderTableButtons();
         }
-
-        // SEPETTEN ÇIKAR
-        function removeFromCart(index) {
-            currentTable.orders.splice(index, 1);
-            loadCart();
-            loadTables();
-        }
-
-        // MASAYI TEMİZLE
-        function clearTable() {
-            if (currentTable.orders.length === 0) return;
+        
+        // Masayı temizle
+        function clearCurrentTable() {
+            if(tables[activeTable].length === 0) return;
             
-            if (confirm(`${currentTable.name} masasını təmizləmək istədiyinizə əminsiniz?`)) {
-                currentTable.orders = [];
-                loadCart();
-                loadTables();
-                showNotification('Masa təmizləndi', 'info');
+            if(confirm(`${activeTable} masasını təmizləmək istəyirsiniz?`)) {
+                tables[activeTable] = [];
+                saveAllData();
+                updateDisplay();
+                renderTableButtons();
+                showNotification('Masa təmizləndi');
             }
         }
-
-        // ÇEK YAZDIR
+        
+        // Yazdır
         function printReceipt() {
-            if (currentTable.orders.length === 0) {
+            let items = tables[activeTable];
+            if (items.length === 0) {
                 showNotification('Çap etmək üçün sifariş yoxdur!', 'error');
                 return;
             }
             
-            // Çek numarasını artır
             receiptCounter++;
-            localStorage.setItem('receipt_counter', receiptCounter);
+            saveAllData();
             
             const now = new Date();
             let total = 0;
             let itemsHTML = '';
             
-            currentTable.orders.forEach(item => {
-                const itemTotal = item.price * item.quantity;
+            items.forEach(item => {
+                let itemTotal = item.price * item.count;
                 total += itemTotal;
-                
                 itemsHTML += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                        <div>${item.quantity} x ${item.name}</div>
-                        <div>${itemTotal.toFixed(2)}</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span>${item.count} x ${item.name}</span>
+                        <span>${itemTotal.toFixed(2)}</span>
                     </div>
                 `;
             });
             
-            // Çek verilerini doldur
-            document.getElementById('receipt-date').textContent = 
-                now.toLocaleString('az-AZ');
+            // Çek hazırla
+            document.getElementById('receipt-date').textContent = now.toLocaleDateString('az-AZ');
+            document.getElementById('receipt-time').textContent = now.toLocaleTimeString('az-AZ');
             document.getElementById('receipt-no').textContent = receiptCounter;
-            document.getElementById('receipt-table').textContent = currentTable.name;
+            document.getElementById('receipt-table').textContent = activeTable;
             document.getElementById('receipt-items').innerHTML = itemsHTML;
             document.getElementById('receipt-total').textContent = total.toFixed(2) + ' AZN';
             
+            // Satış geçmişine ekle
+            salesHistory.unshift({
+                id: receiptCounter,
+                table: activeTable,
+                items: [...items],
+                total: total,
+                date: now.toISOString(),
+                timestamp: now.getTime()
+            });
+            
+            // En fazla 1000 kayıt tut
+            if (salesHistory.length > 1000) {
+                salesHistory = salesHistory.slice(0, 1000);
+            }
+            
             // Yazdır
-            const receiptElement = document.getElementById('receipt');
+            const receiptElement = document.getElementById('print-receipt');
             receiptElement.style.display = 'block';
             
             const printWindow = window.open('', '_blank');
@@ -475,13 +507,13 @@
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>MAMBA PUB Çek</title>
+                    <title>MAMBA PUB Çek #${receiptCounter}</title>
                     <style>
                         @media print {
                             @page { margin: 0; size: 80mm auto; }
-                            body { width: 80mm; font-family: 'Courier New', monospace; }
+                            body { margin: 0; padding: 0; width: 80mm; }
+                            * { font-family: 'Courier New', monospace !important; }
                         }
-                        .receipt { width: 80mm; padding: 10px; font-size: 12px; }
                     </style>
                 </head>
                 <body onload="window.print(); window.close();">
@@ -493,51 +525,114 @@
             
             receiptElement.style.display = 'none';
             
-            // Masa temizle
-            currentTable.orders = [];
-            loadCart();
-            loadTables();
+            // Masayı temizle
+            tables[activeTable] = [];
+            saveAllData();
+            updateDisplay();
+            renderTableButtons();
             
-            showNotification('Çek çap edildi!', 'success');
+            showNotification('Çek çap edildi! #' + receiptCounter);
         }
-
-        // BİLDİRİM GÖSTER
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg font-bold z-50 animate__animated animate__fadeInRight`;
-            
-            const colors = {
-                success: 'bg-green-600',
-                error: 'bg-red-600',
-                info: 'bg-blue-600',
-                warning: 'bg-yellow-600'
+        
+        // Export data
+        function exportData() {
+            const data = {
+                tables: tables,
+                salesHistory: salesHistory,
+                receiptCounter: receiptCounter,
+                exportDate: new Date().toISOString()
             };
             
-            notification.className += ` ${colors[type]}`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `mamba_pos_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Məlumatlar export edildi');
+        }
+        
+        // Bildirim göster
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg font-bold shadow-xl animate__animated animate__fadeInRight z-50 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            notification.textContent = message;
             
             document.body.appendChild(notification);
             
             setTimeout(() => {
-                notification.remove();
+                notification.classList.remove('animate__fadeInRight');
+                notification.classList.add('animate__fadeOutRight');
+                setTimeout(() => notification.remove(), 500);
             }, 3000);
         }
-
-        // KLAVYE KISA YOLLARI
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                printReceipt();
+        
+        // Import için (isteğe bağlı)
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    tables = data.tables || tables;
+                    salesHistory = data.salesHistory || salesHistory;
+                    receiptCounter = data.receiptCounter || receiptCounter;
+                    
+                    saveAllData();
+                    renderTableButtons();
+                    masaSec(activeTable);
+                    
+                    showNotification('Məlumatlar uğurla yükləndi');
+                } catch(err) {
+                    showNotification('Fayl oxuma xətası', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Import butonu ekle
+        const importBtn = document.createElement('input');
+        importBtn.type = 'file';
+        importBtn.accept = '.json';
+        importBtn.style.display = 'none';
+        importBtn.onchange = importData;
+        document.body.appendChild(importBtn);
+        
+        document.querySelector('button[onclick="exportData()"]').insertAdjacentHTML('afterend', 
+            '<button onclick="importBtn.click()" class="bg-purple-600 hover:bg-purple-700 text-xs px-3 py-2 rounded-lg font-bold ml-2"><i class="fas fa-upload mr-1"></i> Import</button>'
+        );
+        
+        // Dosya tabanlı yedekleme (isteğe bağlı)
+        function backupToFile() {
+            const data = {
+                tables: tables,
+                salesHistory: salesHistory,
+                receiptCounter: receiptCounter,
+                backupDate: new Date().toISOString()
+            };
+            
+            // Her gün otomatik yedekle
+            const lastBackup = localStorage.getItem('mamba_last_backup');
+            const today = new Date().toDateString();
+            
+            if (lastBackup !== today) {
+                exportData();
+                localStorage.setItem('mamba_last_backup', today);
             }
-            if (e.key === 'Escape') {
-                clearTable();
-            }
-        });
+        }
+        
+        // Her saat başı yedekle
+        setInterval(backupToFile, 3600000);
     </script>
+    
+    <!-- FontAwesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
 </html>
