@@ -29,6 +29,7 @@
                 margin: 0 !important;
                 background: white !important;
                 color: black !important;
+                font-family: 'Courier New', monospace !important;
             }
             @page { 
                 margin: 0 !important; 
@@ -322,33 +323,36 @@
 
     <div id="receipt-modal" class="modal">
         <div class="modal-content animate__animated animate__fadeIn">
-            <div id="receipt-print" style="width: 80mm; font-family: 'Courier New', monospace; padding: 15px; background: white; color: black; margin: 0 auto;">
+            <div id="receipt-print" style="width: 80mm; font-family: 'Courier New', monospace; padding: 15px; background: white; color: black; margin: 0 auto; font-size: 11px; line-height: 1.2;">
                 <center>
                     <b style="font-size: 16px; display: block; margin-bottom: 5px;">MAMBA PUB</b>
                     <hr style="border-top: 1px dashed #000; margin: 8px 0;">
                     <span style="font-size: 11px;" id="receipt-date"></span><br>
                     <span style="font-size: 11px;">Fiş No: <span id="receipt-no">0001</span></span><br>
+                    <span style="font-size: 11px;">Kassa: 1</span><br>
                     <hr style="border-top: 1px dashed #000; margin: 8px 0;">
                     <b style="font-size: 14px; display: block; padding: 4px 0;" id="receipt-table">MASA 1</b>
                     <hr style="border-top: 1px dashed #000; margin: 8px 0;">
                 </center>
                 
-                <div id="receipt-items" style="font-size: 12px; margin: 10px 0;">
+                <div id="receipt-items" style="font-size: 11px; margin: 10px 0;">
                 </div>
                 
                 <hr style="border-top: 1px dashed #000; margin: 10px 0;">
-                <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;">
                     <span>TOPLAM:</span>
-                    <span id="receipt-total">0.00</span>
+                    <span id="receipt-total">0.00 AZN</span>
                 </div>
                 
-                <center style="margin-top: 20px; font-size: 11px;">
+                <center style="margin-top: 20px; font-size: 10px;">
                     <b>TƏŞƏKKÜRLƏR!</b><br>
                     Nuş Olsun!<br>
+                    <span style="font-size: 9px;">* Qiymətlərə ƏDV daxildir</span>
                 </center>
                 <hr style="border-top: 1px dashed #000; margin: 8px 0;">
                 <center style="font-size: 9px; color: #666;">
-                    Çek tarixi: <span id="receipt-time"></span>
+                    Çek tarixi: <span id="receipt-time"></span><br>
+                    Müştəri nümunəsi
                 </center>
             </div>
             
@@ -366,69 +370,182 @@
     <input type="file" id="file-import" accept=".json" style="display: none;">
 
     <script>
-        let menu;
-        try {
-            menu = JSON.parse(localStorage.getItem('mamba_menu')) || [
-                { id: 1, name: 'Nzs Pivə 1.80m', price: 1.80, category: 'İçkilər' },
-                { id: 2, name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
-                { id: 3, name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
-                { id: 4, name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
-                { id: 5, name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
-                { id: 6, name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
-                { id: 7, name: 'Red Bull', price: 4.00, category: 'İçkilər' },
-                { id: 8, name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
-                { id: 9, name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
-                { id: 10, name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
-                { id: 11, name: 'Semiçka', price: 2.00, category: 'Mezeler' },
-                { id: 12, name: 'Sardelka', price: 6.00, category: 'Mezeler' },
-                { id: 13, name: 'Turşu', price: 3.00, category: 'Mezeler' },
-                { id: 14, name: 'Çips', price: 4.00, category: 'Mezeler' },
-                { id: 15, name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
-                { id: 16, name: 'Tabaka Toyuq', price: 18.00, category: 'İsti Yeməklər' },
-                { id: 17, name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
-                { id: 18, name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
-                { id: 19, name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
-                { id: 20, name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
-                { id: 21, name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
-                { id: 22, name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
-                { id: 23, name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
-                { id: 24, name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
-                { id: 25, name: 'Boğaz', price: 1.50, category: 'Digər' },
-                { id: 26, name: 'Qəlyan', price: 12.00, category: 'Digər' },
-                { id: 27, name: 'Nargilə', price: 15.00, category: 'Digər' },
-                { id: 28, name: 'Çay', price: 1.00, category: 'Digər' }
-            ];
-        } catch(e) {
-            menu = [];
-        }
-
-        let activeTable = localStorage.getItem('mamba_active_table') || "1";
+        // IndexedDB için database oluşturma
+        let db;
+        let menu = [];
+        let tables = {};
+        let activeTable = "1";
         let activeCategory = "İçkilər";
-        let tables;
-        try {
-            tables = JSON.parse(localStorage.getItem('mamba_tables')) || {
-                "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
-                "BAR": [], "TERAS": []
-            };
-        } catch(e) {
-            tables = { "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "BAR": [], "TERAS": [] };
-        }
-        
-        // Tabloların doğruluğundan emin ol
-        const expectedTables = ["1", "2", "3", "4", "5", "6", "BAR", "TERAS"];
-        expectedTables.forEach(t => { if(!tables[t]) tables[t] = []; });
+        let receiptCounter = 1000;
+        let nextItemId = 1;
+        const defaultMenu = [
+            { id: 1, name: 'Nzs Pivə 1.80m', price: 1.80, category: 'İçkilər' },
+            { id: 2, name: 'Xırdalan 0.5L', price: 1.80, category: 'İçkilər' },
+            { id: 3, name: 'Cola 1L', price: 3.00, category: 'İçkilər' },
+            { id: 4, name: 'Fanta 0.5L', price: 1.50, category: 'İçkilər' },
+            { id: 5, name: 'Sprite 0.5L', price: 1.50, category: 'İçkilər' },
+            { id: 6, name: 'Su 0.5L', price: 0.80, category: 'İçkilər' },
+            { id: 7, name: 'Red Bull', price: 4.00, category: 'İçkilər' },
+            { id: 8, name: 'Araq 50ml', price: 3.50, category: 'İçkilər' },
+            { id: 9, name: 'Vodka 50ml', price: 4.00, category: 'İçkilər' },
+            { id: 10, name: 'Viski 50ml', price: 5.00, category: 'İçkilər' },
+            { id: 11, name: 'Semiçka', price: 2.00, category: 'Mezeler' },
+            { id: 12, name: 'Sardelka', price: 6.00, category: 'Mezeler' },
+            { id: 13, name: 'Turşu', price: 3.00, category: 'Mezeler' },
+            { id: 14, name: 'Çips', price: 4.00, category: 'Mezeler' },
+            { id: 15, name: 'Qoz-Fındıq', price: 3.50, category: 'Mezeler' },
+            { id: 16, name: 'Tabaka Toyuq', price: 18.00, category: 'İsti Yeməklər' },
+            { id: 17, name: 'Qovurma', price: 12.00, category: 'İsti Yeməklər' },
+            { id: 18, name: 'KFC Kotlet', price: 9.00, category: 'İsti Yeməklər' },
+            { id: 19, name: 'Toyuq şiş', price: 8.00, category: 'İsti Yeməklər' },
+            { id: 20, name: 'Lüle kebab', price: 9.50, category: 'İsti Yeməklər' },
+            { id: 21, name: 'SET 1 (20 AZN)', price: 20.00, category: 'Setlər' },
+            { id: 22, name: 'SET 2 (25 AZN)', price: 25.00, category: 'Setlər' },
+            { id: 23, name: 'SET 3 (30 AZN)', price: 30.00, category: 'Setlər' },
+            { id: 24, name: 'SET 4 (40 AZN)', price: 40.00, category: 'Setlər' },
+            { id: 25, name: 'Boğaz', price: 1.50, category: 'Digər' },
+            { id: 26, name: 'Qəlyan', price: 12.00, category: 'Digər' },
+            { id: 27, name: 'Nargilə', price: 15.00, category: 'Digər' },
+            { id: 28, name: 'Çay', price: 1.00, category: 'Digər' }
+        ];
 
-        let receiptCounter = parseInt(localStorage.getItem('mamba_receipt_counter')) || 1000;
-        let nextItemId = menu.length > 0 ? Math.max(...menu.map(item => item.id)) + 1 : 1;
+        // IndexedDB başlatma
+        function initDB() {
+            const request = indexedDB.open('MambaPubDB', 2);
+            
+            request.onerror = function(event) {
+                console.error("Database error:", event.target.error);
+            };
+            
+            request.onupgradeneeded = function(event) {
+                db = event.target.result;
+                
+                // Menu store
+                if (!db.objectStoreNames.contains('menu')) {
+                    const menuStore = db.createObjectStore('menu', { keyPath: 'id' });
+                    menuStore.createIndex('category', 'category', { unique: false });
+                }
+                
+                // Tables store
+                if (!db.objectStoreNames.contains('tables')) {
+                    db.createObjectStore('tables');
+                }
+                
+                // Settings store
+                if (!db.objectStoreNames.contains('settings')) {
+                    const settingsStore = db.createObjectStore('settings');
+                }
+            };
+            
+            request.onsuccess = function(event) {
+                db = event.target.result;
+                loadAllData();
+            };
+        }
+
+        // Tüm verileri yükle
+        function loadAllData() {
+            // Menu yükle
+            const menuTransaction = db.transaction(['menu'], 'readonly');
+            const menuStore = menuTransaction.objectStore('menu');
+            const menuRequest = menuStore.getAll();
+            
+            menuRequest.onsuccess = function() {
+                if (menuRequest.result.length === 0) {
+                    // Default menu yükle
+                    const transaction = db.transaction(['menu'], 'readwrite');
+                    const store = transaction.objectStore('menu');
+                    defaultMenu.forEach(item => store.put(item));
+                    menu = [...defaultMenu];
+                    nextItemId = Math.max(...defaultMenu.map(item => item.id)) + 1;
+                } else {
+                    menu = menuRequest.result;
+                    nextItemId = Math.max(...menu.map(item => item.id)) + 1;
+                }
+                renderMenu();
+                loadMenuList();
+            };
+            
+            // Tables yükle
+            const tablesTransaction = db.transaction(['tables'], 'readonly');
+            const tablesStore = tablesTransaction.objectStore('tables');
+            const tablesRequest = tablesStore.get('data');
+            
+            tablesRequest.onsuccess = function() {
+                if (tablesRequest.result) {
+                    tables = tablesRequest.result;
+                } else {
+                    // Default tables oluştur
+                    tables = {
+                        "1": [], "2": [], "3": [], "4": [], "5": [], "6": [], 
+                        "BAR": [], "TERAS": []
+                    };
+                    saveTablesToDB();
+                }
+                updateOrderDisplay();
+            };
+            
+            // Settings yükle
+            const settingsTransaction = db.transaction(['settings'], 'readonly');
+            const settingsStore = settingsTransaction.objectStore('settings');
+            const activeTableRequest = settingsStore.get('activeTable');
+            const receiptCounterRequest = settingsStore.get('receiptCounter');
+            
+            activeTableRequest.onsuccess = function() {
+                if (activeTableRequest.result) {
+                    activeTable = activeTableRequest.result;
+                    selectTable(activeTable);
+                }
+            };
+            
+            receiptCounterRequest.onsuccess = function() {
+                if (receiptCounterRequest.result) {
+                    receiptCounter = receiptCounterRequest.result;
+                }
+            };
+        }
+
+        // Tables'ı database'e kaydet
+        function saveTablesToDB() {
+            if (!db) return;
+            const transaction = db.transaction(['tables'], 'readwrite');
+            const store = transaction.objectStore('tables');
+            store.put(tables, 'data');
+            updateStorageInfo();
+        }
+
+        // Menu'yu database'e kaydet
+        function saveMenuToDB() {
+            if (!db) return;
+            const transaction = db.transaction(['menu'], 'readwrite');
+            const store = transaction.objectStore('menu');
+            menu.forEach(item => store.put(item));
+            updateStorageInfo();
+        }
+
+        // Settings'i kaydet
+        function saveSettingsToDB() {
+            if (!db) return;
+            const transaction = db.transaction(['settings'], 'readwrite');
+            const store = transaction.objectStore('settings');
+            store.put(activeTable, 'activeTable');
+            store.put(receiptCounter, 'receiptCounter');
+        }
+
+        // Ana save fonksiyonu
+        function saveData() {
+            saveTablesToDB();
+            saveSettingsToDB();
+            const statusEl = document.getElementById('data-status');
+            if(statusEl) statusEl.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Saxlanıldı';
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
+            initDB();
             updateClock();
             setInterval(updateClock, 1000);
             selectCategory('İçkilər');
-            selectTable(activeTable);
-            updateStorageInfo();
-            loadMenuList();
-            setInterval(saveData, 5000);
+            setInterval(saveData, 30000); // 30 saniyede bir otomatik kaydet
         });
 
         function updateClock() {
@@ -479,6 +596,7 @@
                 if (btn.textContent === tableId) btn.classList.add('active-table');
             });
             updateOrderDisplay();
+            saveSettingsToDB();
         }
 
         function addToTable(itemId) {
@@ -614,9 +732,9 @@
                 const itemTotal = item.price * item.count;
                 total += itemTotal;
                 itemsHTML += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dotted #eee; padding-bottom: 2px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dotted #eee; padding-bottom: 2px; font-size: 11px;">
                         <div><span style="font-weight: bold;">${item.count}x</span> ${item.name}</div>
-                        <div>${itemTotal.toFixed(2)}</div>
+                        <div>${itemTotal.toFixed(2)} AZN</div>
                     </div>
                 `;
             });
@@ -630,6 +748,7 @@
         function printReceiptNow() {
             const receiptElement = document.getElementById('receipt-print');
             const printWindow = window.open('', '_blank', 'width=80mm,height=600');
+            
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -637,17 +756,51 @@
                     <title>MAMBA PUB Fiş #${receiptCounter}</title>
                     <meta charset="UTF-8">
                     <style>
-                        @page { margin: 0; padding: 0; size: 80mm auto; }
-                        body { width: 80mm; margin: 0; padding: 0; font-family: 'Courier New', monospace; font-size: 11px; background: white; color: black; }
-                        .receipt { width: 80mm; padding: 10px; box-sizing: border-box; }
-                        hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+                        @page { 
+                            margin: 0 !important; 
+                            padding: 0 !important;
+                            size: 80mm auto !important; 
+                        }
+                        body { 
+                            width: 80mm !important; 
+                            margin: 0 !important; 
+                            padding: 0 !important; 
+                            font-family: 'Courier New', monospace !important;
+                            font-size: 11px !important; 
+                            line-height: 1.2 !important;
+                            background: white !important; 
+                            color: black !important;
+                        }
+                        .receipt { 
+                            width: 80mm !important; 
+                            padding: 10px !important; 
+                            box-sizing: border-box !important;
+                        }
+                        hr { 
+                            border: none !important; 
+                            border-top: 1px dashed #000 !important; 
+                            margin: 8px 0 !important;
+                        }
+                        * {
+                            max-width: 80mm !important;
+                        }
                     </style>
-                    <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script>
+                    <script>
+                        window.onload = function() { 
+                            window.print(); 
+                            setTimeout(function() { window.close(); }, 1000); 
+                        };
+                    <\/script>
                 </head>
-                <body><div class="receipt">${receiptElement.innerHTML}</div></body>
+                <body>
+                    <div class="receipt">${receiptElement.innerHTML}</div>
+                </body>
                 </html>
             `);
+            
             printWindow.document.close();
+            
+            // Siparişi temizle
             tables[activeTable] = [];
             saveData();
             updateOrderDisplay();
@@ -660,26 +813,9 @@
             if(modal) modal.style.display = 'none';
         }
 
-        function saveData() {
-            try {
-                localStorage.setItem('mamba_tables', JSON.stringify(tables));
-                localStorage.setItem('mamba_active_table', activeTable);
-                localStorage.setItem('mamba_receipt_counter', receiptCounter.toString());
-                localStorage.setItem('mamba_menu', JSON.stringify(menu));
-                const statusEl = document.getElementById('data-status');
-                if(statusEl) statusEl.innerHTML = '<i class="fas fa-check-circle text-green-400 mr-1"></i>Saxlanıldı';
-                updateStorageInfo();
-            } catch(e) {
-                const statusEl = document.getElementById('data-status');
-                if(statusEl) statusEl.innerHTML = '<i class="fas fa-exclamation-triangle text-red-400 mr-1"></i>Xəta';
-            }
-        }
-
         function updateStorageInfo() {
-            const used = (JSON.stringify(tables) || '').length + (JSON.stringify(menu) || '').length;
-            const kb = (used / 1024).toFixed(1);
             const infoEl = document.getElementById('storage-info');
-            if(infoEl) infoEl.textContent = `${kb} KB yaddaş istifadəsi`;
+            if(infoEl) infoEl.textContent = 'IndexedDB - Kalıcı yaddaş';
         }
 
         function toggleAdminPanel() {
@@ -725,21 +861,47 @@
                 showNotification('Məlumatı düzgün daxil edin!', 'error');
                 return;
             }
-            menu.push({ id: nextItemId++, name, price, category });
-            saveData(); loadMenuList(); renderMenu();
-            nameEl.value = ''; priceEl.value = '';
+            
+            const newItem = { id: nextItemId++, name, price, category };
+            menu.push(newItem);
+            
+            // Database'e kaydet
+            const transaction = db.transaction(['menu'], 'readwrite');
+            const store = transaction.objectStore('menu');
+            store.put(newItem);
+            
+            loadMenuList(); 
+            renderMenu();
+            nameEl.value = ''; 
+            priceEl.value = '';
             showNotification('Məhsul əlavə edildi');
         }
 
         function updateMenuItem(id, field, value) {
             const item = menu.find(item => item.id === id);
-            if (item) { item[field] = value; saveData(); renderMenu(); }
+            if (item) { 
+                item[field] = value; 
+                
+                // Database'i güncelle
+                const transaction = db.transaction(['menu'], 'readwrite');
+                const store = transaction.objectStore('menu');
+                store.put(item);
+                
+                renderMenu(); 
+            }
         }
 
         function deleteMenuItem(id) {
             if (confirm('Silmək istəyirsiniz?')) {
                 menu = menu.filter(item => item.id !== id);
-                saveData(); loadMenuList(); renderMenu();
+                
+                // Database'den sil
+                const transaction = db.transaction(['menu'], 'readwrite');
+                const store = transaction.objectStore('menu');
+                store.delete(id);
+                
+                loadMenuList(); 
+                renderMenu();
                 showNotification('Məhsul silindi');
             }
         }
@@ -751,7 +913,14 @@
                 else item.price *= (1 - percent / 100);
                 item.price = Math.round(item.price * 100) / 100;
             });
-            saveData(); loadMenuList(); renderMenu();
+            
+            // Database'i güncelle
+            const transaction = db.transaction(['menu'], 'readwrite');
+            const store = transaction.objectStore('menu');
+            menu.forEach(item => store.put(item));
+            
+            loadMenuList(); 
+            renderMenu();
             showNotification('Qiymətlər yeniləndi');
         }
 
@@ -764,16 +933,30 @@
         }
 
         function exportMenuData() {
-            const dataStr = JSON.stringify({ menu, exportDate: new Date().toISOString(), version: '2.0' }, null, 2);
+            const exportData = {
+                menu: menu,
+                tables: tables,
+                activeTable: activeTable,
+                receiptCounter: receiptCounter,
+                exportDate: new Date().toISOString(),
+                version: '2.0'
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = `mamba_menu_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            a.href = url; 
+            a.download = `mamba_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a);
             showNotification('Export tamamlandı');
         }
 
-        function importMenuData() { document.getElementById('file-import').click(); }
+        function importMenuData() { 
+            document.getElementById('file-import').click(); 
+        }
 
         document.getElementById('file-import').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -783,19 +966,53 @@
                 try {
                     const data = JSON.parse(ex.target.result);
                     if (data.menu) {
+                        // Database'e kaydet
+                        const transaction = db.transaction(['menu', 'tables', 'settings'], 'readwrite');
+                        const menuStore = transaction.objectStore('menu');
+                        const tablesStore = transaction.objectStore('tables');
+                        const settingsStore = transaction.objectStore('settings');
+                        
+                        // Menu'yu güncelle
+                        menuStore.clear();
+                        data.menu.forEach(item => menuStore.put(item));
                         menu = data.menu;
                         nextItemId = menu.length > 0 ? Math.max(...menu.map(item => item.id)) + 1 : 1;
-                        saveData(); loadMenuList(); renderMenu();
+                        
+                        // Tables'ı güncelle (eğer varsa)
+                        if (data.tables) {
+                            tablesStore.put(data.tables, 'data');
+                            tables = data.tables;
+                        }
+                        
+                        // Settings'i güncelle (eğer varsa)
+                        if (data.activeTable) {
+                            settingsStore.put(data.activeTable, 'activeTable');
+                            activeTable = data.activeTable;
+                            selectTable(activeTable);
+                        }
+                        
+                        if (data.receiptCounter) {
+                            settingsStore.put(data.receiptCounter, 'receiptCounter');
+                            receiptCounter = data.receiptCounter;
+                        }
+                        
+                        loadMenuList(); 
+                        renderMenu();
+                        updateOrderDisplay();
                         showNotification('İmport tamamlandı');
                     }
-                } catch(err) { showNotification('Fayl xətası!', 'error'); }
+                } catch(err) { 
+                    console.error(err);
+                    showNotification('Fayl xətası!', 'error'); 
+                }
             };
             reader.readAsText(file);
         });
 
         function resetAllData() {
             if (confirm('BÜTÜN MƏLUMATLAR SIFIRLANACAQ! Təsdiqləyirsiniz?')) {
-                localStorage.clear(); location.reload();
+                indexedDB.deleteDatabase('MambaPubDB');
+                location.reload();
             }
         }
 
